@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    PHPUnit configuration for the skeleton's custom modules and themes.
+
+    `unit` is the only suite enabled by default — unit tests run inside
+    the container without bootstrapping Drupal, so they're cheap and
+    they're what should fire on every commit. Kernel + Functional suites
+    can be added per project as the surface grows; the file's structure
+    is set up to extend cleanly.
+
+    Run from project root inside DDEV:
+        ddev exec ../vendor/bin/phpunit
+        ddev exec ../vendor/bin/phpunit --testsuite=unit  (explicit)
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         bootstrap="web/core/tests/bootstrap.php"
+         colors="true"
+         beStrictAboutTestsThatDoNotTestAnything="true"
+         beStrictAboutOutputDuringTests="true"
+         beStrictAboutChangesToGlobalState="true"
+         failOnWarning="true"
+         failOnRisky="true"
+         displayDetailsOnTestsThatTriggerWarnings="true"
+         cacheDirectory=".phpunit.cache">
+
+    <php>
+        <!-- Drupal test base class env vars; harmless when empty. -->
+        <env name="SIMPLETEST_BASE_URL" value="http://web"/>
+        <env name="SIMPLETEST_DB" value="mysql://db:db@db/db#test_"/>
+        <env name="BROWSERTEST_OUTPUT_DIRECTORY" value="/tmp"/>
+        <env name="MINK_DRIVER_CLASS" value=""/>
+    </php>
+
+    <testsuites>
+        <testsuite name="unit">
+            <directory>web/modules/custom/*/tests/src/Unit</directory>
+            <directory>web/themes/custom/*/tests/src/Unit</directory>
+        </testsuite>
+        <!-- Kernel and Functional suites: enable per project.
+        <testsuite name="kernel">
+            <directory>web/modules/custom/*/tests/src/Kernel</directory>
+        </testsuite>
+        <testsuite name="functional">
+            <directory>web/modules/custom/*/tests/src/Functional</directory>
+        </testsuite>
+        -->
+    </testsuites>
+
+    <source>
+        <include>
+            <directory>web/modules/custom</directory>
+            <directory>web/themes/custom</directory>
+        </include>
+        <exclude>
+            <directory>web/modules/custom/*/tests</directory>
+            <directory>web/themes/custom/*/tests</directory>
+        </exclude>
+    </source>
+</phpunit>

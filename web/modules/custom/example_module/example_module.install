@@ -1,0 +1,48 @@
+<?php
+
+/**
+ * @file
+ * Install / uninstall / update hooks for example_module.
+ *
+ * `hook_install` is the place to seed initial config that isn't
+ * already covered by config/install/*.yml (which Drupal loads
+ * automatically on install). Use it for runtime-derived defaults,
+ * cache priming, or any one-time bootstrap.
+ *
+ * `hook_update_N()` handles schema migrations between deployed
+ * versions; ALWAYS pick monotonically increasing numbers, never
+ * reuse, never delete entries.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_install().
+ *
+ * Runs once when the module is installed. Idempotent in practice
+ * (an install is only run once), but defensive — config that exists
+ * shouldn't be overwritten.
+ */
+function example_module_install(): void {
+  \Drupal::logger('example_module')->info('Skeleton module installed.');
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Runs once when the module is uninstalled. Clean up: delete config
+ * managed entirely by this module, drop persistent state, log so a
+ * future debugger sees the trail.
+ */
+function example_module_uninstall(): void {
+  \Drupal::logger('example_module')->info('Skeleton module uninstalled.');
+}
+
+/*
+ * Update hook starter (uncomment, increment N as needed):
+ *
+ * function example_module_update_10001(): string {
+ *   // Schema/data migration goes here.
+ *   return t('Migrated whatever to whatever.');
+ * }
+ */

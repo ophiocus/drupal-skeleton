@@ -1,0 +1,16 @@
+# Skeleton routes for example_module.
+#
+# Convention: namespace your routes under your module's machine name
+# so other modules can register routes without colliding. Always
+# include a /health endpoint — useful for smoke tests, deploy gates,
+# and proving the module loaded at all.
+
+example_module.health:
+  path: '/example/health'
+  defaults:
+    _controller: 'Drupal\example_module\Controller\HealthController::check'
+    _title: 'Example module health'
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: TRUE

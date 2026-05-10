@@ -1,0 +1,18 @@
+<?php
+
+/**
+ * @file
+ * Skeleton theme — rename and fill in.
+ *
+ * Theme hook implementations live here. Common starting points:
+ *
+ *   - hook_preprocess_HOOK()       — modify variables before render
+ *   - hook_theme_suggestions_HOOK_alter()  — add theme suggestions
+ *   - hook_form_FORM_ID_alter()    — adjust forms by id
+ *
+ * Keep this file thin. If you find yourself adding logic, extract
+ * to a service in a companion module — themes shouldn't grow into
+ * application code.
+ */
+
+declare(strict_types=1);

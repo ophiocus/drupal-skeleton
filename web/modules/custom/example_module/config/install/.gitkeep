@@ -1,0 +1,8 @@
+# Placeholder — config files dropped here are loaded automatically
+# on module install. Examples:
+#
+#   example_module.settings.yml         (default settings)
+#   system.action.example_module_thing.yml  (custom actions)
+#
+# Pair every config file here with a schema in ../schema/ so
+# `drush config:export` round-trips cleanly.

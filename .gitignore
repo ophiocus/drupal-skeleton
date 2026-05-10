@@ -1,0 +1,48 @@
+# --- Composer / Drupal install artifacts ----------------------------
+/vendor/
+/web/core/
+/web/modules/contrib/
+/web/themes/contrib/
+/web/profiles/contrib/
+/web/libraries/
+
+# --- Per-site state (never committed) -------------------------------
+/web/sites/*/files/
+/web/sites/*/private/
+/web/sites/*/settings.local.php
+/web/sites/*/services.yml
+/web/sites/default/
+
+# --- DDEV local state ------------------------------------------------
+/.ddev/.env
+/.ddev/.global_commands/
+/.ddev/db_snapshots/
+/.ddev/.gitignore
+/.ddev/homeadditions/
+/.ddev/import-db/
+/.ddev/import-files/
+
+# --- Node / Vite / TypeScript ---------------------------------------
+/node_modules/
+/optional/vite-bundle/node_modules/
+/optional/vite-bundle/dist/
+/web/themes/custom/*/dist/*
+!/web/themes/custom/*/dist/.gitkeep
+
+# --- Editors / OS noise ---------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Test / coverage outputs ----------------------------------------
+/.phpunit.result.cache
+/coverage/
+
+# --- Secrets — belt-and-suspenders for the careless `git add .` -----
+.env
+.env.local
+*.pem
+*.key

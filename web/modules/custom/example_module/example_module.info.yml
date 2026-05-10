@@ -1,0 +1,7 @@
+name: 'Example Module'
+type: module
+description: 'Skeleton module — rename and fill in. Provides a /example/health endpoint, one DI''d service, and one Drush command as starting points.'
+core_version_requirement: ^11
+package: Custom
+# dependencies:
+#   - drupal:system

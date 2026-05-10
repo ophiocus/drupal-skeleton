@@ -1,0 +1,56 @@
+{#
+/**
+ * @file
+ * Skeleton page template — rename and fill in.
+ *
+ * Olivero's own page.html.twig provides a complete site shell;
+ * this override exists so you have a place to start customizing.
+ * Delete this file to fall back entirely on Olivero's template,
+ * or extend with `{% extends '@olivero/page.html.twig' %}` if you
+ * want to surgically replace blocks rather than the whole page.
+ *
+ * Available variables — see Olivero's page.html.twig for the
+ * full list. Common ones:
+ *   - page.header, page.primary_menu, page.content, etc.
+ *   - logged_in, is_admin
+ *   - node (when on a node page)
+ */
+#}
+<div class="layout-container">
+  {% if page.header %}
+    <header class="site-header" role="banner">
+      {{ page.header }}
+    </header>
+  {% endif %}
+
+  {% if page.primary_menu or page.secondary_menu %}
+    <nav class="site-nav" role="navigation">
+      {{ page.primary_menu }}
+      {{ page.secondary_menu }}
+    </nav>
+  {% endif %}
+
+  {% if page.breadcrumb %}
+    {{ page.breadcrumb }}
+  {% endif %}
+
+  <main class="site-main" role="main">
+    {{ page.highlighted }}
+    {{ page.content_above }}
+    {{ page.content }}
+    {{ page.content_below }}
+  </main>
+
+  {% if page.sidebar %}
+    <aside class="site-sidebar" role="complementary">
+      {{ page.sidebar }}
+    </aside>
+  {% endif %}
+
+  {% if page.footer_top or page.footer_bottom %}
+    <footer class="site-footer" role="contentinfo">
+      {{ page.footer_top }}
+      {{ page.footer_bottom }}
+    </footer>
+  {% endif %}
+</div>

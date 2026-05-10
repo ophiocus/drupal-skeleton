@@ -1,0 +1,24 @@
+# Library declarations for example_theme.
+#
+# Convention: one library per concern (global, page-specific,
+# component-specific). Drupal lazily loads the libraries each
+# request needs — splitting upfront keeps wire-bytes small.
+#
+# Reference an external bundler's output by relative path under
+# the theme root (e.g. dist/your.bundle.js). Versions like `1.x`
+# are cache-busters; bump them when the source changes meaningfully
+# or rely on Drupal's own cache_version after `drush cr`.
+
+global:
+  version: 1.x
+  css:
+    theme:
+      css/example_theme.css: {}
+  # Uncomment when copying optional/vite-bundle into place:
+  # js:
+  #   dist/index.js:
+  #     attributes:
+  #       type: module
+  #       defer: true
+  dependencies:
+    - core/drupal

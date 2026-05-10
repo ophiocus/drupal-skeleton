@@ -1,0 +1,6 @@
+# Bundler output target. The .gitkeep keeps the directory in
+# version control while the actual *.js / *.map files (gitignored)
+# regenerate per-build.
+#
+# If you've copied optional/vite-bundle/ into place, its
+# vite.config.ts builds here by convention.

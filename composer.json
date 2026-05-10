@@ -1,0 +1,68 @@
+{
+    "name": "ophiocus/drupal-skeleton",
+    "description": "Generic Drupal 11 module/theme starting point. Distilled from drupal-three-js-theme.",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.3",
+        "composer/installers": "^2.0",
+        "drupal/core-composer-scaffold": "^11.3",
+        "drupal/core-recommended": "^11.3",
+        "drupal/core-project-message": "^11.3",
+        "drush/drush": "^13.0"
+    },
+    "require-dev": {
+        "drupal/core-dev": "^11.3",
+        "drupal/devel": "^5.3",
+        "phpunit/phpunit": "^10.5"
+    },
+    "config": {
+        "allow-plugins": {
+            "composer/installers": true,
+            "cweagans/composer-patches": true,
+            "drupal/core-composer-scaffold": true,
+            "drupal/core-project-message": true,
+            "phpstan/extension-installer": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "php-http/discovery": true,
+            "tbachert/spi": true
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "drupal-scaffold": {
+            "locations": {
+                "web-root": "web/"
+            }
+        },
+        "installer-paths": {
+            "web/core": ["type:drupal-core"],
+            "web/libraries/{$name}": [
+                "type:drupal-library",
+                "type:npm-asset",
+                "type:bower-asset"
+            ],
+            "web/modules/contrib/{$name}": ["type:drupal-module"],
+            "web/profiles/contrib/{$name}": ["type:drupal-profile"],
+            "web/themes/contrib/{$name}": ["type:drupal-theme"],
+            "drush/Commands/contrib/{$name}": ["type:drupal-drush"]
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Drupal\\example_module\\": "web/modules/custom/example_module/src/",
+            "Drupal\\example_theme\\": "web/themes/custom/example_theme/src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Drupal\\Tests\\example_module\\": "web/modules/custom/example_module/tests/src/",
+            "Drupal\\Tests\\example_theme\\": "web/themes/custom/example_theme/tests/src/"
+        }
+    },
+    "scripts": {
+        "test:unit": "phpunit --testsuite=unit"
+    }
+}

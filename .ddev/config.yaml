@@ -1,0 +1,52 @@
+# DDEV configuration for the drupal-skeleton testbed.
+#
+# This stack is the lessons-learned default. Notes inline are
+# deliberate; future you (or a teammate) needs the WHY of each
+# choice, not just the value.
+
+name: drupal-skeleton
+type: drupal11
+
+# ─── Application root ────────────────────────────────────────────────
+docroot: web
+
+# ─── PHP / DB / web server ───────────────────────────────────────────
+php_version: "8.3"
+database:
+  type: mariadb
+  version: "11.4"
+
+# nginx-fpm is fine for local. Production behind Traefik has
+# historically hit "service can't reach upstream" friction with
+# nginx-served containers; if you deploy to that topology, switch
+# this (and the compose stack on the host) to apache-fpm to avoid
+# rewriting Traefik labels later. New properties intended for
+# production from day one should start on apache-fpm.
+webserver_type: nginx-fpm
+
+# ─── Performance ─────────────────────────────────────────────────────
+# Mutagen makes file sync between host and container nearly invisible
+# on Win+WSL/macOS hosts. Worth it almost always.
+performance_mode: mutagen
+
+# ─── Tooling versions ────────────────────────────────────────────────
+composer_version: "2"
+nodejs_version: "20"
+
+# ─── Routing ─────────────────────────────────────────────────────────
+router_http_port: "80"
+router_https_port: "443"
+
+# ─── Optional ports (uncomment when needed) ──────────────────────────
+# Vite dev server — reachable from host at https://<project>.ddev.site:5173
+# web_extra_exposed_ports:
+#   - name: vite
+#     container_port: 5173
+#     http_port: 5172
+#     https_port: 5173
+
+# ─── Hooks (keep minimal; everything heavy lives in scripts/) ────────
+hooks:
+  post-start:
+    - exec: php -v
+    - exec: composer --version

@@ -1,0 +1,19 @@
+<?php
+
+/**
+ * @file
+ * Skeleton module — rename and fill in.
+ *
+ * Hook implementations live here. The minimum viable file is empty
+ * (just this docblock); add hooks as the module grows. Common
+ * scaffolding starting points:
+ *
+ *   - hook_help()                — point users at admin/help/<module>
+ *   - hook_entity_insert/update  — react to content lifecycle
+ *   - hook_cron()                — periodic background work
+ *   - hook_theme()               — register theme functions
+ *
+ * For services, prefer DI via services.yml over global functions.
+ */
+
+declare(strict_types=1);

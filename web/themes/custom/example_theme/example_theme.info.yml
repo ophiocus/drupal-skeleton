@@ -1,0 +1,30 @@
+name: 'Example Theme'
+type: theme
+description: 'Skeleton theme — rename and fill in. Olivero child by default; detach by removing the `base theme` line.'
+core_version_requirement: ^11
+package: Custom
+
+# Olivero child = inherit Drupal's modern default theme, override
+# only what you need. To start fresh from `stable9`, swap the line
+# below; to detach entirely, remove it (you become responsible for
+# every region a Drupal page expects).
+base theme: olivero
+
+libraries:
+  - example_theme/global
+
+# Theme regions: flat key→label mapping. Battle scar §8: nested
+# label/description structure crashes block module's region rebuild.
+regions:
+  header: 'Header'
+  primary_menu: 'Primary menu'
+  secondary_menu: 'Secondary menu'
+  highlighted: 'Highlighted'
+  breadcrumb: 'Breadcrumb'
+  hero: 'Hero'
+  content_above: 'Content above'
+  content: 'Content'
+  sidebar: 'Sidebar'
+  content_below: 'Content below'
+  footer_top: 'Footer top'
+  footer_bottom: 'Footer bottom'

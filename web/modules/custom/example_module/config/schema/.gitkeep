@@ -1,0 +1,6 @@
+# Placeholder — typed-config schemas live here. Drupal validates
+# every config write against these schemas, so any config you ship
+# in ../install/ needs a matching schema file in this directory.
+#
+# File naming: example_module.schema.yml (one file per module is
+# the convention; multi-file is allowed).

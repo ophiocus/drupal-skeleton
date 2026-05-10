@@ -1,0 +1,29 @@
+/* example_theme global styles — rename and fill in.
+ *
+ * Olivero's own CSS handles the bulk of the visual baseline; this
+ * file is for project-specific overrides. Keep things small and
+ * scoped — cascade conflicts with Olivero are common and tedious
+ * to debug.
+ *
+ * Conventions:
+ *   - One concern per file when it grows beyond ~200 lines; split
+ *     and add libraries in *.libraries.yml.
+ *   - CSS custom properties for tokens (--color-primary, etc.).
+ *   - No !important unless you've genuinely exhausted alternatives.
+ */
+
+:root {
+  --example-theme-pad: 1rem;
+}
+
+.layout-container {
+  /* example placeholder — replace with real layout primitives */
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100vh;
+}
+
+.site-main {
+  padding: var(--example-theme-pad);
+  flex: 1;
+}

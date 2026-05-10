@@ -1,0 +1,17 @@
+# Service definitions for example_module.
+#
+# Pattern: every module gets its own logger channel (so its log
+# messages are filterable in admin/reports/dblog). Your real
+# services depend on that channel via DI.
+
+services:
+  # Per-module logger channel. Inject as @logger.channel.example_module.
+  logger.channel.example_module:
+    parent: logger.channel_base
+    arguments: ['example_module']
+
+  # Example DI'd service. Replace with your actual service class.
+  example_module.greeter:
+    class: Drupal\example_module\Service\Greeter
+    arguments:
+      - '@logger.channel.example_module'
