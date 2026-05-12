@@ -46,5 +46,4 @@ test/smoke.test.ts ← vitest smoke
   — when you rename the theme, update that path.
 - `outDir` is wiped on every build; keep nothing precious in `dist/`.
 - `manualChunks` and code-splitting are not configured by default.
-  The reference project (`drupal-three-js-theme`) added them when
-  it crossed ~500 KB; do the same when you cross that threshold.
+  Add them when the bundle crosses ~500 KB.

@@ -3,15 +3,13 @@
 A starting point for any Drupal 11 module or theme intended to live —
 contrib-grade, test-covered, DDEV-housed from day one.
 
-The skeleton was reduced from the lessons learned building
-`drupal-three-js-theme` (the Site-as-World theme + `world_signature`
-cypher module). What you find here is the cross-cutting *foundation*
-that survived: the DDEV stack, the composer baseline, the autoload
-conventions, the docs/decision-log scaffold, and a complete inventory
-of battle-scars in `docs/BATTLE_SCARS.md`. Project-shaped specifics
-(MongoDB, RESTHeart, AI providers, three.js, descriptor schemas) are
-deliberately **not** here — those are decisions the next project
-makes for itself.
+The skeleton holds the cross-cutting *foundation* that earns its
+place on every new Drupal project: the DDEV stack, the composer
+baseline, the autoload conventions, the docs/decision-log scaffold,
+and a running inventory of battle-scars in `docs/BATTLE_SCARS.md`.
+Project-shaped specifics (DB vendor, AI providers, JS pipeline,
+domain schemas) are deliberately **not** here — those are decisions
+the next project makes for itself.
 
 ## What's in the box
 
@@ -85,10 +83,9 @@ for the bodies that taught it.
 ## What this skeleton is *not*
 
 - Not a `drush si` profile; you still install Drupal yourself.
-- Not opinionated about your data layer. (The reference project
-  used MongoDB Atlas + RESTHeart; the next might use Postgres + a
-  REST module + nothing exotic. Decide for your project, document
-  in PROTOCOL.md.)
+- Not opinionated about your data layer. Postgres, MariaDB,
+  MongoDB-via-gateway, plain REST — decide for your project and
+  document the choice in PROTOCOL.md.
 - Not a frontend stack picker. The `optional/vite-bundle/` is for
   themes that want modern JS (Vite + TypeScript + Vitest); plenty
   of themes don't need it.
@@ -97,9 +94,3 @@ for the bodies that taught it.
   short-lived *prototyping testbeds*. This skeleton is for things
   intended to outlast their first sprint.
 
-## Provenance
-
-Distilled from `drupal-three-js-theme` between 2026-05-04 and
-2026-05-10. The source project's deeper docs (`THESIS.md`,
-`docs/ARCHITECTURE.md`, `docs/HTML_SURFACES.md`) are project-shape
-specific and stay there. What survived the reduction is here.

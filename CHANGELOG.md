@@ -7,8 +7,7 @@ you whether the foundation you cloned is recent enough.
 
 ## 2026-05-10 — initial reduction
 
-Distilled from `drupal-three-js-theme` between 2026-05-04 and
-2026-05-10. What earned permanent residence:
+What earned permanent residence in the skeleton:
 
 - **DDEV stack baseline.** PHP 8.3, MariaDB 11.4, nginx-fpm with
   apache-fpm fallback notes, mutagen, Composer 2, Node 20.
