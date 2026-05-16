@@ -117,4 +117,20 @@ Reason: Drupal core's own bootstrap; failing-on-warning catches
 deprecations early; risky-test failures catch tests that don't
 actually assert anything.
 
+### D6 — Production container base image pinning
+
+Answer: `FROM drupal:11-php8.3-apache` — never the floating
+`drupal:11-apache` meta-tag.
+
+Reason: The unversioned `drupal:11-apache` tag tracks whatever PHP
+version the Drupal maintainers default to. Today that's 8.3; when
+they advance it to 8.4, every property silently rolls forward on
+next `docker compose pull` — likely fine, occasionally a problem
+(contrib module compatibility, JIT changes, deprecations). The
+explicit `php8.3-apache` tag still tracks 8.3.x patch releases
+(security fixes apply automatically) but won't cross the 8.4
+boundary without a deliberate edit. Local DDEV matches via
+`php_version: "8.3"`. Codified 2026-05-15 as platform-wide standard;
+see webrunners `docs/PROPERTY_PROTOCOL.md` §1a.
+
 <!-- Append project-specific decisions below this line. -->
