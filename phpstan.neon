@@ -1,0 +1,14 @@
+# PHPStan for custom code — mirrors the Drupal.org GitLab CI default.
+# The phpstan-drupal extension is auto-registered via
+# phpstan/extension-installer (allowed in composer config). Run with
+# `composer stan`.
+parameters:
+  level: 1
+  paths:
+    - web/modules/custom
+    - web/themes/custom
+  excludePaths:
+    - '*/tests/fixtures/*'
+    - '*/js/vendor/*'
+  drupal:
+    drupal_root: web

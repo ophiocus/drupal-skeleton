@@ -5,6 +5,25 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-05-22 — linting/sniffing as standard
+
+Code quality is now built in, not bolted on — every project minted
+from the skeleton lints from day one (distilled while prepping a module
+for Drupal.org, where the GitLab CI runs exactly these checks).
+
+- **`drupal/coder` (phpcs Drupal + DrupalPractice)** + **`mglaman/phpstan-drupal`**
+  + **`phpstan/extension-installer`** added to `require-dev`. The
+  phpcs + phpstan composer plugins were already allowed; now the tools
+  that use them ship too.
+- **`phpcs.xml.dist`** — Drupal + DrupalPractice over `web/modules/custom`
+  + `web/themes/custom`; excludes vendor/contrib/core/node_modules and
+  any `js/vendor` third-party bundles.
+- **`phpstan.neon`** — level 1 (the Drupal.org default for new projects),
+  `drupal_root: web`, scoped to custom code.
+- **Composer scripts:** `composer cs` (sniff), `composer cbf` (auto-fix),
+  `composer stan` (analyse), `composer lint` (cs + stan). Run them before
+  every commit; they are the same gates Drupal.org enforces.
+
 ## 2026-05-10 — initial reduction
 
 What earned permanent residence in the skeleton:

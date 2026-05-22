@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="drupal-skeleton">
+  <description>
+    PHP_CodeSniffer ruleset — Drupal + DrupalPractice standards for this
+    project's custom code. Run with `composer cs` (report) or
+    `composer cbf` (auto-fix). Contrib/core and any vendored third-party
+    bundles are excluded — they are not ours to restyle.
+  </description>
+
+  <!-- Lint only custom code. -->
+  <file>web/modules/custom</file>
+  <file>web/themes/custom</file>
+
+  <rule ref="Drupal"/>
+  <rule ref="DrupalPractice"/>
+
+  <!-- PHP + Drupal config/markup. JS/CSS are linted by eslint/stylelint
+       (core's configs), whose toolchains understand modern ES + the
+       theme's stylesheets better than phpcs's sniffs. -->
+  <arg name="extensions" value="php,module,install,inc,profile,theme,engine,yml"/>
+  <arg name="colors"/>
+  <arg value="sp"/>
+
+  <exclude-pattern>*/node_modules/*</exclude-pattern>
+  <exclude-pattern>*/vendor/*</exclude-pattern>
+  <exclude-pattern>*/js/vendor/*</exclude-pattern>
+  <exclude-pattern>*/dist/*</exclude-pattern>
+</ruleset>
