@@ -232,3 +232,24 @@ volume-mounted and Mutagen doesn't see it.
 
 <!-- Append new scars below this line. Date them. Mark
      supersession explicitly: "§17 supersedes §3." -->
+
+## Composer: contrib needs the drupal.org repository (2026-05)
+
+A fresh skeleton could `composer install` core but `composer require
+drupal/<any-contrib>` failed with "Could not find package" — composer.json had
+no `repositories` entry. Drupal *core* packages mirror to Packagist, but
+**contrib lives only on packages.drupal.org**. Every real project needs contrib,
+so the repo is now baked in:
+`"repositories": { "drupal": { "type": "composer", "url": "https://packages.drupal.org/8" } }`.
+
+## DDEV: use `type: drupal`, not `type: drupal11` (2026-05)
+
+`type: drupal11` is rejected by DDEV older than the release that introduced it —
+seen failing on DDEV v1.23.5 with "invalid app type: drupal11". The
+version-agnostic `type: drupal` auto-detects the core version and is portable
+across DDEV releases. Skeleton now ships `type: drupal`.
+
+## Composer: PHPUnit tracks Drupal core-dev (2026-05)
+
+`drupal/core-dev ^11.3` (>= 11.3.3) requires `phpunit/phpunit ^11.5`; pinning
+`^10.5` makes `composer install` unsolvable. Bumped to `^11.5` (see PROTOCOL D13).

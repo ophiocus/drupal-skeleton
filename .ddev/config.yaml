@@ -5,7 +5,7 @@
 # choice, not just the value.
 
 name: drupal-skeleton
-type: drupal11
+type: drupal
 
 # ─── Application root ────────────────────────────────────────────────
 docroot: web

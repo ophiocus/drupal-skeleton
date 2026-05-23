@@ -134,3 +134,26 @@ boundary without a deliberate edit. Local DDEV matches via
 see webrunners `docs/PROPERTY_PROTOCOL.md` §1a.
 
 <!-- Append project-specific decisions below this line. -->
+
+### D13 — Test runner version (supersedes D5)
+
+Answer: PHPUnit 11.5.
+
+Reason: Drupal 11.3.3+ core-dev requires `phpunit/phpunit ^11.5`; the prior
+`^10.5` pin (D5) makes `composer install` unsolvable on current Drupal 11.3.
+D13 supersedes D5.
+
+### D14 — Contrib repository
+
+Answer: Bundle the `packages.drupal.org/8` composer repository.
+
+Reason: Contrib modules are not on Packagist; without the drupal.org repo a
+project installs core but no contrib. Baked in so every spawned project can
+`composer require drupal/<contrib>` immediately.
+
+### D15 — DDEV project type
+
+Answer: `type: drupal` (version-agnostic).
+
+Reason: `type: drupal11` is rejected by older DDEV (v1.23.5); `type: drupal`
+is portable and auto-detects core 11.
