@@ -13,15 +13,27 @@ base theme: olivero
 libraries:
   - example_theme/global
 
-# Theme regions: flat key→label mapping. Battle scar §8: nested
-# label/description structure crashes block module's region rebuild.
+# ── Regions: LOAD-BEARING. Do not delete this block. ────────────────
+# A sub-theme does NOT inherit its base theme's regions (§17). Omit
+# this and the theme silently falls back to Drupal's DEFAULT region
+# list — which has `sidebar_first` but none of Olivero's
+# `content_above` / `content_below` / `hero` / `social` / `sidebar`.
+# Blocks placed in those regions are then disabled and moved to
+# `sidebar_first` by block_rebuild() on every cache rebuild.
+#
+# Flat key→label mapping only — nested label/description structure
+# crashes the block module's region rebuild (§8).
+#
+# Mirrors core/themes/olivero/olivero.info.yml. If you change
+# `base theme`, re-mirror this list from the new base theme.
 regions:
   header: 'Header'
   primary_menu: 'Primary menu'
   secondary_menu: 'Secondary menu'
+  hero: 'Hero'
   highlighted: 'Highlighted'
   breadcrumb: 'Breadcrumb'
-  hero: 'Hero'
+  social: 'Social bar'
   content_above: 'Content above'
   content: 'Content'
   sidebar: 'Sidebar'

@@ -253,3 +253,39 @@ across DDEV releases. Skeleton now ships `type: drupal`.
 
 `drupal/core-dev ^11.3` (>= 11.3.3) requires `phpunit/phpunit ^11.5`; pinning
 `^10.5` makes `composer install` unsolvable. Bumped to `^11.5` (see PROTOCOL D13).
+
+## §17 — Sub-themes do not inherit base-theme regions (2026-07)
+
+**§17 extends §8: same `regions:` key, opposite failure mode. §8 is getting the
+structure wrong; §17 is leaving it out.**
+
+Symptom: blocks a sub-theme ships in its own `config/install` come up
+**disabled and sitting in `sidebar_first`**, whatever region the YAML asked for.
+Re-placing them by hand — `setRegion()` + `setStatus(TRUE)` + `save()` —
+reports success and then reverts on the next `drush cr`. It reads like a
+per-block config bug. It isn't.
+
+Cause: a theme that declares no `regions:` key does **not** inherit its base
+theme's regions. It falls back to Drupal's *default* region list
+(`ThemeExtensionList::$defaults`), which contains `sidebar_first`,
+`sidebar_second`, `content`, `header`, `primary_menu`, `secondary_menu`,
+`highlighted`, `breadcrumb`, `help`, `footer`, `page_top`, `page_bottom` — and
+**none** of Olivero's own regions (`content_above`, `content_below`, `hero`,
+`social`, `sidebar`, `footer_top`, `footer_bottom`). A block in a region the
+theme doesn't have is invalid, so `block_rebuild()` disables it and relocates it
+to the fallback region — every cache rebuild, undoing any manual fix.
+
+The diagnostic tell is **partial** success: blocks in `header`, `content`,
+`primary_menu`, `highlighted` work fine, because those names exist in *both*
+lists. Only the base-theme-specific regions break. That split is the fingerprint
+— if some blocks place correctly and others always land in `sidebar_first`,
+suspect the region list, not the blocks.
+
+Fix: declare the full region list in the sub-theme's `.info.yml`, mirrored from
+the base theme's `.info.yml`. The skeleton ships this already; the comment above
+it is a warning, not decoration. Two corollaries:
+
+- **Re-mirror when you change `base theme`.** The list is a copy, not a link.
+- **Verify rather than trust:** `system_region_list('<theme>')` returns what the
+  theme actually has. Compare it against the base theme's `.info.yml` before
+  debugging individual blocks.
