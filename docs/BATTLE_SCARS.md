@@ -323,10 +323,21 @@ green.
 2. **Verify the installed version, never just the lock.** After any security
    update, confirm with something that reads the running code
    (`drush status --field=drupal-version`), not only `composer audit`.
-3. **Pin with `~`, not `^`, when the intent is a patch-level security bump.**
+3. **Pin deliberately during a security bump — and verify the fix is reachable.**
    `^11.3.14` legitimately resolves to `11.4.4` — a *minor* upgrade. That may be
-   fine deliberately, but a security patch silently becoming a minor upgrade is not
-   what you want under incident pressure. Use `~11.3.14` to stay on the branch.
+   fine, but a security patch silently becoming a minor upgrade is not what you
+   want under incident pressure. `~11.3.14` scopes it to the branch.
+
+   **Do not make `~` a blanket rule.** Tilde constrains you to one minor branch, so
+   it will happily *block* the very fix you are chasing when the patch lands only on
+   a later minor — or when that branch reaches end-of-life and stops receiving
+   security releases at all. Drupal supports a limited window of minor branches; a
+   project parked on `~` quietly stops getting fixes, and audits clean while doing it.
+
+   The rule is therefore: **find which version actually carries the fix, then choose
+   the constraint that reaches it** — `~` when the patch is on your branch and you
+   want a scoped change, `^` or an explicit bump when the fix only exists further
+   ahead. Decide it; do not inherit it from a default.
 
 **Applies to:** every Drupal project on this stack. The broader gap this exposed —
 that nothing schedules or enforces `composer audit` across properties — is tracked
