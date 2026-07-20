@@ -289,3 +289,45 @@ it is a warning, not decoration. Two corollaries:
 - **Verify rather than trust:** `system_region_list('<theme>')` returns what the
   theme actually has. Compare it against the base theme's `.info.yml` before
   debugging individual blocks.
+
+## §18 — A blocked Composer plugin can make a security update lie (2026-07)
+
+Drupal core **>= 11.3.12 pulls `symfony/runtime`**, which is a Composer *plugin*.
+If it is not in `config.allow-plugins`, `composer require` fails with:
+
+```
+symfony/runtime contains a Composer plugin which is blocked by your allow-plugins
+config. You may add it to the list if you consider it safe.
+```
+
+That error is survivable on its own. The dangerous part is **what state it leaves
+behind**: Composer had already resolved and **written the new versions to
+`composer.lock`** before the plugin gate stopped the vendor install. So afterwards:
+
+- `composer audit --locked` reads the *lock* and reports **"No security
+  vulnerability advisories found."**
+- `drush status` reads the *installed code* and still reports the **old, vulnerable
+  version**.
+
+A security update therefore *looks applied and is not*, and the one command you
+would naturally use to confirm it agrees with you. This surfaced while patching a
+core carrying an XSS and an SSRF — precisely the moment you least want a false
+green.
+
+**Fixes, in order:**
+
+1. The skeleton now ships `"symfony/runtime": true` in `allow-plugins`, so new
+   projects never hit the gate. Existing projects:
+   `composer config --no-plugins allow-plugins.symfony/runtime true`, then
+   `composer install` to actually land the already-locked versions.
+2. **Verify the installed version, never just the lock.** After any security
+   update, confirm with something that reads the running code
+   (`drush status --field=drupal-version`), not only `composer audit`.
+3. **Pin with `~`, not `^`, when the intent is a patch-level security bump.**
+   `^11.3.14` legitimately resolves to `11.4.4` — a *minor* upgrade. That may be
+   fine deliberately, but a security patch silently becoming a minor upgrade is not
+   what you want under incident pressure. Use `~11.3.14` to stay on the branch.
+
+**Applies to:** every Drupal project on this stack. The broader gap this exposed —
+that nothing schedules or enforces `composer audit` across properties — is tracked
+as a separate fleet-level concern, not solved here.
