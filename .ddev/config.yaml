@@ -50,3 +50,7 @@ hooks:
   post-start:
     - exec: php -v
     - exec: composer --version
+  post-pull:
+    # Any provider's pull re-imports a remote DB whose cache_discovery may point at
+    # code that differs locally → Drupal 500s until cache is rebuilt. Rebuild on pull.
+    - exec: drush cache:rebuild
