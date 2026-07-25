@@ -9,8 +9,9 @@
     is set up to extend cleanly.
 
     Run from project root inside DDEV:
-        ddev exec ../vendor/bin/phpunit
-        ddev exec ../vendor/bin/phpunit --testsuite=unit  (explicit)
+        ddev exec vendor/bin/phpunit
+    The `unit` suite is the default, so no suite flag is needed. Pass a
+    suite name via the testsuite option once more suites are enabled.
 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
