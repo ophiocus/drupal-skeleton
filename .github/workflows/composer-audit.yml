@@ -1,0 +1,43 @@
+name: Composer audit
+
+# Fail CI when composer.lock carries a known security advisory in a production
+# dependency. Baked into the skeleton so every property minted from it inherits
+# the gate BY CONSTRUCTION — rather than having it bolted on by hand per-property,
+# which is exactly how coverage drifts (some properties get it, some silently
+# don't, and the one that doesn't is the one that ships a vulnerable image).
+#
+# Two triggers, two jobs of the same check:
+#   - push / pull_request: the GATE. A vulnerable lock cannot merge or (with a
+#     build workflow that needs this) deploy.
+#   - schedule: DETECTION when nobody touches composer. Advisories are published
+#     against code that was clean when it merged; a weekly run surfaces them, and
+#     a failed scheduled workflow notifies the repo owner (somewhere a human
+#     actually looks) without anyone having to run composer by chance.
+
+on:
+  push:
+    branches:
+      - master
+      - 'dev/**'
+  pull_request:
+  schedule:
+    # Weekly, Monday 06:17 UTC. Off the hour to avoid the cron thundering herd.
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # --locked   : audit composer.lock alone — no `composer install`, no PHP
+      #              extension setup needed; the GHA-provided composer suffices.
+      # --no-dev   : test/build tooling never reaches the runtime image, so a
+      #              dev-only advisory should not fail a production gate.
+      # --abandoned=report : abandoned packages warn, they do not fail the gate.
+      - name: composer audit (production deps)
+        run: composer audit --no-dev --abandoned=report --format=plain --locked

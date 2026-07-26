@@ -16,6 +16,7 @@ the next project makes for itself.
 ```
 drupal-skeleton/
 ├── .ddev/config.yaml                 ← PHP 8.3, MariaDB 11.4, nginx-fpm, mutagen, Composer 2, Node 20
+├── .github/workflows/composer-audit.yml ← inherited security gate: fails CI on a vulnerable composer.lock (push/PR + weekly)
 ├── composer.json                     ← Drupal 11.3 + drush + devel; min-stability dev + prefer-stable; PSR-4 autoload
 ├── phpunit.xml.dist                  ← unit suite, ready for `ddev exec ../vendor/bin/phpunit`
 ├── docs/
@@ -28,6 +29,22 @@ drupal-skeleton/
 
 The module and the theme are independent — keep one, both, or
 neither (delete the directory; nothing else references it).
+
+### Inherited security gate
+
+`.github/workflows/composer-audit.yml` ships with the skeleton so every property
+minted from it is covered **by construction**, not by remembering to bolt an audit
+step onto each property's build workflow later. It runs `composer audit --no-dev
+--locked` and:
+
+- **fails the build** on push / PR when `composer.lock` carries a known advisory in
+  a production dependency — a vulnerable lock cannot merge;
+- **runs weekly on a schedule**, so an advisory published *after* code merged is
+  surfaced (a failed scheduled run notifies the repo owner) without waiting for
+  someone to touch composer by chance.
+
+If a property also has a build-and-push workflow, keep an audit step there too as a
+hard pre-deploy gate — this standalone workflow is the floor, not the ceiling.
 
 ## Quickstart
 

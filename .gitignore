@@ -39,6 +39,7 @@ Thumbs.db
 
 # --- Test / coverage outputs ----------------------------------------
 /.phpunit.result.cache
+/.phpunit.cache/
 /coverage/
 
 # --- Secrets — belt-and-suspenders for the careless `git add .` -----
