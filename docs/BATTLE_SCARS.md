@@ -342,3 +342,59 @@ green.
 **Applies to:** every Drupal project on this stack. The broader gap this exposed —
 that nothing schedules or enforces `composer audit` across properties — is tracked
 as a separate fleet-level concern, not solved here.
+
+## §19 — `allow-plugins: false` is not "skip it", and a green build is not a healthy site (2026-07)
+
+**§19 extends §18: same `symfony/runtime` plugin gate, one step further down the
+road.** §18 is what happens when the gate *blocks* the install. §19 is what
+happens when you "fix" the gate the wrong way.
+
+A property deployed with a **green CI run** and then served a PHP fatal on
+**every request for ~3.5 days**. CI reported success the entire time.
+
+```
+require(/opt/drupal/web/../vendor/autoload_runtime.php):
+  Failed to open stream: No such file or directory
+```
+
+Facing §18's blocked-plugin error under time pressure, the install was unblocked
+with `"symfony/runtime": false` instead of `true`. That resolves the error — and
+it is the wrong value. **`false` installs the package and disables its plugin**,
+and that plugin is precisely what generates `vendor/autoload_runtime.php`, which
+core's scaffolded `web/index.php` requires. So `composer install` exits 0, the
+image builds perfectly, and the container cannot serve a single request.
+
+Two rules:
+
+1. **`allow-plugins: false` does not mean "skip this dependency".** It means
+   *install it, but do not let it run*. When a plugin's job is to generate build
+   artefacts, disabling it silently removes those artefacts and nothing warns
+   you. Use `true` unless you know exactly what the plugin does and are certain
+   you don't need its output.
+2. **Gate deploys on an HTTP health check, not on the build.** A build proves
+   `composer install` succeeded. It says nothing about whether the container
+   serves. The decisive detail: **the broken site answered HTTP 200 with a
+   500-byte body**, so a plain status check would have gone green too.
+
+The gate that catches this asserts three things after deploy — status, a
+plausible body size, and the absence of fatal markers — with retries so the
+container can settle:
+
+```yaml
+- name: Post-deploy health check
+  if: github.ref == 'refs/heads/master'
+  env:
+    HEALTH_URL: https://example.com    # this property's public URL
+    MIN_BYTES: '5000'
+  run: |
+    code=$(curl -sL -o /tmp/h.html -w '%{http_code}' --max-time 25 "$HEALTH_URL")
+    bytes=$(wc -c < /tmp/h.html | tr -d ' ')
+    fatal=$(grep -ciE 'Fatal error|Uncaught (Error|Exception)' /tmp/h.html || true)
+    # All three, or fail: status AND size AND no fatal markers.
+```
+
+**Applies to:** every property whose CI deploys. Exercise all three branches
+locally before trusting the gate — a healthy page, an undersized page, and a
+page carrying a fatal — not just the happy one. (Writing this entry via a shell
+heredoc ate every backtick and code fence in it; see §1. Author docs with a file
+write, not a heredoc through three shells.)
