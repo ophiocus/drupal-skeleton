@@ -1,0 +1,64 @@
+# Production stack for one property — runs on the host, one directory per
+# property (e.g. /srv/<platform>/sites/<apex>/), next to a `.env` built from
+# deploy/.env.example. Every per-property value is interpolated from that
+# .env, so this file is committed verbatim and identical across properties.
+#
+#   docker compose pull && docker compose up -d      # release
+#   docker compose exec -T drupal drush deploy -y    # updb + cim + cr
+#
+# The image is what CI pushed (see .github/workflows/build-and-push.yml);
+# nothing is built on the host. State lives in ./data/ (bind mounts) so
+# `docker compose down` + `up` is lossless and backups are a directory copy.
+
+name: ${COMPOSE_PROJECT_NAME:?set COMPOSE_PROJECT_NAME in .env}
+
+services:
+  drupal:
+    image: ${IMAGE:?set IMAGE in .env}
+    restart: unless-stopped
+    expose: ["80"]
+    volumes:
+      - ./data/drupal-files:/opt/drupal/web/sites/default/files
+      - ./data/drupal-private:/opt/drupal/private
+    env_file: [.env]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - edge
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${EDGE_NETWORK:-edge}"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${APEX:?set APEX in .env}`) || Host(`www.${APEX}`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls=true"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80"
+
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    volumes:
+      - ./data/db:/var/lib/mysql
+    env_file: [.env]
+    networks:
+      - default
+    healthcheck:
+      # $$ escapes compose interpolation — the shell inside the container
+      # expands MARIADB_ROOT_PASSWORD from its own environment.
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p\"$$MARIADB_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+networks:
+  # The reverse proxy's shared network, created once per host
+  # (`docker network create <name>`); every property attaches to it.
+  edge:
+    external: true
+    name: ${EDGE_NETWORK:-edge}
+  # Private app<->db network; nothing else can reach the DB.
+  default:
+    driver: bridge

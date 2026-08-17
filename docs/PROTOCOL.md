@@ -171,3 +171,26 @@ and keeps toolchains installable. Pin a specific line, never `lts/*`, so two
 clones on different days build the same assets. The same rule applies to CI:
 every GitHub Action `uses:` stays on its Node-24 major (checkout@v7 …);
 GitHub deprecated the Node 20 action runtime in 2025-09.
+
+### D17 — Production deploy scaffold ships with the skeleton (supersedes D3)
+
+Answer: `Dockerfile`, `.dockerignore`, `deploy/{docker-compose.yaml,
+.env.example, settings.prod.php, entrypoint.sh}`, `config/sync/` and
+`.github/workflows/build-and-push.yml` are part of the foundation and are
+used **unchanged** by every project minted from it. Per-property values live
+in the host `.env` and in three GitHub Actions settings (`PROD_URL`,
+`DEPLOY_HOST`, `VPS_DEPLOY_KEY`) — never edited into the files. Local DDEV
+runs `apache-fpm` to match the image (D3 said nginx-fpm locally + "switch
+before deploying"; that switch was the first thing to drift).
+
+Reason: the deploy path was the one part of a property that was copied by
+hand from a sibling and then evolved in place. Four properties, four
+Dockerfiles, three workflow variants, two of them without the health gate
+that had already saved a third. When the fix for a shared problem (an audit
+advisory, a deprecated action runtime, a missing bind-mount chown) has to be
+re-derived per property, it gets applied to some of them. Baking the path
+into the skeleton makes a new property correct by construction, and makes
+"what does the fleet's deploy look like?" a single file to read. The gates
+in the workflow — audit, image build, HTTP health — are the ones that have
+each caught a real incident (BATTLE_SCARS §18–§21). The contract is
+`docs/DEPLOY.md`.

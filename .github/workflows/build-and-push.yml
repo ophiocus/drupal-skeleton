@@ -1,0 +1,168 @@
+name: Build and push image
+
+# The production pipeline, shipped with the skeleton so every property minted
+# from it deploys the same way from its first push (PROTOCOL D17):
+#
+#   audit gate → build image → push to GHCR → deploy (dev/** or master)
+#              → post-deploy HTTP health gate
+#
+# Per-property values are NOT edited into this file. They come from the repo's
+# Actions configuration (Settings → Secrets and variables → Actions):
+#
+#   variable  PROD_URL      https://example.com   — enables the health gate
+#   variable  DEPLOY_HOST   user@host             — enables deploy steps
+#   secret    VPS_DEPLOY_KEY                      — SSH private key for DEPLOY_HOST
+#
+# Until DEPLOY_HOST is set, pushes still audit + build + push the image (so the
+# Dockerfile is proven in CI from day one) and the deploy/health steps skip.
+# The site slug used everywhere is the repository name — keep repo name,
+# image name and the host's compose directory naming aligned.
+#
+# The host side of the contract (a `deploy-prod <site>` / `deploy-dev <site>
+# <branch>` command reachable over SSH as DEPLOY_HOST) is platform
+# infrastructure, documented in docs/DEPLOY.md.
+
+on:
+  push:
+    branches:
+      - master
+      - 'dev/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Every `uses:` below is on its Node-24 major. GitHub deprecated the
+      # Node 20 action runtime (2025-09); older majors warn on every run and
+      # will hard-fail when Node 20 is removed. When bumping, verify the new
+      # major's action.yml says `using: node24` (or later).
+      - uses: actions/checkout@v7
+
+      # Production-only audit: skip dev-dep advisories (test tooling never
+      # reaches the runtime image), fail the build on any finding in packages
+      # that DO ship. `--locked` audits composer.lock alone via the runner's
+      # composer — no PHP extension setup, no install.
+      #
+      # This gate is fleet-wide by construction: the day an advisory lands
+      # against a shared runtime dep, EVERY property's next push stops here.
+      # Bump the lock in each property (BATTLE_SCARS §20).
+      - name: Composer audit (production deps)
+        run: composer audit --no-dev --abandoned=report --format=plain --locked
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch,prefix=
+            type=sha,enable={{is_default_branch}}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      # ─── Deploy ──────────────────────────────────────────────────────
+      # dev/<slug> branches get an ephemeral environment; master is production.
+      # Both call a host-side command over SSH; neither touches the DB volume.
+      # Schema-changing redeploys (sql:drop + si + recipe) stay an operator
+      # action — too destructive to gate behind a code push.
+      - name: Deploy to dev env
+        if: startsWith(github.ref, 'refs/heads/dev/') && vars.DEPLOY_HOST != ''
+        env:
+          DEPLOY_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+              "$DEPLOY_HOST" \
+              "deploy-dev ${{ github.event.repository.name }} ${{ github.ref_name }}"
+
+      # Production auto-deploy on push to master. deploy-prod on the host:
+      #   - docker compose pull   (the :latest image we just built)
+      #   - docker compose up -d  (recreates drupal container, volumes preserved)
+      #   - drush deploy --yes || drush cr   (idempotent reconciliation)
+      - name: Deploy to production
+        if: github.ref == 'refs/heads/master' && vars.DEPLOY_HOST != ''
+        env:
+          DEPLOY_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+              "$DEPLOY_HOST" \
+              "deploy-prod ${{ github.event.repository.name }} master"
+
+      # ─── Post-deploy health gate ──────────────────────────────────────
+      # A green image build proves `composer install` succeeded. It does NOT
+      # prove the container serves a page. A property once deployed green and
+      # then fataled on EVERY request for ~3.5 days (BATTLE_SCARS §19):
+      #
+      #   require(/opt/drupal/web/../vendor/autoload_runtime.php): No such
+      #   file or directory
+      #
+      # The decisive detail: the broken site answered HTTP **200** with a
+      # 500-byte body, so a plain status check would have gone green. This
+      # gate asserts three things — status, a plausible body size, and the
+      # absence of PHP fatal signatures — and fails the run if any is off.
+      - name: Post-deploy health check
+        if: github.ref == 'refs/heads/master' && vars.DEPLOY_HOST != '' && vars.PROD_URL != ''
+        env:
+          HEALTH_URL: ${{ vars.PROD_URL }}
+          MIN_BYTES: '5000'
+          ATTEMPTS: '10'
+          SLEEP_SECONDS: '15'
+        run: |
+          set -u
+          fail_body=""
+          for i in $(seq 1 "$ATTEMPTS"); do
+            code=$(curl -sL -o /tmp/health.html -w '%{http_code}' --max-time 25 "$HEALTH_URL" || echo 000)
+            bytes=$(wc -c < /tmp/health.html | tr -d ' ')
+            fatal=$(grep -ciE 'Fatal error|Uncaught (Error|Exception)|The website encountered an unexpected error' /tmp/health.html || true)
+
+            echo "attempt $i/$ATTEMPTS: http=$code bytes=$bytes fatal_markers=$fatal"
+
+            if [ "$code" = "200" ] && [ "$bytes" -ge "$MIN_BYTES" ] && [ "$fatal" = "0" ]; then
+              echo "::notice::Health check passed — $HEALTH_URL is serving ($bytes bytes)."
+              exit 0
+            fi
+
+            fail_body=$(head -c 800 /tmp/health.html)
+            # The container needs a moment after `docker compose up -d`.
+            sleep "$SLEEP_SECONDS"
+          done
+
+          echo "::error::Health check FAILED for $HEALTH_URL after $ATTEMPTS attempts."
+          echo "Last response: http=$code bytes=$bytes fatal_markers=$fatal"
+          echo "--- first 800 bytes of the response ---"
+          echo "$fail_body"
+          echo "---------------------------------------"
+          echo "The image built and deployed, but the site is not serving a"
+          echo "healthy page. Check the container log on the host:"
+          echo "  docker logs --tail 50 <compose-project>-drupal-1"
+          exit 1

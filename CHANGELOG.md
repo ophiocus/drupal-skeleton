@@ -5,6 +5,54 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-08-17 — production deploy scaffold, by construction
+
+Until now the skeleton stopped at "a module/theme in DDEV"; how a site
+reached production was copied property-to-property and drifted (four
+properties, four Dockerfiles, three workflow variants, two of them without
+a health gate). The skeleton now carries the whole path and is opinionated
+about it (PROTOCOL D17). Distilled from the properties that already run it;
+verified end-to-end locally — image build, `deploy/docker-compose.yaml` up
+against it, `drush site:install` through the stack, a real 200 page,
+wrong-Host → 400, `config:export` into `config/sync`.
+
+- **`Dockerfile` + `.dockerignore`** — multi-stage: composer `--no-dev`
+  from the committed lock in a build stage, clean runtime stage,
+  docroot `/opt/drupal/web`, drush on `PATH`, `deploy/settings.prod.php`
+  installed as `settings.php`, `PHP_MEMORY_LIMIT` build-arg (512M
+  default). Carries every Dockerfile lesson from the fleet as comments
+  (`--classmap-authoritative` is incompatible with Drupal; bcmath and
+  mariadb-client are absent from the base image but present in DDEV;
+  128M is below the `drush recipe` floor) plus one new: **git + unzip in
+  the build stage** — see BATTLE_SCARS §21.
+- **`deploy/docker-compose.yaml`** — the host stack (drupal + MariaDB
+  11.4, Traefik labels, external edge network, bind-mounted
+  `data/{db,drupal-files,drupal-private}`), 100 % interpolated from
+  `.env`, identical across properties. Adds a private-files volume the
+  fleet was missing.
+- **`deploy/.env.example`** — every key, grouped by who reads it.
+- **`deploy/settings.prod.php`** — env-driven DB, hash salt, trusted
+  hosts, private path; reverse-proxy headers; `config_sync_directory
+  = ../config/sync`; unusable fallback host so misconfiguration fails
+  loudly. Project settings go below a marker, env-driven the same way.
+- **`deploy/entrypoint.sh`** — re-asserts `www-data` ownership of the
+  bind-mounted `files/` and `private/` on every start (Docker creates
+  missing host dirs as root on first boot — BATTLE_SCARS §21). No manual
+  `chown 33:33` on first deploy any more.
+- **`.github/workflows/build-and-push.yml`** — audit gate → buildx →
+  GHCR → `deploy-dev` (dev/**) / `deploy-prod` (master) over SSH →
+  post-deploy HTTP health gate (status + body size + no fatal markers,
+  BATTLE_SCARS §19). Every `uses:` on a Node-24 major. Per-property values
+  come from repo Actions settings (`PROD_URL`, `DEPLOY_HOST`,
+  `VPS_DEPLOY_KEY`); deploy/health steps self-skip until they exist, so a
+  fresh clone builds and pushes its image from day one.
+- **`config/sync/.gitkeep`** — the deploy source of truth has a home.
+- **DDEV `webserver_type` nginx-fpm → apache-fpm** — parity with the
+  production image from day one (D17 supersedes D3).
+- **docs** — new `docs/DEPLOY.md` (repo ↔ CI ↔ host contract, what each
+  gate proves, first deploy, rollback, local parity); README section;
+  PROTOCOL D17; BATTLE_SCARS §21.
+
 ## 2026-08-17 — full-health baseline
 
 The weekly audit turned red on a runtime advisory (see BATTLE_SCARS §20);

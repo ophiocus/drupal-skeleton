@@ -16,13 +16,14 @@ database:
   type: mariadb
   version: "11.4"
 
-# nginx-fpm is fine for local. Production behind Traefik has
-# historically hit "service can't reach upstream" friction with
-# nginx-served containers; if you deploy to that topology, switch
-# this (and the compose stack on the host) to apache-fpm to avoid
-# rewriting Traefik labels later. New properties intended for
-# production from day one should start on apache-fpm.
-webserver_type: nginx-fpm
+# apache-fpm — parity with the production image (Dockerfile:
+# drupal:11-php8.3-apache) from day one, so .htaccess semantics, rewrite
+# behaviour and Traefik upstream routing are exercised locally exactly as
+# they run in prod (PROTOCOL D17 supersedes D3). nginx-fpm is marginally
+# lighter, and behind Traefik it historically hit "service can't reach
+# upstream" friction (BATTLE_SCARS §9); an editorial-only project that
+# will never ship an image may switch back.
+webserver_type: apache-fpm
 
 # ─── Performance ─────────────────────────────────────────────────────
 # Mutagen makes file sync between host and container nearly invisible

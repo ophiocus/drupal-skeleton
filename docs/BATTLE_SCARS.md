@@ -444,3 +444,51 @@ phpstan-drupal 2.1 (auto-discovered — delete it); Node 20 went EOL 2026-04-30
 DrupalPractice warning (inject via `create()`); an open `_access: 'TRUE'` route
 needs a comment saying why. None of these fails a build on its own; all of them
 get copied into every new project. Template code must sniff clean.
+
+## §21 — Two things the production image only gets wrong outside CI (2026-08)
+
+Both surfaced the first time the deploy scaffold was exercised **locally**,
+end-to-end, instead of only in GitHub Actions. Neither had ever failed in CI.
+Both are fixed in the skeleton's `Dockerfile` / `deploy/entrypoint.sh`.
+
+**1. `composer install` dies on a transient GitHub throttle if `git` is
+missing.** Dist zips come from `codeload.github.com`, which rate-limits by
+source IP. When it answers 429, composer does the right thing — falls back to
+cloning the package source — and the `drupal:*-apache` base image has no
+`git`, so the fallback dies:
+
+```
+Failed to download symfony/yaml from dist: … (HTTP/2 429 )
+Now trying to download from source
+In GitDownloader.php line 82:
+  git was not found in your PATH, skipping source download
+```
+
+…followed, confusingly, by composer printing the *usage* of `install` — the
+first visible symptom, and it looks like a syntax error, not a network one.
+Runner IPs rotate and are rarely throttled, which is why every property has
+built green for months; a workstation that had pulled the same 88 packages a
+few times that day was throttled on 13 of them. `apt-get install git unzip`
+in the build stage — cheap, and the fallback then works (verified: same
+build, 13 × 429, all 13 cloned, image built). unzip also spares composer the
+PHP-zip extraction path and its "permissions will be lost" warning.
+
+**2. Bind-mounted writable paths come up root-owned on first boot.** The
+image `chown -R www-data` s `sites/default/files` and `/opt/drupal/private`.
+The compose stack bind-mounts both from `./data/…` on the host. On the very
+first `up`, those host directories do not exist, Docker creates them as
+`root:root`, and the mount silently replaces the image's directory *and its
+ownership*. Apache then cannot write a single upload, aggregated CSS file or
+twig cache entry — while `drush` via `compose exec` (root) works perfectly,
+so `site:install`, `deploy` and `status` are all green and the site is broken
+for users only. The fleet had been papering over this with a manual `chown
+33:33 data/drupal-files` in the first-deploy runbook. Fix at source: an
+entrypoint that re-asserts ownership of the two mount points (top level only
+— non-recursive, so it costs nothing on a mature site) on every start, then
+execs the base image's entrypoint. First deploy needs no host-side chown.
+
+**Applies to:** every property. Exercise the deploy scaffold locally at least
+once per major change — `docker build`, `docker compose up` from
+`deploy/`, `drush site:install` through the stack, then a request *as
+Apache* (not as drush) — because CI proves the build and the health gate
+proves a page, and neither of them proves the file system.
