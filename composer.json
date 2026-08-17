@@ -15,8 +15,9 @@
         "php": ">=8.3",
         "composer/installers": "^2.0",
         "drupal/core-composer-scaffold": "^11.4",
-        "drupal/core-recommended": "^11.4",
         "drupal/core-project-message": "^11.4",
+        "drupal/core-recommended": "^11.4",
+        "drupal/symfony_mailer_lite": "^2.0",
         "drush/drush": "^13.0"
     },
     "require-dev": {

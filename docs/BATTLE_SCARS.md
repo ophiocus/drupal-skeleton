@@ -492,3 +492,51 @@ once per major change — `docker build`, `docker compose up` from
 `deploy/`, `drush site:install` through the stack, then a request *as
 Apache* (not as drush) — because CI proves the build and the health gate
 proves a page, and neither of them proves the file system.
+
+## §22 — A contact form that "works" and delivers nothing (2026-08)
+
+Three independent failures stack into one silent hole, and every layer reports
+success. Found on a live property that had been inviting enquiries for weeks.
+
+**1. The runtime image has no MTA.** `drupal:11-php8.3-apache` ships no
+sendmail, so PHP `mail()` cannot deliver. Drupal's contact form does not care:
+it shows the visitor **"Your message has been sent."** either way. Nothing in
+the UI, and nothing in a status check, distinguishes a delivered enquiry from a
+discarded one.
+
+**2. Installing an SMTP module does not route mail through it.**
+`symfony_mailer_lite`'s `hook_install` only registers itself as an *available*
+option (`mailsystem.settings` → `modules.symfony_mailer_lite.none`). The
+site-wide default stays:
+
+```
+defaults:
+  sender: php_mail
+  formatter: php_mail
+```
+
+So the module is enabled, the transport entity exists, the DSN is set — and
+every message still goes out through PHP `mail()`, ignoring all of it. You must
+assert `defaults.sender` **and** `defaults.formatter` yourself.
+
+**3. The dev box hides both of the above.** DDEV has a working sendmail wired to
+Mailpit. So the naive test — submit the form, see the message in Mailpit —
+**passes for the wrong reason**: it proves sendmail works, not that your
+transport is engaged. This nearly shipped as a validated standard. What exposed
+it was testing the *failure* direction: pointing the DSN at a dead port
+(`smtp://127.0.0.1:2599`) and finding the mail still arrived — proof the DSN was
+never consulted.
+
+**The test that actually proves it** is two-sided. Good relay → message lands,
+zero errors. Deliberately dead relay → the page must show an error, the inbox
+must **not** gain a message (`Connection refused` in dblog). If the broken case
+still reports success, the transport is not wired.
+
+**And check the domain receives at all:** `dig +short MX <apex>`. Empty means
+every address published on the site bounces — which was also true here, in a
+privacy policy that had been advertising a dead `privacy@` address in
+production.
+
+**Applies to:** every property that mails anything. Codified as PROTOCOL D18 +
+`scripts/setup_mail.php`; the trap is that all three failures are individually
+invisible and each one alone is enough to lose the mail.

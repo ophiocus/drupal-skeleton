@@ -113,3 +113,75 @@ docker run --rm -e DRUPAL_TRUSTED_HOSTS='^localhost$' -p 8080:80 mythingname:loc
 (No DB → Drupal will show the installer; the point is that the image boots,
 Apache serves `web/`, and drush is on `PATH`: `docker run --rm
 mythingname:local drush --version`.)
+
+## 6. Outbound mail
+
+**The runtime image has no MTA.** `drupal:11-php8.3-apache` ships no sendmail,
+so Drupal's default transport — PHP `mail()` — cannot deliver anything. Left
+alone, a site sends no password resets, no order receipts, and no contact-form
+enquiries. The contact form is the dangerous one: Drupal tells the visitor
+*"Your message has been sent"* whether or not a transport exists, so the failure
+is invisible from outside and the enquiry is simply lost.
+
+The skeleton wires this by default:
+
+| Piece | Where |
+| --- | --- |
+| `drupal/symfony_mailer_lite` (+ `mailsystem`) | `composer.json` |
+| A `dsn` transport entity `env`, dsn left **empty** in config | created by `scripts/setup_mail.php` |
+| mailsystem defaults pointed at `symfony_mailer_lite` | `scripts/setup_mail.php` — see the warning below |
+| Runtime DSN, From: address, contact recipient | `deploy/settings.prod.php`, from env |
+| `MAILER_DSN`, `SITE_MAIL`, `CONTACT_RECIPIENT` | `deploy/.env.example` → host `.env` |
+| Site-wide contact form at `/contact`, anonymous-accessible | `scripts/setup_mail.php` |
+
+Set it up on a new property with:
+
+```bash
+ddev drush php:script scripts/setup_mail.php   # idempotent
+ddev drush config:export -y                     # placeholders, never secrets
+```
+
+**One DSN carries the whole credential**, so nothing sensitive reaches
+`config/sync` — the committed transport keeps `dsn: ''` and
+`deploy/settings.prod.php` fills it at runtime. Any relay works:
+
+```
+MAILER_DSN=smtp://apikey:SG.xxxxxxxx@smtp.sendgrid.net:587
+MAILER_DSN=smtp://postmaster%40mg.example.com:pass@smtp.mailgun.org:587
+```
+
+URL-encode reserved characters in the password (`@` → `%40`, `/` → `%2F`).
+
+> **Installing the module is not the same as using it.** `symfony_mailer_lite`'s
+> `hook_install` only *registers* itself as an available option; the site-wide
+> default stays `php_mail`. Until `mailsystem.settings` `defaults.sender` and
+> `defaults.formatter` both say `symfony_mailer_lite`, your DSN is ignored and
+> mail silently goes back out through PHP `mail()`. `setup_mail.php` asserts
+> both. Verify with `drush cget mailsystem.settings defaults` — never assume.
+
+**`MAILER_DSN` is deliberately not defaulted to the `null` transport.** Unset, the
+site keeps the native transport and mail fails loudly in dblog. That noise is the
+feature; silencing it with `null` recreates the exact bug this section exists to
+prevent.
+
+### Verifying it actually delivers
+
+Testing on a dev box proves less than it appears: DDEV has a working sendmail
+that catches everything in Mailpit, so a message can arrive *without your
+transport being involved at all*. Test both directions:
+
+```bash
+# 1. good relay -> message lands, no errors
+ddev drush cset symfony_mailer_lite.symfony_mailer_lite_transport.env configuration.dsn 'smtp://localhost:1025' -y
+# submit /contact, then check Mailpit at :8026
+
+# 2. deliberately broken relay -> must NOT report success
+ddev drush cset symfony_mailer_lite.symfony_mailer_lite_transport.env configuration.dsn 'smtp://127.0.0.1:2599' -y
+# submit /contact: the page must show an error and Mailpit must NOT gain a message
+```
+
+If step 2 still says "Your message has been sent" and the mail still arrives,
+your transport is not wired — go back to the mailsystem defaults.
+
+Also check the apex actually **receives**: `dig +short MX example.com`. An empty
+result means every address you publish on the site bounces, contact form or not.

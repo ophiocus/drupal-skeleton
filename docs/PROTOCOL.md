@@ -194,3 +194,24 @@ into the skeleton makes a new property correct by construction, and makes
 in the workflow — audit, image build, HTTP health — are the ones that have
 each caught a real incident (BATTLE_SCARS §18–§21). The contract is
 `docs/DEPLOY.md`.
+
+### D18 — Outbound mail: one DSN, asserted defaults, loud failure
+
+Answer: `drupal/symfony_mailer_lite` with a single `dsn` transport entity whose
+`dsn` stays **empty in config** and is filled at runtime from `MAILER_DSN`.
+`scripts/setup_mail.php` creates it, points `mailsystem.settings` defaults at
+`symfony_mailer_lite`, and stands up the anonymous-accessible contact form at
+`/contact`. `SITE_MAIL` and `CONTACT_RECIPIENT` are env-driven too. With
+`MAILER_DSN` unset the site keeps the native transport and mail fails loudly —
+never the `null` transport.
+
+Reason: three things had to be true at once. **(1) No secret in git** — a DSN is
+one string, so unlike the `smtp` module's host/port/user/pass (which stores the
+password in `smtp.settings`, i.e. in `config/sync`) there is nothing to
+accidentally export. **(2) Provider-agnostic** — the same env var takes
+SendGrid, Mailgun, SES, Postmark or a plain relay, so switching providers is an
+`.env` edit, not a config change. **(3) Failure must be visible** — the runtime
+image has no MTA, and Drupal's contact form reports "Your message has been sent"
+regardless, so the default-off state has to be noisy rather than convenient.
+Chosen over `drupal/smtp` (password-in-config) and full `symfony_mailer`
+(replaces the mail API wholesale — more surface than a property needs).

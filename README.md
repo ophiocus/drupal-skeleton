@@ -25,6 +25,7 @@ drupal-skeleton/
 │   ├── .env.example                  ← every key the stack + image read; copy to .env on the host
 │   ├── settings.prod.php             ← tracked production settings.php, 100% env-driven, baked into the image
 │   └── entrypoint.sh                 ← fixes bind-mount ownership on start; no manual chown on first deploy
+├── scripts/setup_mail.php            ← idempotent: SMTP transport + /contact form, all secrets from env
 ├── config/sync/                      ← exported config = deploy source of truth (`drush deploy` imports it)
 ├── composer.json                     ← Drupal 11.4 + drush + devel; min-stability dev + prefer-stable; PSR-4 autoload
 ├── phpunit.xml.dist                  ← unit suite, ready for `ddev exec ../vendor/bin/phpunit`

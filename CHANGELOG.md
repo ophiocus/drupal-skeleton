@@ -5,6 +5,35 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-08-17 — outbound mail + contact form (PROTOCOL D18)
+
+The runtime image has no MTA, so every property minted so far could not send a
+single email — and a Drupal contact form says "Your message has been sent"
+regardless, so the hole is invisible. Mail is now part of the foundation.
+
+- **`drupal/symfony_mailer_lite`** (+ `mailsystem`) in `composer.json`. Chosen
+  over `drupal/smtp`, which keeps the SMTP password in `smtp.settings` — i.e.
+  in `config/sync`. A DSN is one string and stays out of git entirely.
+- **`scripts/setup_mail.php`** (new, idempotent, the fleet's `setup_*.php`
+  convention): enables `contact` + `symfony_mailer_lite`, creates a `dsn`
+  transport `env` with an **empty** dsn, **points `mailsystem.settings`
+  defaults at `symfony_mailer_lite`**, creates the site-wide contact form,
+  grants anonymous access to it, and adds the `/contact` menu link (skipped
+  gracefully where `menu_link_content` is absent, e.g. the `minimal` profile).
+- **`deploy/settings.prod.php`** — runtime `MAILER_DSN`, `SITE_MAIL` and
+  `CONTACT_RECIPIENT` overrides. Unset `MAILER_DSN` leaves the native
+  transport so mail fails *loudly*; the `null` transport is deliberately not
+  the default.
+- **`deploy/.env.example`** — the three keys, with relay examples.
+- **docs** — `DEPLOY.md` §6 (incl. the two-sided verification recipe),
+  PROTOCOL D18, BATTLE_SCARS §22.
+
+Verified end-to-end in DDEV: anonymous submission of the real form delivered to
+Mailpit with zero errors; the same submission against a dead relay produced a
+visitor-facing error, `Connection refused` in dblog, and **no** phantom
+delivery. That second half is what caught the module being installed but not
+actually routing mail (§22).
+
 ## 2026-08-17 — production deploy scaffold, by construction
 
 Until now the skeleton stopped at "a module/theme in DDEV"; how a site

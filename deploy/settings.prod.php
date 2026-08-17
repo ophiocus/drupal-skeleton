@@ -63,6 +63,44 @@ $settings['trusted_host_patterns'] = $trusted
   ? array_map('trim', explode(',', $trusted))
   : ['^example\.com$', '^www\.example\.com$'];
 
+// --- Outbound mail ----------------------------------------------------------
+// Drupal's default transport is PHP mail(), which shells out to sendmail — and
+// the drupal:*-apache base image ships NO MTA. With no explicit transport every
+// mail Drupal sends (contact form, password reset, order receipt) fails. The
+// dangerous part is the contact form: Drupal reports "Your message has been
+// sent" to the visitor either way, so the failure is invisible from the outside
+// and the enquiry is simply gone. See docs/DEPLOY.md §6 and BATTLE_SCARS §22.
+//
+// MAILER_DSN is a single Symfony Mailer DSN, so the whole credential travels as
+// one env var and no secret can reach config/sync:
+//   smtp://user:pass@smtp.example.com:587
+//   smtp://apikey:SG.xxxxxxxx@smtp.sendgrid.net:587
+//
+// Deliberately NOT defaulted to the null transport: with MAILER_DSN unset the
+// site keeps the native transport, so mail fails LOUDLY in dblog rather than
+// being swallowed. A silent success is the exact failure this block exists to
+// prevent — never "fix" a noisy log here by pointing it at null.
+$dsn = getenv('MAILER_DSN');
+if ($dsn) {
+  $config['symfony_mailer_lite.symfony_mailer_lite_transport.env']['configuration']['dsn'] = $dsn;
+  $config['symfony_mailer_lite.settings']['default_transport'] = 'env';
+}
+
+// From: address for everything Drupal sends. It must sit on a domain the relay
+// is authorised to send for (SPF/DKIM) or the mail is spam-filed.
+$siteMail = getenv('SITE_MAIL');
+if ($siteMail) {
+  $config['system.site']['mail'] = $siteMail;
+}
+
+// Where the site-wide contact form delivers. Env-driven because the recipient
+// is per-property and per-environment (a dev env must never mail the real
+// inbox), and because it is a personal address that does not belong in git.
+$contactTo = getenv('CONTACT_RECIPIENT');
+if ($contactTo) {
+  $config['contact.form.feedback']['recipients'] = array_map('trim', explode(',', $contactTo));
+}
+
 // --- Project settings -------------------------------------------------------
 // Keep every value env-driven so committed config stays inert across
 // environments (dev never pollutes prod analytics; integrations stay dark
