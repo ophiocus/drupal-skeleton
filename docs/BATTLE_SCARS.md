@@ -398,3 +398,49 @@ locally before trusting the gate — a healthy page, an undersized page, and a
 page carrying a fatal — not just the happy one. (Writing this entry via a shell
 heredoc ate every backtick and code fence in it; see §1. Author docs with a file
 write, not a heredoc through three shells.)
+
+## §20 — The audit gate is fleet-wide: one advisory blocks every deploy (2026-08)
+
+The weekly `composer-audit.yml` run went red two Mondays in a row on a lock that
+had been green when it merged. Cause: two `guzzlehttp/guzzle` advisories
+published against `< 7.15.2` (a runtime dependency of core). That is the gate
+doing exactly its job — but three things about the blast radius were not obvious
+until it fired:
+
+1. **Every property minted from this skeleton carries the same lock ancestry, and
+   the same audit step gates its build-and-push workflow.** So the day the
+   advisory lands, *every* property's next `git push master` fails at step 1 and
+   never builds, never deploys. Nothing broke on the servers — the pipelines
+   simply closed. The fix is a lock bump **in every property**, not only in the
+   repo whose scheduled run happened to turn red. Sweep the fleet.
+2. **A dev-only advisory hides behind `--no-dev`.** The gate correctly ignores
+   `require-dev`, but the same run showed `squizlabs/php_codesniffer` (high, OS
+   command injection) which `composer audit --no-dev` never reports. When you
+   bump for a runtime advisory, run the *full* `composer audit --locked` too and
+   clear the dev side in the same commit — that is code that runs on your
+   workstation and in CI.
+3. **Runtime deprecations arrive by the same channel and are easy to mistake for
+   the failure.** The same run also warned that `actions/checkout@v4` targets the
+   deprecated Node 20 runtime (GitHub, 2025-09) — a warning today, a hard failure
+   when Node 20 is removed. Different problem, different fix (bump each `uses:`
+   to its Node-24 major), and it should be done in the same sweep so the next
+   red run is a real advisory and not noise.
+
+The health baseline that came out of the sweep, and that a fresh clone should
+meet before its first commit — run inside DDEV, all four must be clean:
+
+```
+composer audit --locked          # incl. dev — not just the CI gate's --no-dev
+composer lint                    # phpcs + phpstan, zero errors AND zero warnings
+vendor/bin/phpunit --testsuite=unit --display-deprecations
+ddev exec node -v                # a supported LTS, not an EOL line
+```
+
+Small things that turned up under that light and are now fixed at source:
+`@coversDefaultClass` doc-comment metadata is deprecated in PHPUnit 11 (use
+`#[CoversClass]`); `drupal.drupal_root` in `phpstan.neon` is deprecated in
+phpstan-drupal 2.1 (auto-discovered — delete it); Node 20 went EOL 2026-04-30
+(`nodejs_version: "22"`); a `\Drupal::` static in a controller is a
+DrupalPractice warning (inject via `create()`); an open `_access: 'TRUE'` route
+needs a comment saying why. None of these fails a build on its own; all of them
+get copied into every new project. Template code must sniff clean.

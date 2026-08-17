@@ -43,8 +43,10 @@ final class ExampleCommands extends DrushCommands {
   }
 
   /**
-   * Helper — writeln() collides with the parent's protected method,
-   * so we expose a thin alias. Use this from your own commands.
+   * Writes one line to the command output.
+   *
+   * The parent already declares a protected writeln(), so we expose a
+   * thin alias under a different name. Use this from your own commands.
    */
   private function line(string $message): void {
     $this->output()->writeln($message);

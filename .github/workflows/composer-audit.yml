@@ -32,7 +32,10 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # v7 = Node 24 runtime. GitHub deprecated Node 20 for actions
+      # (2025-09) and now warns on every run that still uses a Node-20
+      # major (checkout@v4). Keep every `uses:` on a Node-24 major.
+      - uses: actions/checkout@v7
 
       # --locked   : audit composer.lock alone — no `composer install`, no PHP
       #              extension setup needed; the GHA-provided composer suffices.

@@ -31,7 +31,9 @@ performance_mode: mutagen
 
 # ─── Tooling versions ────────────────────────────────────────────────
 composer_version: "2"
-nodejs_version: "20"
+# Node 20 reached end-of-life 2026-04-30; 22 is the active LTS line
+# (maintained to 2027-04). Bump again when 22 goes EOL.
+nodejs_version: "22"
 
 # ─── Routing ─────────────────────────────────────────────────────────
 router_http_port: "80"

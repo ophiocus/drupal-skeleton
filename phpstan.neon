@@ -10,5 +10,6 @@ parameters:
   excludePaths:
     - '*/tests/fixtures/*'
     - '*/js/vendor/*'
-  drupal:
-    drupal_root: web
+  # No `drupal.drupal_root` here: phpstan-drupal ≥ 2.1 discovers the
+  # Drupal root itself and deprecates the parameter (it emits a PHP
+  # Deprecated notice on every run if set).

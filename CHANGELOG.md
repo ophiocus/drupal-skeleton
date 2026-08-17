@@ -5,6 +5,36 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-08-17 — full-health baseline
+
+The weekly audit turned red on a runtime advisory (see BATTLE_SCARS §20);
+this entry is the sweep that followed. A clone at this date passes all
+four health checks — `composer audit --locked` (incl. dev), `composer lint`
+with zero errors *and* zero warnings, PHPUnit with zero deprecations, and a
+supported Node LTS in the container.
+
+- **Lock fully refreshed within existing constraints** — 36 packages.
+  Notables: `drupal/core` 11.4.4 → **11.4.5**, `guzzlehttp/guzzle` 7.15.1 →
+  **7.15.3** (clears CVE-2026-69246 / CVE-2026-69245),
+  `squizlabs/php_codesniffer` 3.13.5 → **3.13.6** (clears CVE-2026-67434,
+  dev-only), phpstan 2.2.8, phpstan-drupal 2.1.2, phpunit 11.5.56, symfony
+  7.4.16 line.
+- **CI on the Node 24 runtime** — `actions/checkout@v4` → `@v7`
+  (`composer-audit.yml`). GitHub deprecated Node 20 for actions; v4 warns
+  on every run and will hard-fail when Node 20 is removed.
+- **DDEV `nodejs_version` 20 → 22** — Node 20 reached EOL 2026-04-30.
+- **PHPUnit 11 idioms** — `#[CoversClass]` attribute instead of the
+  deprecated `@coversDefaultClass` doc-comment; `phpunit.xml.dist` schema
+  10.5 → 11.5.
+- **phpstan.neon** — dropped the deprecated `drupal.drupal_root` parameter
+  (phpstan-drupal ≥ 2.1 auto-discovers it and warned on every run).
+- **Template code sniffs clean** — `HealthController` injects
+  `datetime.time` via `create()` instead of `\Drupal::time()`; test methods
+  and the drush helper carry proper doc comments; the open health route
+  documents *why* it is public. Zero phpcs errors, zero warnings.
+- **PROTOCOL** — D1 refreshed to Drupal 11.4 / PHP 8.3; new D16 (Node
+  runtime line).
+
 ## 2026-05-22 — linting/sniffing as standard
 
 Code quality is now built in, not bolted on — every project minted

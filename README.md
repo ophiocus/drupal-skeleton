@@ -15,9 +15,9 @@ the next project makes for itself.
 
 ```
 drupal-skeleton/
-├── .ddev/config.yaml                 ← PHP 8.3, MariaDB 11.4, nginx-fpm, mutagen, Composer 2, Node 20
+├── .ddev/config.yaml                 ← PHP 8.3, MariaDB 11.4, nginx-fpm, mutagen, Composer 2, Node 22
 ├── .github/workflows/composer-audit.yml ← inherited security gate: fails CI on a vulnerable composer.lock (push/PR + weekly)
-├── composer.json                     ← Drupal 11.3 + drush + devel; min-stability dev + prefer-stable; PSR-4 autoload
+├── composer.json                     ← Drupal 11.4 + drush + devel; min-stability dev + prefer-stable; PSR-4 autoload
 ├── phpunit.xml.dist                  ← unit suite, ready for `ddev exec ../vendor/bin/phpunit`
 ├── docs/
 │   ├── PROTOCOL.md                   ← DDEV-only working principle + decision-log scaffold
@@ -45,6 +45,21 @@ step onto each property's build workflow later. It runs `composer audit --no-dev
 
 If a property also has a build-and-push workflow, keep an audit step there too as a
 hard pre-deploy gate — this standalone workflow is the floor, not the ceiling.
+
+### Health baseline
+
+A fresh clone passes all four, inside DDEV, before its first commit — and so
+should every project minted from it, before every push:
+
+```bash
+ddev exec composer audit --locked                       # incl. dev deps
+ddev exec composer lint                                 # phpcs + phpstan: 0 errors, 0 warnings
+ddev exec vendor/bin/phpunit --testsuite=unit --display-deprecations
+ddev exec node -v                                       # a supported LTS line
+```
+
+When the weekly audit turns red, remember it is fleet-wide (BATTLE_SCARS §20):
+bump the lock in every property that shares the ancestry, not only here.
 
 ## Quickstart
 

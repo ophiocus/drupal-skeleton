@@ -76,11 +76,13 @@ the original.
 
 ### D1 — Drupal version
 
-Answer: Drupal 11.3 on PHP 8.3.
+Answer: Drupal 11.4 on PHP 8.3 (refreshed 2026-08; was 11.3 at 2026-05).
 
-Reason: Drupal 11 is the supported major as of 2026-05; 11.3 is
-the current minor. PHP 8.3 is what 11.3's contrib ecosystem
-expects.
+Reason: Drupal 11 is the supported major; the composer constraint tracks
+the current minor (`^11.4`) so `composer update` follows patch releases.
+PHP 8.3 is what the contrib ecosystem expects and what the production
+images run; moving to 8.4 is a fleet-wide decision (image base + every
+property), not a skeleton-only bump.
 
 ### D2 — Local DB engine
 
@@ -157,3 +159,15 @@ Answer: `type: drupal` (version-agnostic).
 
 Reason: `type: drupal11` is rejected by older DDEV (v1.23.5); `type: drupal`
 is portable and auto-detects core 11.
+
+### D16 — Node runtime line
+
+Answer: the current active Node LTS — `nodejs_version: "22"` as of 2026-08
+(Node 20 went EOL 2026-04-30). Bump when the line goes EOL, not before.
+
+Reason: the container Node only drives theme tooling (vite, eslint,
+stylelint) — nothing production-facing — so tracking the LTS line is cheap
+and keeps toolchains installable. Pin a specific line, never `lts/*`, so two
+clones on different days build the same assets. The same rule applies to CI:
+every GitHub Action `uses:` stays on its Node-24 major (checkout@v7 …);
+GitHub deprecated the Node 20 action runtime in 2025-09.

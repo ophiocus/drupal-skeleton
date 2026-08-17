@@ -11,6 +11,9 @@ example_module.health:
     _controller: 'Drupal\example_module\Controller\HealthController::check'
     _title: 'Example module health'
   requirements:
+    # Intentionally public: the health probe carries no data beyond
+    # "module loaded" and is hit anonymously by deploy gates + uptime
+    # monitors. (Silences DrupalPractice.Yaml.RoutingAccess.OpenCallback.)
     _access: 'TRUE'
   options:
     no_cache: TRUE
