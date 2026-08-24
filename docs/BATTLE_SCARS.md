@@ -540,3 +540,63 @@ production.
 **Applies to:** every property that mails anything. Codified as PROTOCOL D18 +
 `scripts/setup_mail.php`; the trap is that all three failures are individually
 invisible and each one alone is enough to lose the mail.
+
+## §23 — DDEV silently points config export at files/sync (2026-08)
+
+`deploy/settings.prod.php` pins `config_sync_directory = ../config/sync`,
+but locally DDEV generates `web/sites/default/settings.php` whose
+`settings.ddev.php` include defaults the sync dir to
+`sites/default/files/sync` when settings.php has not set it. Nothing
+fails: `drush config:export` succeeds, prints a path most eyes skim past,
+and the tracked `config/sync/` stays empty — a property shipped its
+"config baseline" commit with zero config in it this way. The image then
+installs with `--existing-config` against an empty directory, or `drush
+deploy` imports nothing, and prod quietly diverges from local.
+
+**Fix (first boot, once per clone):** append an active override *after*
+DDEV's include block — it wins because it runs last:
+
+```bash
+echo "\$settings['config_sync_directory'] = '../config/sync';" >> web/sites/default/settings.php
+```
+
+Then verify before the first export — do not trust the default:
+
+```bash
+ddev drush ev 'print \Drupal\Core\Site\Settings::get("config_sync_directory");'
+```
+
+Gotcha inside the gotcha: a naive idempotency guard like
+`grep -q config_sync_directory settings.php` always matches, because the
+vanilla settings.php *documents* the setting in comments around line 250.
+Match the active assignment, not the phrase.
+
+## §24 — Mutagen half-syncs vendor/ between two composer runs (2026-08)
+
+`ddev composer install` followed immediately by a second composer command
+(`composer require`, or anything that boots the vendor autoloader) can
+fatal with `Failed opening required
+'vendor/composer/../symfony/polyfill-*/bootstrap.php'` — the first run's
+vendor tree was still mid-flight in the mutagen session when the second
+run started, so the container saw a directory listing from one moment and
+file contents from another. The failure looks like a corrupted lock or a
+broken package and reproduces unpredictably.
+
+**Fix:** flush between consecutive composer operations in scripts —
+`ddev mutagen sync` is cheap and deterministic:
+
+```bash
+ddev composer install --no-interaction
+ddev mutagen sync
+ddev composer require drupal/foo -W --no-interaction
+```
+
+If a tree is already half-synced, repair is `ddev exec "rm -rf
+/var/www/html/vendor"` + `ddev composer install` + `ddev mutagen sync` —
+deleting inside the container, not on the host, so mutagen propagates one
+coherent deletion instead of racing a second time.
+
+**Applies to:** any scripted multi-step composer sequence under
+`performance_mode: mutagen` — first boots and CI-style bootstrap scripts
+especially. Interactive use rarely hits it because a human is slower than
+the sync.

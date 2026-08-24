@@ -104,6 +104,10 @@ ddev start
 ddev composer install
 ddev drush si --account-name=admin --account-pass=admin -y
 ddev drush en my_module my_theme -y      # whichever you kept
+# Pin config export at the tracked dir — DDEV defaults it to
+# sites/default/files/sync and the first export silently lands there
+# (BATTLE_SCARS §23). Do this before any `drush config:export`:
+echo "\$settings['config_sync_directory'] = '../config/sync';" >> web/sites/default/settings.php
 ddev launch                              # opens the site
 
 # 4. Develop. Tests:
