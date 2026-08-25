@@ -44,13 +44,16 @@ into the repo.
 
 ## §4 — Documentation hygiene
 
-Three living documents, in order of read frequency:
+Living documents, in order of read frequency:
 
 1. **`README.md`** — "How do I work this?" Five-minute orientation.
 2. **`CHANGELOG.md`** — what changed, when. Append-only.
 3. **`docs/PROTOCOL.md`** (this file) — the rules + decision log.
 4. **`docs/BATTLE_SCARS.md`** — the lessons that cost time. Append
    anything that took >30 minutes to figure out.
+5. **`docs/FEATURE_REQUESTS.md`** — the queue: proposed skeleton
+   additions not yet built. An entry graduates by shipping, at which
+   point it leaves that file and becomes a `Dn` decision here.
 
 Project-shape-specific docs (THESIS, ARCHITECTURE, EDITORIAL,
 SUBJECT, etc.) live alongside but vary per project; don't
