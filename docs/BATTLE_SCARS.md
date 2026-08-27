@@ -600,3 +600,39 @@ coherent deletion instead of racing a second time.
 `performance_mode: mutagen` — first boots and CI-style bootstrap scripts
 especially. Interactive use rarely hits it because a human is slower than
 the sync.
+
+## §25 — Traefik issues ONE certificate per router, not per Host() (2026-08)
+
+Adding several alternate domains as 301 redirects to a canonical apex, the
+obvious shape is one router listing every hostname:
+
+```
+routers.<name>.rule=Host(`a.example`) || Host(`www.a.example`) || Host(`b.example`) || ...
+```
+
+It resolves, it routes, and **every one of those domains is left without TLS**
+— even the ones whose DNS is perfect. Traefik requests a *single* ACME
+certificate per router, with every host in that rule as a SAN, and Let's
+Encrypt fails the entire order if **any** name fails validation. One sibling
+domain still pointing at the registrar's parking page (HTTP 403 on the
+challenge path) therefore poisons the certificate for all the others. The
+symptom is misleading: `http://` works and 301s correctly, while `https://`
+serves `TRAEFIK DEFAULT CERT`, which looks like "ACME is just slow" rather
+than "this order can never succeed".
+
+The log line that gives it away names the whole set at once:
+
+```
+Unable to obtain ACME certificate for domains
+  domains=["a.example","www.a.example","b.example",...]
+  routerName=<name>@docker
+```
+
+**Fix: one router per domain**, each with its own `rule`, `tls.certresolver`
+and `service`, all pointing at one shared redirect middleware (a single regex
+with an alternation covers every TLD). Each domain then gets its own
+certificate order, fails alone, and self-heals the moment its DNS lands — no
+redeploy required.
+
+**Applies to:** any property with alternate/vanity domains, and any staged
+rollout where some names point at the host before others.
