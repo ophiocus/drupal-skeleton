@@ -44,6 +44,24 @@ GitHub → repo → *Settings → Secrets and variables → Actions*:
 | variable | `DEPLOY_HOST` | `deployuser@host` | enables the deploy steps |
 | secret | `VPS_DEPLOY_KEY` | private key accepted by `DEPLOY_HOST` | SSH auth for deploy |
 
+Everything else the workflow needs has a default that reproduces the
+previously-hardcoded behaviour, so a property that sets none of these runs
+exactly as before. Set one only when the default is wrong for that property:
+
+| Kind | Name | Default | Set it when |
+| --- | --- | --- | --- |
+| variable | `DEPLOY_SITE` | the repository name | the host's site directory does not match the repo name |
+| variable | `IMAGE_NAME` | `ghcr.io/<owner>/<repo>` | the image lives somewhere other than the derived path |
+| variable | `HEALTH_MIN_BYTES` | `5000` | the front page is legitimately leaner than 5 KB (or much heavier, and you want a tighter floor) |
+| variable | `HEALTH_ATTEMPTS` | `10` | the container needs longer than ~2.5 min to serve |
+| variable | `HEALTH_SLEEP_SECONDS` | `15` | as above |
+
+**The production branch is deliberately not a variable.** GitHub forbids
+expressions in `on.push.branches`, so a `PROD_BRANCH` variable would arm the
+deploy condition for a branch that never triggers the workflow — configured in
+appearance, inert in fact. Changing it means editing the trigger and the `if:`
+together, as one visible change.
+
 Until `DEPLOY_HOST` exists a push still audits, builds and pushes the image
 — the Dockerfile is proven in CI from the first commit — and simply does
 not deploy. `GITHUB_TOKEN` is enough to push to GHCR (`packages: write`).

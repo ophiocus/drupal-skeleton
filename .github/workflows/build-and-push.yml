@@ -6,17 +6,36 @@ name: Build and push image
 #   audit gate → build image → push to GHCR → deploy (dev/** or master)
 #              → post-deploy HTTP health gate
 #
-# Per-property values are NOT edited into this file. They come from the repo's
-# Actions configuration (Settings → Secrets and variables → Actions):
+# ─── Parametric entries ──────────────────────────────────────────────────
+# Per-property values are NEVER edited into this file. They come from the
+# repo's Actions configuration (Settings → Secrets and variables → Actions).
+# Every one is OPTIONAL except where noted: each falls back to the value that
+# was hardcoded before, so a property that sets nothing behaves identically.
 #
-#   variable  PROD_URL      https://example.com   — enables the health gate
-#   variable  DEPLOY_HOST   user@host             — enables deploy steps
-#   secret    VPS_DEPLOY_KEY                      — SSH private key for DEPLOY_HOST
+#   secret    VPS_DEPLOY_KEY          SSH private key for DEPLOY_HOST.
+#                                     Required for any deploy.
+#   variable  DEPLOY_HOST             user@host — REQUIRED to enable deploys.
+#                                     Unset ⇒ audit + build + push only.
+#   variable  PROD_URL                https://example.com — REQUIRED to enable
+#                                     the health gate. Unset ⇒ gate skipped.
+#   variable  DEPLOY_SITE             site slug passed to deploy-prod/deploy-dev
+#                                     on the host. Default: the repository name.
+#                                     Set ONLY when the host's site directory
+#                                     does not match the repo name.
+#   variable  IMAGE_NAME              full image ref without tag.
+#                                     Default: ghcr.io/<owner>/<repo>.
+#   variable  HEALTH_MIN_BYTES        smallest believable page. Default 5000.
+#                                     Raise for content-heavy sites; lower only
+#                                     if the front page is genuinely lean.
+#   variable  HEALTH_ATTEMPTS         health retries. Default 10.
+#   variable  HEALTH_SLEEP_SECONDS    delay between retries. Default 15.
 #
-# Until DEPLOY_HOST is set, pushes still audit + build + push the image (so the
-# Dockerfile is proven in CI from day one) and the deploy/health steps skip.
-# The site slug used everywhere is the repository name — keep repo name,
-# image name and the host's compose directory naming aligned.
+# NOT parametric, deliberately: the production branch. GitHub does not allow
+# expressions in `on.push.branches`, so a PROD_BRANCH variable would arm the
+# deploy condition for a branch that never triggers the workflow — a trap that
+# looks configured and silently does nothing. The platform is master-only
+# (locked 2026-05-16); a property needing otherwise edits the trigger AND the
+# condition together, as one visible change.
 #
 # The host side of the contract (a `deploy-prod <site>` / `deploy-dev <site>
 # <branch>` command reachable over SSH as DEPLOY_HOST) is platform
@@ -33,9 +52,20 @@ permissions:
   contents: read
   packages: write
 
+# One deploy per ref at a time. Two pushes in quick succession would otherwise
+# race: both pull, both `up -d`, and `drush deploy` can run against a container
+# the other job is replacing. Never cancel in progress — a half-applied
+# `drush deploy` is worse than a queued one.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A hung SSH or a wedged buildx would otherwise burn the full 6-hour
+    # default before anyone notices.
+    timeout-minutes: 30
     steps:
       # Every `uses:` below is on its Node-24 major. GitHub deprecated the
       # Node 20 action runtime (2025-09); older majors warn on every run and
@@ -60,7 +90,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+          images: ${{ vars.IMAGE_NAME || format('ghcr.io/{0}/{1}', github.repository_owner, github.event.repository.name) }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch,prefix=
@@ -88,18 +118,24 @@ jobs:
       # Both call a host-side command over SSH; neither touches the DB volume.
       # Schema-changing redeploys (sql:drop + si + recipe) stay an operator
       # action — too destructive to gate behind a code push.
+      #
+      # Slug and branch travel as env vars rather than inline expressions: a
+      # repo or branch name containing shell metacharacters would otherwise be
+      # interpolated straight into the remote command string.
       - name: Deploy to dev env
         if: startsWith(github.ref, 'refs/heads/dev/') && vars.DEPLOY_HOST != ''
         env:
           DEPLOY_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_SITE: ${{ vars.DEPLOY_SITE || github.event.repository.name }}
+          DEV_BRANCH: ${{ github.ref_name }}
         run: |
           mkdir -p ~/.ssh
           echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
               "$DEPLOY_HOST" \
-              "deploy-dev ${{ github.event.repository.name }} ${{ github.ref_name }}"
+              "deploy-dev $DEPLOY_SITE $DEV_BRANCH"
 
       # Production auto-deploy on push to master. deploy-prod on the host:
       #   - docker compose pull   (the :latest image we just built)
@@ -110,13 +146,14 @@ jobs:
         env:
           DEPLOY_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_SITE: ${{ vars.DEPLOY_SITE || github.event.repository.name }}
         run: |
           mkdir -p ~/.ssh
           echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
               "$DEPLOY_HOST" \
-              "deploy-prod ${{ github.event.repository.name }} master"
+              "deploy-prod $DEPLOY_SITE master"
 
       # ─── Post-deploy health gate ──────────────────────────────────────
       # A green image build proves `composer install` succeeded. It does NOT
@@ -134,9 +171,9 @@ jobs:
         if: github.ref == 'refs/heads/master' && vars.DEPLOY_HOST != '' && vars.PROD_URL != ''
         env:
           HEALTH_URL: ${{ vars.PROD_URL }}
-          MIN_BYTES: '5000'
-          ATTEMPTS: '10'
-          SLEEP_SECONDS: '15'
+          MIN_BYTES: ${{ vars.HEALTH_MIN_BYTES || '5000' }}
+          ATTEMPTS: ${{ vars.HEALTH_ATTEMPTS || '10' }}
+          SLEEP_SECONDS: ${{ vars.HEALTH_SLEEP_SECONDS || '15' }}
         run: |
           set -u
           fail_body=""
