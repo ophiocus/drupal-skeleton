@@ -101,22 +101,32 @@ if ($contactTo) {
   $config['contact.form.feedback']['recipients'] = array_map('trim', explode(',', $contactTo));
 }
 
-// --- Analytics & AdSense (env-driven) ---------------------------------------
-// All analytics/AdSense IDs live in the host .env, never in committed config.
-// Committed config ships EMPTY containers; the value only ever comes from the
-// environment, so dev never pollutes prod analytics and integrations stay dark
-// until their key lands. google_tag + adsense are skeleton defaults, enabled
-// per site:
+// --- Analytics + advertising (env-driven) ----------------------------------
+// Neither ID is secret (both appear in page source), but env-driving keeps the
+// committed config inert: dev never pollutes prod analytics, and AdSense stays
+// dark until the account is approved and the ID lands in the VPS .env.
+// google_tag + adsense are skeleton defaults, enabled per site:
 //   drush en google_tag adsense
-$tagIds = array_values(array_filter([
-  getenv('GTM_CONTAINER_ID') ?: NULL,   // GTM-XXXXXXX (container; holds the GA4 tag)
-  getenv('GA_MEASUREMENT_ID') ?: NULL,  // G-XXXXXXXXXX (bare GA4, optional)
-]));
-if ($tagIds) {
-  $config['google_tag.container.default']['tag_container_ids'] = $tagIds;
+//
+//   GTM_CONTAINER_ID     GTM container "GTM-XXXXXXX" or a GA4 id "G-XXXXXXXXXX"
+//   ADSENSE_PUBLISHER_ID AdSense publisher id, e.g. "pub-1234567890123456"
+//                        (no "ca-" prefix; the module adds it for ad markup and
+//                         omits it for ads.txt)
+
+// GTM/GA4: empty list => google_tag injects nothing. Consent Mode v2 stays on.
+$tag = getenv('GTM_CONTAINER_ID');
+$config['google_tag.container.default']['tag_container_ids'] = $tag ? [$tag] : [];
+
+// AdSense: live only when a publisher ID is present. Otherwise fully dark —
+// no ad markup, no /ads.txt (404), no placeholder box.
+$pub = getenv('ADSENSE_PUBLISHER_ID');
+if ($pub) {
+  $config['adsense.settings']['adsense_basic_id'] = $pub;
+  $config['adsense.settings']['adsense_disable'] = FALSE;
+  $config['adsense.settings']['adsense_placeholder'] = FALSE;
 }
-// adsense module setting key confirmed on `drush en adsense`; inert until then.
-$adsenseId = getenv('ADSENSE_PUBLISHER_ID');   // ca-pub-XXXXXXXXXXXXXXXX
-if ($adsenseId) {
-  $config['adsense.settings']['adsense_basic_id'] = $adsenseId;
+else {
+  $config['adsense.settings']['adsense_basic_id'] = '';
+  $config['adsense.settings']['adsense_disable'] = TRUE;
+  $config['adsense.settings']['adsense_placeholder'] = FALSE;
 }
