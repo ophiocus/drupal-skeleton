@@ -101,10 +101,22 @@ if ($contactTo) {
   $config['contact.form.feedback']['recipients'] = array_map('trim', explode(',', $contactTo));
 }
 
-// --- Project settings -------------------------------------------------------
-// Keep every value env-driven so committed config stays inert across
-// environments (dev never pollutes prod analytics; integrations stay dark
-// until their key lands in the host .env). Pattern:
-//
-//   $ga4 = getenv('DRUPAL_GA4_ID');
-//   $config['google_tag.container.default']['tag_container_ids'] = $ga4 ? [$ga4] : [];
+// --- Analytics & AdSense (env-driven) ---------------------------------------
+// All analytics/AdSense IDs live in the host .env, never in committed config.
+// Committed config ships EMPTY containers; the value only ever comes from the
+// environment, so dev never pollutes prod analytics and integrations stay dark
+// until their key lands. google_tag + adsense are skeleton defaults, enabled
+// per site:
+//   drush en google_tag adsense
+$tagIds = array_values(array_filter([
+  getenv('GTM_CONTAINER_ID') ?: NULL,   // GTM-XXXXXXX (container; holds the GA4 tag)
+  getenv('GA_MEASUREMENT_ID') ?: NULL,  // G-XXXXXXXXXX (bare GA4, optional)
+]));
+if ($tagIds) {
+  $config['google_tag.container.default']['tag_container_ids'] = $tagIds;
+}
+// adsense module setting key confirmed on `drush en adsense`; inert until then.
+$adsenseId = getenv('ADSENSE_PUBLISHER_ID');   // ca-pub-XXXXXXXXXXXXXXXX
+if ($adsenseId) {
+  $config['adsense.settings']['adsense_basic_id'] = $adsenseId;
+}
