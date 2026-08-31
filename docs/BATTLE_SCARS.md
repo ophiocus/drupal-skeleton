@@ -636,3 +636,35 @@ redeploy required.
 
 **Applies to:** any property with alternate/vanity domains, and any staged
 rollout where some names point at the host before others.
+
+## §26 — Changing a field's storage TYPE means delete + recreate, and the purge can lie (2026-06)
+
+You cannot convert a field storage's *type* in place (e.g. an `image` field to
+a media `entity_reference`). The only path is: delete the old storage, create
+the new one, migrate the values. Two traps inside that path:
+
+**Trap 1 — missing revision tables make the purge throw but half-succeed.**
+On sites whose bundles skipped revisions, the field may have no
+`node_revision__field_x` table. `field_purge_batch()` /
+`$storage->delete()` then throw `42S02 (table doesn't exist)` — but the
+config deletion has already completed by the time the exception surfaces.
+The site is now in between: config gone, storage bookkeeping half-present.
+
+**Trap 2 — a same-request recreate is blocked by "pending deletion".**
+Creating the replacement storage in the same request/update hook that deleted
+the old one can fail with a pending-deletion error, because the old storage
+is still queued for purge.
+
+**Fix pattern (idempotent, two-pass converge):**
+1. Guard: only run the delete when the field's data tables report 0 rows
+   (migrate values out first).
+2. Wrap the delete in try/catch and tolerate the `42S02` throw — then clear
+   any pending-deletion bookkeeping explicitly.
+3. Make the update hook a converge, not a script: every step checks current
+   state and no-ops when already done, so `drush updb` can simply be re-run
+   when the recreate was blocked on the first pass.
+4. After the swap, restore view/form displays and any language-override
+   config that referenced the old field — they are silently dropped with it.
+
+**Applies to:** any storage-type migration (image→media being the classic),
+on any site old enough to have bundles created before revisions were enabled.
