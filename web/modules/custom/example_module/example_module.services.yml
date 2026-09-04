@@ -15,3 +15,20 @@ services:
     class: Drupal\example_module\Service\Greeter
     arguments:
       - '@logger.channel.example_module'
+
+  # ── Autowiring aliases, keyed by fully-qualified class name ────────
+  #
+  # REQUIRED for any service injected into a Drush command class.
+  #
+  # Drush's AutowireTrait resolves a constructor by looking each type
+  # hint up AS A SERVICE ID, so it asks the container for
+  # "Drupal\example_module\Service\Greeter", never for
+  # "example_module.greeter". Without the alias the lookup fails and
+  # Drush drops the ENTIRE command class without reporting an error —
+  # every command in the file disappears at once and the only symptom
+  # is "There are no commands defined in the ... namespace", which
+  # reads like a discovery problem and is actually a DI problem.
+  #
+  # See docs/BATTLE_SCARS.md §27. Add one line here per service that
+  # a Drush command injects.
+  Drupal\example_module\Service\Greeter: '@example_module.greeter'

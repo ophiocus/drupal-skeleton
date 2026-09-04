@@ -668,3 +668,53 @@ is still queued for purge.
 
 **Applies to:** any storage-type migration (image→media being the classic),
 on any site old enough to have bundles created before revisions were enabled.
+
+## §27 — A Drush command class vanishes whole when one injected service lacks a class-name alias (2026-09)
+
+**Symptom.** A Drush command that plainly exists refuses to run:
+
+```
+There are no commands defined in the "yourmodule" namespace.
+```
+
+The file is on disk, the module is enabled, `drush cache:clear drush`
+changes nothing, and `php -l` is clean. Nothing is logged.
+
+**Cause.** `AutowireTrait` resolves a command constructor by looking up
+each type hint **as a service ID**. A type hint of
+`Drupal\yourmodule\Service\Thing` makes Drush ask the container for a
+service literally named `Drupal\yourmodule\Service\Thing`. Declaring
+the service as `yourmodule.thing` in `*.services.yml` does not satisfy
+that lookup, because the class name is not an alias for it by default.
+
+The failure is silent and total. Drush cannot construct the class, so
+it discards the class — not the one command, the whole file. A command
+class holding six commands loses all six, and the error message talks
+about namespaces, which sends you looking at discovery, attributes and
+file placement rather than at dependency injection.
+
+**Fix.** Alias every injected service by its fully-qualified class name:
+
+```yaml
+services:
+  yourmodule.thing:
+    class: Drupal\yourmodule\Service\Thing
+    arguments: ['@logger.channel.yourmodule']
+
+  # Required for Drush autowiring.
+  Drupal\yourmodule\Service\Thing: '@yourmodule.thing'
+```
+
+**How it was isolated.** The alias was the only change between a deploy
+where the namespace was absent and one where the command ran. The
+module rename that landed in the previous commit had already been
+deployed and the Drush cache cleared while the command was still
+missing, so the rename was ruled out.
+
+**Tell.** The tell is a command class that disappears *entirely* rather
+than erroring. If one command in a file is missing, suspect the
+attribute. If every command in a file is missing, suspect a constructor
+argument the container cannot resolve.
+
+**Applies to:** Drush 12+ attribute-based commands, which is every
+command written against Drupal 10 and 11.
