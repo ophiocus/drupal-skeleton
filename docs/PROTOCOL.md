@@ -242,10 +242,23 @@ canonical anywhere and `/sitemap.xml` returning 404. Nobody chose that; it is
 what happens when the baseline lives in whoever set the property up rather than
 in the scaffold.
 
-**Drupal core does not emit a canonical tag.** That is worth stating outright,
-because the absence looks like a theme bug and gets chased in the wrong place.
-Core adds `shortlink` and a few `rel` links on entity routes; the
-`<link rel="canonical">` you expect comes from metatag's `global` default.
+**What core does and does not emit — settle this before diagnosing anything.**
+Core emits `<link rel="canonical">` on **entity canonical routes** — a node
+page, a commerce product page — with no contrib module at all. It emits none on
+anything else: the front page, views pages, custom controller routes. Verified
+across the fleet: a property with metatag absent still serves a canonical on
+`/node/2`, and serves none on `/`.
+
+So metatag is not what makes canonicals exist. What it buys is:
+
+- canonical on the **non-entity** routes core leaves bare,
+- `<title>` patterns, Open Graph and Twitter tags,
+- per-bundle editorial override.
+
+Practical consequence when auditing: **probe a real entity URL and a non-entity
+URL separately, and confirm the entity URL actually exists.** Testing `/node/1`
+proves nothing if that node was never created — a 404 carries no canonical
+either, which looks identical to the bug you are hunting.
 
 **Verify from outside, not from the admin UI:**
 
