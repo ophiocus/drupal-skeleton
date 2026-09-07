@@ -774,3 +774,53 @@ curl -sL https://example.com/ | grep -oE '<link rel="canonical" href="https?'
 
 **Applies to:** any Drupal behind Traefik, nginx, HAProxy, a cloud load
 balancer, or a CDN. The two settings that look sufficient are not.
+
+## §29 — Saving an entity with an uninstalled langcode silently blanks its fields (2026-09)
+
+**Symptom.** After a language change, 350 entities lose most of their field
+values. No error, no exception, no log entry. The saves reported success.
+Setting the langcode back does **not** restore the data.
+
+**The sequence that does it.**
+
+```php
+// system.site.yml says default_langcode: es
+// …but the `language` module is NOT installed.
+$node->set('langcode', 'es')->save();   // succeeds. destroys the fields.
+```
+
+**Why.** With no `language` module there is exactly one installed language, and
+it is `en` regardless of what `system.site.default_langcode` says. Verify:
+
+```php
+\Drupal::config('system.site')->get('default_langcode');            // 'es'
+\Drupal::languageManager()->getDefaultLanguage()->getId();          // 'en'  ← the truth
+\Drupal::languageManager()->getLanguages();                         // ['en']
+```
+
+Saving with `langcode = es` therefore writes the **`es` translation** of the
+entity. That translation has no field data, so the write persists empty values
+over the row. The original `en` values are replaced, not shadowed.
+
+**Check before you write, and check the right thing:**
+
+```php
+$installed = array_keys(\Drupal::languageManager()->getLanguages());
+if (!in_array($target, $installed, TRUE)) {
+  throw new \LogicException("Language $target is not installed; this save would blank fields.");
+}
+```
+
+`system.site.default_langcode` is **not** the check. It is the value that lies.
+
+**Recovery is a database restore.** There is no in-place fix — the values are
+gone. On this stack: `ddev pull ssdnodes` to rebuild local from production, and
+if it reached production, the pre-deploy backup.
+
+**Related:** changing a site's language is a migration (install `language` +
+`locale`, add the language, set it default, migrate content), never a config
+edit. Path *prefixes* are safe to change freely — they are pattern config and
+aliases regenerate. The internal langcode is not.
+
+**Applies to:** any Drupal site without the `language` module, which is every
+monolingual install — i.e. the default state of a fresh scaffold.

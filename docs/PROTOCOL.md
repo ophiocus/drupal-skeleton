@@ -341,3 +341,45 @@ curl -sL https://example.com/ | grep -oE '<link rel="alternate" hreflang="[^"]*"
 are nearly free to change while a property has no published nodes and nothing
 indexed; afterwards each change is a redirect map and a re-crawl. Settle it at
 scaffold time.
+
+### D21 — amends D20: `default_langcode` is not a switch, and flipping it destroys field data
+
+Answer: **a monolingual site's language cannot be changed by editing
+`system.site.default_langcode`.** Without the `language` module there is exactly
+one installed language and it stays `en` no matter what that key says. Changing
+a property's language is a migration — install `language` + `locale`, add the
+language, set it default, migrate content — never a config edit.
+
+D20 said "monolingual ⇒ do not install the language modules" and stopped there.
+That is right, but it reads as though the default language is still yours to
+pick. It is not, and the way it fails is expensive.
+
+**What actually happens.** Set `default_langcode: es` with no `language` module
+and `\Drupal::languageManager()->getDefaultLanguage()` still returns `en`,
+because `es` was never installed. Now save any entity with `langcode = es`:
+Drupal writes the *`es` translation*, which does not exist, so **every field
+comes back empty and the original values are overwritten.** Setting the langcode
+back does not restore them — the data is gone, not hidden. There is no error and
+no warning; the save succeeds.
+
+Observed on 350 entities: `field_local_date`, `field_city` and `field_capacity`
+all blanked. Recovery was a full database re-pull from production.
+
+**The rule that follows:**
+
+- Never write `langcode` on an entity for a language the site has not installed.
+  Check `\Drupal::languageManager()->getLanguages()` first, not
+  `system.site.default_langcode` — those two disagree exactly when it matters.
+- Path *prefixes* are a free, safe change (they are pattern config, and aliases
+  regenerate). The site's internal *langcode* is not. A property whose content
+  is Spanish can perfectly well run on an `en` langcode with Spanish URLs; that
+  is cosmetically odd but harmless, and it is the correct interim state until
+  someone does the migration properly.
+- Do the migration before the property has content, or budget for it as a
+  migration with a database backup taken first.
+
+Reason: this is the second time this class of thing has bitten — a config value
+that looks like a setting but is actually a declaration the rest of the system
+was built around. Recording it as its own decision so D20's "declare it at
+scaffold time" carries the weight it needs: at scaffold time it is a keystroke,
+afterwards it is a migration with a data-loss failure mode.
