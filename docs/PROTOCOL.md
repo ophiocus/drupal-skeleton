@@ -218,3 +218,49 @@ image has no MTA, and Drupal's contact form reports "Your message has been sent"
 regardless, so the default-off state has to be noisy rather than convenient.
 Chosen over `drupal/smtp` (password-in-config) and full `symfony_mailer`
 (replaces the mail API wholesale — more surface than a property needs).
+
+### D19 — SEO baseline: metatag + simple_sitemap + pathauto, shipped as modules, configured per project
+
+Answer: the skeleton **requires** `drupal/metatag`, `drupal/simple_sitemap` and
+`drupal/pathauto` (pulling `token` and `ctools`). It ships **no config for
+them**, because every useful setting names a content type the skeleton does not
+define. Each project configures its own:
+
+- `pathauto.pattern.<bundle>` — one per bundle that should have a readable URL.
+  Without a pattern, nodes stay at `/node/N`, which then goes into the sitemap.
+- `simple_sitemap.bundle_settings.default.node.<bundle>` — one per bundle to
+  index. **A sitemap with no bundle settings is not broken; it is empty by
+  definition** and will contain only the front page.
+- `metatag.metatag_defaults.*` — at minimum `global`, `front`, `node`, `403`,
+  `404`. The `global` default is what emits `<link rel="canonical">`.
+
+Reason: this was a real fleet-wide gap, not a hypothetical. Five properties
+built from a skeleton that shipped none of these ended up with **four different
+configurations**: two had the full layer, one had a sitemap but no canonicals
+(144 URLs indexed with no canonical tag), and two had nothing at all — no
+canonical anywhere and `/sitemap.xml` returning 404. Nobody chose that; it is
+what happens when the baseline lives in whoever set the property up rather than
+in the scaffold.
+
+**Drupal core does not emit a canonical tag.** That is worth stating outright,
+because the absence looks like a theme bug and gets chased in the wrong place.
+Core adds `shortlink` and a few `rel` links on entity routes; the
+`<link rel="canonical">` you expect comes from metatag's `global` default.
+
+**Verify from outside, not from the admin UI:**
+
+```bash
+curl -sL https://example.com/ | grep -oE '<link rel="canonical" href="[^"]*"'
+curl -sLo /dev/null -w '%{http_code}\n' https://example.com/sitemap.xml
+```
+
+An empty sitemap on a site with no content types is correct — check the site
+actually has indexable content before treating one URL as a defect.
+
+**Ordering note:** `pathauto` before `simple_sitemap` generation. Aliases are
+*content*, not config, so `config:import` cannot ship them — a pattern only
+fires when an entity is saved. Existing nodes predating a pattern keep their
+`/node/N` URLs until something regenerates them, and the sitemap will publish
+those raw paths. Use a `hook_deploy_NAME()` (which `drush deploy` runs after
+`config:import`) to call `pathauto.generator`'s `updateEntityAlias()` over the
+affected bundles; it is idempotent, so it is free on every later deploy.
