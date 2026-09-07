@@ -52,6 +52,26 @@ $settings['reverse_proxy_trusted_headers'] =
   | \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_PROTO
   | \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_PORT;
 
+// …and name who is allowed to send them. This line is not optional decoration:
+// Symfony honours the trusted headers above ONLY when the connecting address
+// appears in this list, and an unset list means "trust nobody". Without it the
+// two settings above silently do nothing, and the site advertises itself as
+// http:// while being served over TLS — putting the wrong scheme in every
+// canonical tag, JSON-LD url and sitemap entry. The failure is invisible from
+// inside the container (Drupal is simply told the request was plain HTTP), so
+// it survives indefinitely until someone reads a canonical tag from outside.
+//
+// Trusting the immediate peer is correct for the standard topology this
+// skeleton targets: the app container publishes NO ports and is reachable only
+// from the reverse proxy on an internal Docker network, so REMOTE_ADDR *is* the
+// proxy. If a deployment exposes the container directly, set
+// DRUPAL_REVERSE_PROXY_ADDRESS to the proxy's address instead — with a directly
+// reachable container, trusting the peer would let any client forge
+// X-Forwarded-Proto and X-Forwarded-For.
+$settings['reverse_proxy_addresses'] = array_values(array_filter([
+  getenv('DRUPAL_REVERSE_PROXY_ADDRESS') ?: ($_SERVER['REMOTE_ADDR'] ?? NULL),
+]));
+
 // --- Trusted hosts ----------------------------------------------------------
 // Comma-separated regexes in DRUPAL_TRUSTED_HOSTS, e.g.
 //   ^example\.com$,^www\.example\.com$

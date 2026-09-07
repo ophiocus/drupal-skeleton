@@ -718,3 +718,59 @@ argument the container cannot resolve.
 
 **Applies to:** Drush 12+ attribute-based commands, which is every
 command written against Drupal 10 and 11.
+
+## §28 — `reverse_proxy` without `reverse_proxy_addresses` does nothing, silently (2026-09)
+
+**Symptom.** The site is served over TLS and works perfectly, but every
+`<link rel="canonical">`, every JSON-LD `url`, and every `<loc>` in the sitemap
+says `http://`. Nothing errors. Nothing in the logs. Search engines see a site
+whose own canonical URLs disagree with the scheme it is served on.
+
+**What was in settings.php:**
+
+```php
+$settings['reverse_proxy'] = TRUE;
+$settings['reverse_proxy_trusted_headers'] =
+  Request::HEADER_X_FORWARDED_FOR
+  | Request::HEADER_X_FORWARDED_PROTO
+  | Request::HEADER_X_FORWARDED_PORT;
+```
+
+That looks complete and reads as complete. It is not. Symfony honours those
+headers **only when the connecting address appears in
+`$settings['reverse_proxy_addresses']`**, and an unset list means *trust
+nobody*. So both settings above were inert, Drupal was told every request was
+plain HTTP, and it dutifully built `http://` URLs.
+
+**Why it survives for months.** The failure is invisible from inside: Drupal is
+not malfunctioning, it is correctly rendering the scheme it was told about. The
+site loads fine over HTTPS because the proxy handles TLS regardless. Nothing
+surfaces until somebody reads a canonical tag from *outside* the container. On
+one property this shipped unnoticed from first deploy.
+
+**Fix.**
+
+```php
+$settings['reverse_proxy_addresses'] = array_values(array_filter([
+  getenv('DRUPAL_REVERSE_PROXY_ADDRESS') ?: ($_SERVER['REMOTE_ADDR'] ?? NULL),
+]));
+```
+
+**Trusting the immediate peer is only safe when the app container publishes no
+ports.** In the standard topology — app reachable solely from the reverse proxy
+on an internal Docker network — `REMOTE_ADDR` *is* the proxy, and this is
+correct. Verify with `docker port <container>`; empty output is the
+precondition. If the container is directly reachable, set
+`DRUPAL_REVERSE_PROXY_ADDRESS` to the proxy's address instead: with a public
+container, trusting the peer lets any client forge `X-Forwarded-Proto` and
+`X-Forwarded-For` — spoofing both the scheme and the client IP that rate
+limiting and logging depend on.
+
+**How to detect it in one line, from outside:**
+
+```bash
+curl -sL https://example.com/ | grep -oE '<link rel="canonical" href="https?'
+```
+
+**Applies to:** any Drupal behind Traefik, nginx, HAProxy, a cloud load
+balancer, or a CDN. The two settings that look sufficient are not.
