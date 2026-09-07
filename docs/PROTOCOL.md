@@ -277,3 +277,67 @@ fires when an entity is saved. Existing nodes predating a pattern keep their
 those raw paths. Use a `hook_deploy_NAME()` (which `drush deploy` runs after
 `config:import`) to call `pathauto.generator`'s `updateEntityAlias()` over the
 affected bundles; it is idempotent, so it is free on every later deploy.
+
+### D20 — Language is declared at scaffold time, and everything URL-shaped follows from it
+
+Answer: **every property states its default language once, deliberately, before it
+has content.** Monolingual is a legitimate choice and must be an explicit one.
+Everything downstream — pathauto prefixes, negotiation, alias langcodes,
+canonical URLs — derives from that declaration rather than being decided per
+feature by whoever happens to be adding one.
+
+The declaration lives in `config/sync/system.site.yml` (`default_langcode`), is
+set when the property is scaffolded, and is **not** left at Drupal's `en`
+default by omission. "Nobody changed it" is not a decision.
+
+**If monolingual:** do not install `language`, `locale`, `content_translation`
+or `config_translation`. Their absence is the record of the choice. Path
+prefixes are written in that one language.
+
+**If multilingual:**
+
+- **Negotiation is `language-url` — path prefixes, not query strings.**
+  `/es/…` and `/en/…`. A query-parameter negotiator (`?lang=en`) makes every
+  page reachable at two URLs that differ only by a parameter, which doubles the
+  sitemap and creates a duplicate-content shape that canonical tags then have to
+  paper over. Path prefixes are the shape search engines expect and the one
+  hreflang addresses cleanly.
+- **Pathauto patterns are per language, via the pattern's `language` selection
+  condition.** The `[node:title]` half of a pattern adapts to the translation on
+  its own; **the prefix never does.** One pattern therefore means one language's
+  words for every translation — `/venues/…` on Spanish content. If the property
+  is multilingual, ship paired patterns:
+
+  ```
+  venue_es  condition langcode=es  ->  /lugares/[node:title]
+  venue_en  condition langcode=en  ->  /venues/[node:title]
+  ```
+
+- **Never hand-write a path alias.** `path_alias` entities carry a langcode, and
+  pathauto sets it from the entity being aliased. Hand-written aliases are how a
+  site ends up with one language's words filed under another language's code.
+
+**Prefix vocabulary follows the default language, not the developer's.** A
+property whose `default_langcode` is `es` gets `/relojes/`, `/marca/`,
+`/eventos/` — not the English words that came to mind while writing the pattern.
+
+Reason: this was a real fleet-wide divergence, not a hypothetical. Five
+properties built from this scaffold ended up with **two defaults `es` and three
+`en`, two different negotiation strategies plus two properties with none, and
+language modules installed on three of five** — none of it chosen as a fleet
+position, because the scaffold had no position to inherit. The specific failure
+that surfaced it: pathauto patterns were written with English prefixes on a
+property whose content is Spanish-language listings, purely because its
+`default_langcode` still said `en` from the installer.
+
+**Verify from outside, per language:**
+
+```bash
+curl -sL https://example.com/es/<path> | grep -oE '<link rel="canonical" href="[^"]*"'
+curl -sL https://example.com/ | grep -oE '<link rel="alternate" hreflang="[^"]*"'
+```
+
+**Change it before there is content.** Default language and prefix vocabulary
+are nearly free to change while a property has no published nodes and nothing
+indexed; afterwards each change is a redirect map and a re-crawl. Settle it at
+scaffold time.
