@@ -824,3 +824,45 @@ aliases regenerate. The internal langcode is not.
 
 **Applies to:** any Drupal site without the `language` module, which is every
 monolingual install — i.e. the default state of a fresh scaffold.
+
+## §30 — Files a container writes never reach the commit (2026-09)
+
+**Symptom.** A drush script reports writing config, the commit succeeds,
+CI is green, the deploy is green, and the feature is simply absent in
+production. `git show --stat` on that commit shows the code and none of
+the config. Minutes later the files are sitting on the workstation,
+untracked.
+
+**Cause.** With `performance_mode: mutagen` the container filesystem is
+the authority and the host copy is an asynchronous replica. Anything
+drush writes lands inside the container first. `git add` runs on the
+HOST, so a commit fired straight after an export stages what the host
+had a moment ago, which is nothing.
+
+It is silent from every angle that normally catches mistakes. The
+export succeeded, so it prints success. Git was asked to add paths that
+held nothing new, so it has no error to report. The deploy imports the
+config directory faithfully, and that directory does not contain the
+new objects.
+
+**Fix.** Force the sync between writing and staging:
+
+```bash
+ddev drush php:script scripts/export_sync.php
+ddev mutagen sync          # <- the missing line
+git add config/sync
+```
+
+**Why the reflex does not save you.** Syncing BEFORE the script, to push
+local edits into the container, is the habit and is useless here. The
+direction that matters is container to host, and it has to happen after
+the write.
+
+**Tell.** `git status` showing untracked files you are certain you
+committed. If a deploy was green and the feature is missing, check
+`git show --stat` on the commit before debugging anything on the server.
+
+**Applies to:** any DDEV project on mutagen where something running
+inside the container produces files that git then commits. Config
+exports are the common case; generated migrations, compiled assets and
+scaffolded code have the same shape.
