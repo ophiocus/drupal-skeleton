@@ -1,3 +1,5 @@
+![drupal-skeleton](assets/banner.jpg)
+
 # drupal-skeleton
 
 A starting point for any Drupal 11 module or theme intended to live —
