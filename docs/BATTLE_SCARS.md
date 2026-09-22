@@ -866,3 +866,64 @@ committed. If a deploy was green and the feature is missing, check
 inside the container produces files that git then commits. Config
 exports are the common case; generated migrations, compiled assets and
 scaffolded code have the same shape.
+
+---
+
+## §31 — A Commerce catalogue is not nodes, and a product without its variation is not for sale (2026-09)
+
+**Symptom.** Two failures that look nothing alike and have one cause.
+
+First: a tool that measures "does this environment have content?" by
+counting nodes reports **zero** on a storefront with a full catalogue. A
+local fill from production finishes cleanly — multi-megabyte dump,
+hundreds of files on disk — and then prints `nodes 0 -> 0`, which reads
+exactly like an import that silently failed. The reflex is to re-run the
+fetch, or to go hunting for a corrupt dump. Nothing is wrong.
+
+Second: a seeder builds the catalogue, the products exist, the listing
+renders — and nothing can be bought. No price, no Add to cart. It
+presents as a theme or display bug and gets debugged in Twig.
+
+**Cause.** On a storefront the content does not live in `node`. A product
+is a `commerce_product` entity, and **the thing a customer actually buys
+is a `commerce_product_variation`** — a separate entity that carries the
+SKU, the price and the stock. `node` is one content entity type among
+many; on a storefront it may legitimately hold only a few standing pages,
+or nothing at all.
+
+So counting nodes asks the wrong question, and seeding nodes seeds the
+wrong entity. The second symptom is the same error one layer down: a
+seeder that creates products but not variations creates a catalogue with
+nothing purchasable in it, because price and Add to cart hang off the
+variation, not the product.
+
+**Fix — counting.** Any health check, fingerprint, or "is this local
+filled?" test must enumerate the content entity types the property
+actually uses, not assume `node`:
+
+```php
+foreach (['node', 'commerce_product', 'commerce_product_variation', 'media', 'taxonomy_term'] as $type) {
+  // count per type; a zero in one is only meaningful next to the others
+}
+```
+
+**Fix — seeding.** Seed the **variation first**, then the product that
+references it. The product holds a reference to its variations, so the
+purchasable entity has to exist before the thing pointing at it. Key the
+variation on its **SKU**, which is the natural stable identifier — never
+on a title, which is editable copy.
+
+Remember too that a **store** is a content entity, not config: it does not
+travel in `config/sync`, and every environment needs it created once
+before a product can be attached to anything.
+
+**Tell.** A content count of exactly zero sitting next to a large database
+dump and a populated files directory. Zero plus megabytes is not an empty
+site — it is the wrong question. For the second symptom: a product page
+that renders everything except a price.
+
+**Applies to:** any property running Commerce, and more generally any
+property whose content lives in a non-node entity type — products and
+variations, media, taxonomy terms, custom block content, or a project's
+own custom entity. The node count is a habit from brochure sites and it
+does not survive contact with anything else.

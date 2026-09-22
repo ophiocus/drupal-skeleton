@@ -151,6 +151,13 @@ a pipeline rather than by a rebuild months later.
 - **Match on a stable identifier, not on a title.** Matching by (bundle, title)
   is the mechanism that turns drift into duplication. Seeds should carry uuids;
   a title is editable copy and cannot be a key.
+- **Not everything is a node.** On a storefront the catalogue is
+  `commerce_product`, and the purchasable entity is `commerce_product_variation`
+  — a seeder that walks nodes seeds nothing, and one that seeds products but
+  not variations produces a catalogue that renders and cannot be bought.
+  Variations are seeded first and keyed on SKU, because the product references
+  them and a SKU is a stable identifier where a title is not. The manifest is
+  per **entity type**, not per node bundle. See `BATTLE_SCARS.md` §31.
 - **Seed-owned vs editorial is a judgement, and the manifest must force it.**
   Not everything should be a seed. Editorial content is written in production
   and belongs to backups, not to the repository — a tool that exports
