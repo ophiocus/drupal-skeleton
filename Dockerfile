@@ -93,14 +93,50 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && docker-php-ext-install -j"$(nproc)" bcmath
 
-# PHP memory_limit: the base image ships 128M, which is below the floor for
-# `drush recipe` / `drush deploy` on any non-trivial contrib stack (Symfony
-# DI graph compilation alone can exhaust 128M during a recipe apply). This
-# is a per-process CEILING, not a reservation — steady-state request RSS
-# stays ~100–150 MB. Raise via `--build-arg PHP_MEMORY_LIMIT=1024M` for
-# heavy stacks (Commerce + Migrate + custom module graphs have needed 1G).
-ARG PHP_MEMORY_LIMIT=512M
-RUN echo "memory_limit = ${PHP_MEMORY_LIMIT}" > /usr/local/etc/php/conf.d/zz-memory.ini
+# ─── Platform tuning: identical in every property ────────────────────
+# Source: this file; change it here first, then copy the block verbatim into
+# every property. Why each line: the platform's performance audit.
+#   opcache  a Drupal codebase is 17–20k PHP files; the base image caches
+#            4,000 and recompiles the rest on every request. The code is
+#            baked into this image, so timestamps are never re-checked.
+#   APCu     Drupal moves its bootstrap, config and discovery caches into
+#            APCu (chained to the database) as soon as the extension loads.
+#   memory   1024M for the CLI (drush deploy, recipes); 512M per web request.
+#   prefork  20 workers: one peaks near 70 MiB, the container has 2 GiB.
+RUN set -eux; \
+    savedAptMark="$(apt-mark showmanual)"; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends $PHPIZE_DEPS; \
+    pecl install apcu; \
+    docker-php-ext-enable apcu; \
+    apt-mark auto '.*' > /dev/null; \
+    apt-mark manual $savedAptMark > /dev/null; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+    rm -rf /var/lib/apt/lists/* /tmp/pear; \
+    printf '%s\n' \
+      'opcache.memory_consumption=256' \
+      'opcache.interned_strings_buffer=32' \
+      'opcache.max_accelerated_files=32531' \
+      'opcache.validate_timestamps=0' \
+      'apc.shm_size=128M' \
+      'memory_limit=1024M' \
+      > /usr/local/etc/php/conf.d/zz-platform-tuning.ini; \
+    printf '%s\n' \
+      '<IfModule mpm_prefork_module>' \
+      '    StartServers             3' \
+      '    MinSpareServers          2' \
+      '    MaxSpareServers          6' \
+      '    MaxRequestWorkers       20' \
+      '    MaxConnectionsPerChild 500' \
+      '</IfModule>' \
+      > /etc/apache2/mods-available/mpm_prefork.conf; \
+    printf '%s\n' \
+      '<IfModule php_module>' \
+      '    php_value memory_limit 512M' \
+      '</IfModule>' \
+      > /etc/apache2/conf-enabled/zz-platform-php.conf; \
+    php -m | grep -qx apcu; \
+    apache2ctl -t
 
 RUN rm -rf /opt/drupal/web /opt/drupal/vendor
 COPY --from=build --chown=www-data:www-data /opt/drupal /opt/drupal
