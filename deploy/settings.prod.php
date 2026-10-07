@@ -75,6 +75,10 @@ $settings['reverse_proxy_addresses'] = array_values(array_filter([
 // --- Trusted hosts ----------------------------------------------------------
 // Comma-separated regexes in DRUPAL_TRUSTED_HOSTS, e.g.
 //   ^example\.com$,^www\.example\.com$
+// Branch environments are named one label under the apex,
+// <slug>--dev.example.com, never <slug>.dev.example.com: a CDN's free wildcard
+// certificate covers one level only (BATTLE_SCARS §33). Trust them with
+//   ^[a-z0-9-]+--dev\.example\.com$
 // The fallback below is deliberately unusable ("example.com") so a
 // misconfigured environment fails loudly (Drupal refuses the host) instead
 // of quietly serving under an unexpected name.
@@ -82,6 +86,19 @@ $trusted = getenv('DRUPAL_TRUSTED_HOSTS');
 $settings['trusted_host_patterns'] = $trusted
   ? array_map('trim', explode(',', $trusted))
   : ['^example\.com$', '^www\.example\.com$'];
+
+// --- Edge cache: page max-age -------------------------------------------------
+// A CDN in front of the site may cache an anonymous page only when Drupal says
+// so: "Cache-Control: public, max-age=N" (+ "Vary: Cookie"). Drupal's default
+// of 0 sends "must-revalidate, no-cache, private", and the edge then never
+// caches HTML however the CDN is configured (BATTLE_SCARS §32). N, in seconds,
+// is DRUPAL_PAGE_MAX_AGE (default 3600). Until edits purge the edge by cache
+// tag, N bounds how long an edit takes to reach anonymous visitors; a shop or
+// a fast-moving site wants it lower. 0 turns edge caching off for this site.
+// Drupal's own page cache is unaffected: it is invalidated by tags either way.
+$page_max_age = getenv('DRUPAL_PAGE_MAX_AGE');
+$config['system.performance']['cache']['page']['max_age'] =
+  ($page_max_age === FALSE || $page_max_age === '') ? 3600 : max(0, (int) $page_max_age);
 
 // --- Outbound mail ----------------------------------------------------------
 // Drupal's default transport is PHP mail(), which shells out to sendmail — and

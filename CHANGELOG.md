@@ -5,6 +5,22 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-07 — edge cache + one-level names (BATTLE_SCARS §32, §33)
+
+A property behind a CDN served every page from the origin: the CDN does not
+cache HTML by default, and Drupal's page max-age of 0 tells it not to anyway.
+
+- **`deploy/settings.prod.php`** — `cache.page.max_age` from
+  `DRUPAL_PAGE_MAX_AGE` (default **3600**), so a new site sends
+  `Cache-Control: public, max-age=3600` to anonymous visitors from its first
+  deploy. 0 disables edge caching. The CDN side (one cache rule that bypasses
+  Drupal session cookies and admin/cart paths, tiered caching, browser TTL
+  from origin) is described in §32.
+- **Trusted hosts** — branch environments are named `<slug>--dev.<apex>`,
+  one label under the apex, because a free wildcard edge certificate covers one
+  level only (§33). Comment and `.env.example` show the pattern.
+- **`deploy/.env.example`** — `DRUPAL_PAGE_MAX_AGE` added.
+
 ## 2026-08-17 — outbound mail + contact form (PROTOCOL D18)
 
 The runtime image has no MTA, so every property minted so far could not send a

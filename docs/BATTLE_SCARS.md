@@ -927,3 +927,71 @@ property whose content lives in a non-node entity type — products and
 variations, media, taxonomy terms, custom block content, or a project's
 own custom entity. The node count is a habit from brochure sites and it
 does not survive contact with anything else.
+
+## §32 — The CDN is in front, and still no page is cached (2026-10)
+
+**What bit.** A fleet moved behind Cloudflare and every HTML response still
+came back `cf-cache-status: DYNAMIC`: every page view went through the tunnel
+to the origin, while only CSS/JS/images were cached. Two independent causes,
+either one sufficient:
+
+1. **Cloudflare never caches HTML by default.** It caches by file extension
+   only, so that it can never serve one visitor's private page to another.
+   Caching HTML needs an explicit cache rule per zone. A site that already
+   sent `Cache-Control: public, max-age=3600` was *still* DYNAMIC without it.
+2. **Drupal says "private" by default.** `system.performance`
+   `cache.page.max_age = 0` emits `must-revalidate, no-cache, private` on
+   every anonymous page, and a CDN set to respect the origin obeys it.
+
+**Fix.** Both halves. Drupal: a non-zero page max-age (here
+`deploy/settings.prod.php`, `DRUPAL_PAGE_MAX_AGE`, default 3600). Edge: one
+rule, "eligible for cache, TTL from origin", for `GET`/`HEAD` **without a
+Drupal session cookie** (`SESS…`/`SSESS…` — this covers logged-in users *and*
+anonymous Commerce carts, which live in the session) and outside `/user`,
+`/admin`, `/cart`, `/checkout`, `/batch`, `/system`, `/jsonapi`. Turn on
+tiered caching so one origin fetch refills every PoP, and set the browser
+TTL to respect the origin rather than a forced value.
+
+**The trap inside the fix.** Cloudflare ignores `Vary: Cookie`. Any cookie the
+site reads **server-side** to change the HTML (a consent choice, a currency, a
+region) must be an explicit bypass in the rule, or one visitor's variant is
+served to everyone; and every visitor carrying it misses the cache. Prefer
+deciding such things in the browser, so the HTML stays the same for everyone.
+
+**Rotation.** Hashed CSS/JS rotate themselves. HTML is bounded by the
+max-age until edits purge the edge by cache tag; warm the edge after each
+deploy by crawling the sitemap once through the public hostname.
+
+**Tell.** `cf-cache-status: DYNAMIC` on a page you expected cached. Check the
+origin's `Cache-Control` first, then whether the zone has a cache rule at all.
+
+---
+
+## §33 — A free edge certificate covers one level, so name everything one level deep (2026-10)
+
+**What bit.** After a zone moved to Cloudflare, `api.service.example.com` and
+`<slug>.dev.example.com` failed the TLS handshake at the edge (curl exit 35;
+schannel `SEC_E_ILLEGAL_MESSAGE`), while `www.example.com` worked. A
+certificate wildcard matches exactly one label: Universal SSL covers
+`example.com` and `*.example.com`, never `*.dev.example.com`. Covering deeper
+names is a paid add-on per zone. Proxying a two-level name took a live API
+down until its record was put back to DNS-only.
+
+**Fix.** A naming rule instead of a certificate: every public name is one
+label under the apex, with levels joined by a double hyphen, leaf first:
+`api--service.example.com`, `<slug>--dev.example.com`. One proxied `*`
+record per zone (plus the matching tunnel/ingress wildcard) then routes any
+new name with no DNS change. Constraints: no `--` inside a slug (it is the
+joiner), and the leaf needs at least 3 characters, because DNS reserves `--`
+in positions 3–4 (`xn--`).
+
+**The second half.** Drupal's `trusted_host_patterns` must accept the new
+form (`^[a-z0-9-]+--dev\.example\.com$`), or the renamed environment answers
+`400 The provided host name is not valid for this server`, from the origin
+as well as through the edge. Also, an OAuth/MCP server that publishes its own
+URL in its metadata must be told the new name before OAuth clients move.
+
+**Tell.** TLS failure at the edge only for names with two labels before the
+apex.
+
+---
