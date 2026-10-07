@@ -1,0 +1,5 @@
+name: 'Edge Purge'
+type: module
+description: 'Purges a CDN (Cloudflare) by Drupal cache tag: tags every response with hashed Cache-Tag values and queues each invalidated tag for a host-side purger.'
+core_version_requirement: ^10.3 || ^11
+package: Performance

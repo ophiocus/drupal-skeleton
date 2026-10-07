@@ -1,0 +1,18 @@
+services:
+  edge_purge.queue:
+    class: Drupal\edge_purge\PurgeQueue
+    arguments: ['@database', '@datetime.time']
+  # Drush's AutowireTrait looks each constructor type hint up AS A SERVICE ID;
+  # without this alias it silently drops the whole command class.
+  Drupal\edge_purge\PurgeQueue: '@edge_purge.queue'
+
+  edge_purge.invalidator:
+    class: Drupal\edge_purge\Cache\PurgeQueueInvalidator
+    arguments: ['@edge_purge.queue']
+    tags:
+      - { name: cache_tags_invalidator }
+
+  edge_purge.cache_tag_header:
+    class: Drupal\edge_purge\EventSubscriber\CacheTagHeader
+    tags:
+      - { name: event_subscriber }

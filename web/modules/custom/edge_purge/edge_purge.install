@@ -1,0 +1,41 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Edge Purge module.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_schema().
+ */
+function edge_purge_schema(): array {
+  $schema['edge_purge_queue'] = [
+    'description' => 'Invalidated cache tags waiting for the CDN purger, one row per tag.',
+    'fields' => [
+      'hash' => [
+        'description' => 'The tag as the CDN knows it: EdgeTags::hash().',
+        'type' => 'varchar_ascii',
+        'length' => 16,
+        'not null' => TRUE,
+      ],
+      'tag' => [
+        'description' => 'The Drupal cache tag, for reading the queue by eye.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'seq' => [
+        'description' => 'When the tag was last invalidated, in microseconds. A purge acknowledges only rows it saw, so a tag invalidated again meanwhile stays queued.',
+        'type' => 'int',
+        'size' => 'big',
+        'not null' => TRUE,
+      ],
+    ],
+    'primary key' => ['hash'],
+    'indexes' => ['seq' => ['seq']],
+  ];
+  return $schema;
+}

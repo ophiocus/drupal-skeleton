@@ -5,6 +5,27 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-07 — `edge_purge`: purge the CDN by cache tag
+
+With a page max age of an hour, an editor's save could stay invisible behind
+the CDN for an hour. `web/modules/custom/edge_purge` closes that gap so the
+max age can go to a day:
+
+- every cacheable response carries a `Cache-Tag` header naming its Drupal
+  cache tags, each hashed to 12 characters (Cloudflare's header cap is 16 KB;
+  a page carries hundreds of tags);
+- every invalidated tag is queued in `edge_purge_queue`, inside the save's
+  own transaction;
+- the host drains the queue (`drush edge-purge:claim` → purge-by-tag API →
+  `drush edge-purge:ack --through=<seq>`). Drupal never holds the CDN token,
+  and the host batches to the CDN's rate limit (Cloudflare Free: 5 purge
+  requests a minute, 100 tags each).
+
+Enable it through `core.extension.yml` so `drush deploy` installs it, run the
+host drainer, then raise `cache.page.max_age`. The contrib `cloudflare` module
+was passed over: beta, minimally maintained, needs the Purge framework, and
+keeps the token inside Drupal. See the module's README.
+
 ## 2026-10-07 — edge cache + one-level names (BATTLE_SCARS §32, §33)
 
 A property behind a CDN served every page from the origin: the CDN does not
