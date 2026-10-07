@@ -20,6 +20,9 @@ cache HTML by default, and Drupal's page max-age of 0 tells it not to anyway.
   one label under the apex, because a free wildcard edge certificate covers one
   level only (§33). Comment and `.env.example` show the pattern.
 - **`deploy/.env.example`** — `DRUPAL_PAGE_MAX_AGE` added.
+- **BATTLE_SCARS §34** (CLI-rendered URLs need `drush --uri`, or sitemaps say
+  `http://default`) and **§35** (an anonymous session, e.g. from a module writing
+  the private tempstore on render, bypasses every cache layer).
 
 ## 2026-08-17 — outbound mail + contact form (PROTOCOL D18)
 

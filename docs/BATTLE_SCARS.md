@@ -995,3 +995,53 @@ URL in its metadata must be told the new name before OAuth clients move.
 apex.
 
 ---
+
+## §34 — From the CLI, Drupal does not know its own address (2026-10)
+
+**What bit.** A deploy script regenerated the XML sitemap with
+`drush simple-sitemap:generate`. Every `<loc>` came out as
+`http://default/...`: the public sitemap handed search engines a list of dead
+links, and the post-deploy cache warmer (which crawls the sitemap) had nothing
+to fetch. Nothing failed; the site looked fine.
+
+**Why.** Anything that builds absolute URLs outside an HTTP request — sitemaps,
+mail with links, feeds, cron jobs that render — takes its base URL from drush's
+`--uri`, and without it Drupal falls back to `http://default`.
+
+**Fix.** Pass the real address on every CLI call that renders URLs:
+`drush --uri=https://example.com simple-sitemap:generate` (or set
+`options.uri` in `drush/drush.yml` per environment). Check after deploying:
+the first `<loc>` of `/sitemap.xml` must be the public host.
+
+**Tell.** `http://default` anywhere in public output.
+
+---
+
+## §35 — One anonymous session undoes every cache layer (2026-10)
+
+**What bit.** A site behind a CDN with a correct cache rule kept answering
+`cf-cache-status: BYPASS` although the origin said `public, max-age=3600`.
+The first render of each page sent `Set-Cookie: SSESS…` to an anonymous
+visitor. A CDN does not cache a response that sets a cookie, and from then on
+the visitor's session cookie routes every request past the edge cache *and*
+past Drupal's page cache. Session rows piled up by the hundred.
+
+**Why.** A contributed module recorded each visitor's navigation trail in the
+**private tempstore** on every front-end response. `PrivateTempStore` needs an
+owner; for an anonymous user it starts a session to have one. Any code that
+writes `$session`, the private tempstore or a session-backed service while
+rendering a public page does the same (a "recently viewed" block, a trail, a
+form that stores state on build).
+
+**Fix.** Never start a session on an anonymous render. Record only when a
+session already exists (`$request->hasPreviousSession()`), or only after the
+visitor opts into the feature, or keep the state in the browser
+(sessionStorage) and send it when it is needed. Warming the cache after a
+deploy hides the symptom (the crawler takes the first renders), not the cause.
+
+**Tell.** Session rows for uid 0 whose payload is only
+`core.tempstore.private.owner`, and BYPASS at the edge on pages the origin
+calls public. Find the writer with
+`grep -rln "tempstore.private\|PrivateTempStore" web/modules`.
+
+---
