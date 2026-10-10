@@ -93,7 +93,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: gd, pdo_mysql, bcmath, intl, zip, opcache
+          extensions: gd, pdo_mysql, bcmath, intl, zip
           coverage: none
           tools: composer:v2
 
@@ -120,11 +120,15 @@ jobs:
       # with Drupal's router script is enough; workers let a test's own
       # requests overlap. Absolute paths: the server resolves the router
       # from inside its docroot, so `web/.ht.router.php` is not found and
-      # every request dies with a fatal.
+      # every request dies with a fatal. No opcache: each test installs a
+      # site and rewrites its settings.php, and a cached copy of the old
+      # one answers the first requests after install with a 500, a
+      # different test each run.
       - name: Web server for functional tests
         run: |
           mkdir -p web/sites/simpletest /tmp/browser_output
-          PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8080 \
+          PHP_CLI_SERVER_WORKERS=4 php -d opcache.enable=0 -d opcache.enable_cli=0 \
+            -S 127.0.0.1:8080 \
             -t "$GITHUB_WORKSPACE/web" "$GITHUB_WORKSPACE/web/.ht.router.php" \
             > /tmp/php-server.log 2>&1 &
 
