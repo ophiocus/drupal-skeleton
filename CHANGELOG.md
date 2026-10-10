@@ -5,6 +5,20 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-10 — tests gate every deploy (BATTLE_SCARS §36)
+
+The workflow built and deployed every push without running a test. Now a
+`test` job runs first and `build` needs it:
+
+- `scripts/ci/tests.sh` runs phpcs, phpstan, the Unit, Kernel and Functional
+  suites of all custom code (modules, submodules, themes; found by directory)
+  and `npm test` in custom packages that define one. Every gate runs, and the
+  run fails if any did. Locally: `ddev exec bash scripts/ci/tests.sh [gate…]`.
+- In CI: PHP 8.3 (setup-php), MariaDB 11.4 as a service, Node 22, PHP's built-in
+  server for functional tests. Keep those in step with the image and
+  `.ddev/config.yaml`.
+- `phpunit.xml.dist`'s `unit` suite now reaches submodules' tests too.
+
 ## 2026-10-07 — `edge_purge`: purge the CDN by cache tag
 
 With a page max age of an hour, an editor's save could stay invisible behind

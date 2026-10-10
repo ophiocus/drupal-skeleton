@@ -3,8 +3,11 @@ name: Build and push image
 # The production pipeline, shipped with the skeleton so every property minted
 # from it deploys the same way from its first push (PROTOCOL D17):
 #
-#   audit gate → build image → push to GHCR → deploy (dev/** or master)
-#              → post-deploy HTTP health gate
+#   test gate → audit gate → build image → push to GHCR
+#             → deploy (dev/** or master) → post-deploy HTTP health gate
+#
+# The test gate is its own job and `build` needs it: no image is built, and so
+# nothing is deployed, from a push whose tests fail (BATTLE_SCARS §36).
 #
 # ─── Parametric entries ──────────────────────────────────────────────────
 # Per-property values are NEVER edited into this file. They come from the
@@ -61,7 +64,80 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ─── Test gate ─────────────────────────────────────────────────────
+  # Every check in scripts/ci/tests.sh: coding standards, static analysis,
+  # the Unit, Kernel and Functional suites of all custom code, and the npm
+  # tests of custom packages. The same script runs by hand in DDEV
+  # (`ddev exec bash scripts/ci/tests.sh`), so a red gate here reproduces
+  # locally. Versions follow the image (PHP) and .ddev/config.yaml (MariaDB,
+  # Node): change them together.
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      db:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: db
+          MARIADB_USER: db
+          MARIADB_PASSWORD: db
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: gd, pdo_mysql, bcmath, intl, zip, opcache
+          coverage: none
+          tools: composer:v2
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      # With dev dependencies: the test tooling lives there. The image build
+      # below installs without them, as before.
+      - name: Composer install
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # Functional tests drive a real site over HTTP. PHP's built-in server
+      # with Drupal's router script is enough; workers let a test's own
+      # requests overlap.
+      - name: Web server for functional tests
+        run: |
+          mkdir -p web/sites/simpletest /tmp/browser_output
+          PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8080 -t web web/.ht.router.php \
+            > /tmp/php-server.log 2>&1 &
+
+      - name: Test gate
+        env:
+          SIMPLETEST_DB: mysql://db:db@127.0.0.1:3306/db
+          SIMPLETEST_BASE_URL: http://127.0.0.1:8080
+          BROWSERTEST_OUTPUT_DIRECTORY: /tmp/browser_output
+        run: bash scripts/ci/tests.sh
+
+      - name: Web server log (on failure)
+        if: failure()
+        run: tail -n 200 /tmp/php-server.log || true
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     # A hung SSH or a wedged buildx would otherwise burn the full 6-hour
     # default before anyone notices.

@@ -1045,3 +1045,44 @@ calls public. Find the writer with
 `grep -rln "tempstore.private\|PrivateTempStore" web/modules`.
 
 ---
+
+## §36 — The pipeline deployed every push and ran no test (2026-10)
+
+**What bit.** The workflow audited the lock file, built the image, deployed it
+and checked that the site answered. It never ran a test. A property carried
+nearly four hundred passing PHPUnit tests and a JavaScript suite, and a push
+to `master` reached production without executing one of them. The suites ran
+only when someone remembered to run them in DDEV, so two things went unseen:
+a test that failed in the full run and passed alone (state leaking between
+tests), and one coding-standards error that sat in a release for days.
+
+A second gap hid inside the first: the `unit` suite in `phpunit.xml.dist`
+globbed `web/modules/custom/*/tests`, so the tests of submodules
+(`custom/<module>/modules/<sub>/tests`) did not run even when someone did run
+the default command.
+
+**Why.** Each gate was added after the failure it prevents (the audit after an
+advisory, the health check after a site that fataled behind a 200). Tests had
+never failed in production, so nothing forced a gate for them; "the suite is
+green locally" was true on the machine where it was last run, and nowhere else.
+
+**Fix.** A `test` job that `build` needs: no image, and so no deploy, from a
+push whose tests fail. The job runs `scripts/ci/tests.sh`, which also runs by
+hand (`ddev exec bash scripts/ci/tests.sh [gate…]`), so a red run reproduces
+locally with one command. The script runs phpcs, phpstan, the Unit, Kernel and
+Functional suites of every custom module, submodule and theme (found by
+directory, so a new module's tests join by existing), and `npm test` in every
+custom `package.json` that defines one. In CI: PHP from setup-php at the image's
+version, MariaDB as a service container at the DDEV version, PHP's built-in
+server with `web/.ht.router.php` for functional tests. Every gate runs even
+after one fails, so a red run lists everything that is wrong at once.
+
+A test that fails only in the full run is fixed, or skipped with
+`markTestSkipped()` and a reason naming the leak; it is never left red, because
+a gate that is sometimes red for no reason teaches everyone to ignore it.
+
+**Tell.** A workflow whose steps are audit, build, push, deploy, health and
+nothing that runs `phpunit`. Check with
+`grep -n "phpunit\|tests.sh" .github/workflows/*.yml`.
+
+---

@@ -12,6 +12,8 @@
 /web/sites/*/settings.local.php
 /web/sites/*/services.yml
 /web/sites/default/
+# Functional test sites and their browser output (scripts/ci/tests.sh).
+/web/sites/simpletest/
 
 # --- DDEV local state ------------------------------------------------
 /.ddev/.env

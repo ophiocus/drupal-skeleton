@@ -2,16 +2,17 @@
 <!--
     PHPUnit configuration for the skeleton's custom modules and themes.
 
-    `unit` is the only suite enabled by default — unit tests run inside
-    the container without bootstrapping Drupal, so they're cheap and
-    they're what should fire on every commit. Kernel + Functional suites
-    can be added per project as the surface grows; the file's structure
-    is set up to extend cleanly.
-
-    Run from project root inside DDEV:
+    `unit` is the only suite enabled here — unit tests run inside the
+    container without bootstrapping Drupal, so they're cheap:
         ddev exec vendor/bin/phpunit
-    The `unit` suite is the default, so no suite flag is needed. Pass a
-    suite name via the testsuite option once more suites are enabled.
+
+    The full gate (coding standards, static analysis, Unit, Kernel and
+    Functional suites of all custom code, npm tests) is
+    scripts/ci/tests.sh. CI runs it before every image build, so before
+    every deploy; run the same thing locally with
+        ddev exec bash scripts/ci/tests.sh
+    It finds suites by directory and uses core's phpunit configuration,
+    so new modules join it without an edit here.
 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
@@ -36,6 +37,7 @@
     <testsuites>
         <testsuite name="unit">
             <directory>web/modules/custom/*/tests/src/Unit</directory>
+            <directory>web/modules/custom/*/modules/*/tests/src/Unit</directory>
             <directory>web/themes/custom/*/tests/src/Unit</directory>
         </testsuite>
         <!-- Kernel and Functional suites: enable per project.
