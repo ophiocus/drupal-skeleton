@@ -7,6 +7,10 @@
 #   ddev exec bash scripts/ci/tests.sh unit       # one or more gates by name
 #
 # Gates, in order (cheap first; all run, so one failure does not hide another):
+#   integrity   no merge-conflict marker in any tracked file, and every YAML
+#               file in config/sync and custom code parses. The suites below
+#               install from config/install, so a broken config/sync file
+#               would otherwise pass them all and fail only at `drush cim`
 #   phpcs       Drupal + DrupalPractice over custom code (phpcs.xml.dist)
 #   phpstan     static analysis over custom code (phpstan.neon)
 #   unit        PHPUnit Unit suites of every custom module, submodule, theme
@@ -29,7 +33,7 @@ export SIMPLETEST_DB="${SIMPLETEST_DB:-mysql://db:db@db/db}"
 export SIMPLETEST_BASE_URL="${SIMPLETEST_BASE_URL:-http://localhost}"
 export BROWSERTEST_OUTPUT_DIRECTORY="${BROWSERTEST_OUTPUT_DIRECTORY:-/tmp}"
 
-ALL=(phpcs phpstan unit kernel functional js)
+ALL=(integrity phpcs phpstan unit kernel functional js)
 WANT=("$@")
 [ ${#WANT[@]} -eq 0 ] && WANT=("${ALL[@]}")
 
@@ -57,6 +61,34 @@ phpunit_suite() {
   vendor/bin/phpunit -c web/core "${dirs[@]}"
 }
 
+integrity() {
+  local ok=0 files markers yaml
+  # Tracked files when git can see the repository; inside a container that
+  # holds only a worktree's files it cannot, and the project's own
+  # directories are searched instead.
+  if files="$(git ls-files 2>/dev/null)" && [ -n "$files" ]; then
+    markers="$(printf '%s\n' "$files" | grep -v -E '^(vendor|web/core|web/(modules|themes|profiles)/contrib)/' \
+      | tr '\n' '\0' | xargs -0 grep -I -n -E '^(<<<<<<<|>>>>>>>)( |$)' 2>/dev/null)"
+  else
+    markers="$(grep -r -I -n -E '^(<<<<<<<|>>>>>>>)( |$)' \
+      --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=.git \
+      --exclude-dir=core --exclude-dir=contrib --exclude-dir=files --exclude-dir=simpletest . 2>/dev/null)"
+  fi
+  if [ -n "$markers" ]; then
+    echo "merge-conflict markers:"
+    echo "$markers"
+    ok=1
+  else
+    echo "no merge-conflict markers"
+  fi
+  yaml=(config/sync/*.yml web/modules/custom/*.yml web/modules/custom/*/*.yml
+        web/modules/custom/*/config/*/*.yml web/modules/custom/*/modules/*/*.yml
+        web/modules/custom/*/modules/*/config/*/*.yml
+        web/themes/custom/*/*.yml web/themes/custom/*/config/*/*.yml)
+  php scripts/ci/yaml_lint.php "${yaml[@]}" || ok=1
+  return $ok
+}
+
 js_tests() {
   local pkg dir ran=0
   for pkg in web/modules/custom/*/package.json web/modules/custom/*/*/package.json \
@@ -74,7 +106,8 @@ js_tests() {
 
 run_gate() {
   case "$1" in
-    phpcs)      vendor/bin/phpcs ;;
+    integrity)  integrity ;;
+    phpcs)     vendor/bin/phpcs ;;
     phpstan)    vendor/bin/phpstan analyse --no-progress --memory-limit=1G ;;
     unit)       phpunit_suite Unit ;;
     kernel)     phpunit_suite Kernel ;;

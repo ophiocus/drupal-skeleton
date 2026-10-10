@@ -1093,3 +1093,32 @@ nothing that runs `phpunit`. Check with
 `grep -n "phpunit\|tests.sh" .github/workflows/*.yml`.
 
 ---
+
+## §37 — A merge left conflict markers in config/sync and every test passed (2026-10)
+
+**What bit.** A branch merge resolved its code conflict and staged a form
+display YAML with its `<<<<<<< HEAD` / `>>>>>>>` lines still inside. The test
+gate of §36 went green, the release was pushed, and the deploy was cancelled
+only because someone ran `drush config:status` locally and it died with
+"Unable to parse at line 18 (near <<<<<<< HEAD)". On the server, `drush deploy
+|| drush cr` would have failed the import, fallen back to a cache rebuild and
+passed the HTTP health check: new code live, none of the release's config.
+
+**Why.** Every suite installs from modules' `config/install`; none reads
+`config/sync`. The conflict was checked by grepping the one file that was
+resolved by hand, not the whole tree.
+
+**Fix.** A first gate, `integrity`, in `scripts/ci/tests.sh`: it fails on a
+`<<<<<<<` or `>>>>>>>` line in any tracked file (`git ls-files`; a plain search
+inside a container where git cannot see the repository, as with a worktree),
+and on any YAML in `config/sync` or custom code that does not parse
+(`scripts/ci/yaml_lint.php`, Symfony Yaml from the project's vendor).
+
+A related quiet diff: a config object whose keys in `config/sync` are not in
+the order Drupal stores them reads `Different` in `config:status` after every
+import, forever. Write the keys in the stored order (what `cex` writes).
+
+**Tell.** `drush config:status` fails to parse, or reports the same object
+after two imports in a row.
+
+---

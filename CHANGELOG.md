@@ -5,6 +5,13 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-10 — integrity gate: conflict markers and config YAML (BATTLE_SCARS §37)
+
+- `scripts/ci/tests.sh` gains a first gate, `integrity`: it fails on a
+  merge-conflict marker in any tracked file and on any YAML in `config/sync`
+  or custom code that does not parse (`scripts/ci/yaml_lint.php`). The other
+  suites install from `config/install`, so a broken `config/sync` passed them.
+
 ## 2026-10-10 — tests gate every deploy (BATTLE_SCARS §36)
 
 The workflow built and deployed every push without running a test. Now a
