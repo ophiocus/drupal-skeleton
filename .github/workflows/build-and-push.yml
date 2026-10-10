@@ -118,11 +118,14 @@ jobs:
 
       # Functional tests drive a real site over HTTP. PHP's built-in server
       # with Drupal's router script is enough; workers let a test's own
-      # requests overlap.
+      # requests overlap. Absolute paths: the server resolves the router
+      # from inside its docroot, so `web/.ht.router.php` is not found and
+      # every request dies with a fatal.
       - name: Web server for functional tests
         run: |
           mkdir -p web/sites/simpletest /tmp/browser_output
-          PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8080 -t web web/.ht.router.php \
+          PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8080 \
+            -t "$GITHUB_WORKSPACE/web" "$GITHUB_WORKSPACE/web/.ht.router.php" \
             > /tmp/php-server.log 2>&1 &
 
       - name: Test gate
