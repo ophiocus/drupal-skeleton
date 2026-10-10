@@ -117,17 +117,19 @@ jobs:
         run: composer install --no-interaction --no-progress --prefer-dist
 
       # Functional tests drive a real site over HTTP. PHP's built-in server
-      # with Drupal's router script is enough; workers let a test's own
-      # requests overlap. Absolute paths: the server resolves the router
-      # from inside its docroot, so `web/.ht.router.php` is not found and
-      # every request dies with a fatal. No opcache: each test installs a
-      # site and rewrites its settings.php, and a cached copy of the old
-      # one answers the first requests after install with a 500, a
-      # different test each run.
+      # with Drupal's router script is enough, with two conditions:
+      # - absolute paths: the server resolves the router from inside its
+      #   docroot, so `web/.ht.router.php` is not found and every request
+      #   dies with a fatal;
+      # - ONE worker. With PHP_CLI_SERVER_WORKERS the forked workers log
+      #   "Failed to poll event" and random requests (often the first after
+      #   a login or a form post) answer 500, a different test each run.
+      #   Reproduced in DDEV: 4 workers, 2 of 8 failing; 1 worker, 38 of 38.
+      # Opcache stays off: each test rewrites its site's settings.php.
       - name: Web server for functional tests
         run: |
           mkdir -p web/sites/simpletest /tmp/browser_output
-          PHP_CLI_SERVER_WORKERS=4 php -d opcache.enable=0 -d opcache.enable_cli=0 \
+          php -d opcache.enable=0 -d opcache.enable_cli=0 \
             -S 127.0.0.1:8080 \
             -t "$GITHUB_WORKSPACE/web" "$GITHUB_WORKSPACE/web/.ht.router.php" \
             > /tmp/php-server.log 2>&1 &
