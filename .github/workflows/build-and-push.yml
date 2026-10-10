@@ -64,6 +64,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Runner pinned, not ubuntu-latest: `latest` moves to a new Ubuntu on
+  # GitHub's schedule (24.04 → 26.04 from 2026-10-19), and with it the
+  # system libraries under setup-php and the service containers. A gate
+  # that changes under a push is not a gate. Bump deliberately, both jobs.
   # ─── Test gate ─────────────────────────────────────────────────────
   # Every check in scripts/ci/tests.sh: coding standards, static analysis,
   # the Unit, Kernel and Functional suites of all custom code, and the npm
@@ -72,7 +76,7 @@ jobs:
   # locally. Versions follow the image (PHP) and .ddev/config.yaml (MariaDB,
   # Node): change them together.
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     services:
       db:
@@ -158,7 +162,7 @@ jobs:
 
   build:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # A hung SSH or a wedged buildx would otherwise burn the full 6-hour
     # default before anyone notices.
     timeout-minutes: 30
