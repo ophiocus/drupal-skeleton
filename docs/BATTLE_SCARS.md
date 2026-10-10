@@ -1077,6 +1077,13 @@ version, MariaDB as a service container at the DDEV version, PHP's built-in
 server with `web/.ht.router.php` for functional tests. Every gate runs even
 after one fails, so a red run lists everything that is wrong at once.
 
+Two traps in the CI web server, each paid with a red run. `php -S -t web
+web/.ht.router.php` fails every request: the server resolves the router from
+inside its docroot, so give both paths absolute. And `PHP_CLI_SERVER_WORKERS`
+breaks Drupal's functional tests at random: the forked workers log "Failed to
+poll event" and a few requests a run answer 500, a different test each time.
+One worker passes them all; it reproduces in DDEV with the same command.
+
 A test that fails only in the full run is fixed, or skipped with
 `markTestSkipped()` and a reason naming the leak; it is never left red, because
 a gate that is sometimes red for no reason teaches everyone to ignore it.
