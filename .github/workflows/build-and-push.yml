@@ -139,6 +139,17 @@ jobs:
         if: failure()
         run: tail -n 200 /tmp/php-server.log || true
 
+      # The pages functional tests saw, so a failure that does not reproduce
+      # locally can still be read. Kept a week.
+      - name: Functional test pages (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-output
+          path: web/sites/simpletest/browser_output/
+          if-no-files-found: ignore
+          retention-days: 7
+
   build:
     needs: test
     runs-on: ubuntu-latest
