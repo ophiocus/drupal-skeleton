@@ -68,9 +68,16 @@ $settings['reverse_proxy_trusted_headers'] =
 // DRUPAL_REVERSE_PROXY_ADDRESS to the proxy's address instead — with a directly
 // reachable container, trusting the peer would let any client forge
 // X-Forwarded-Proto and X-Forwarded-For.
-$settings['reverse_proxy_addresses'] = array_values(array_filter([
-  getenv('DRUPAL_REVERSE_PROXY_ADDRESS') ?: ($_SERVER['REMOTE_ADDR'] ?? NULL),
-]));
+//
+// Behind a CDN tunnel there are two proxies (tunnel connector → Traefik), and
+// Symfony reports the first UNtrusted address from the right of
+// X-Forwarded-For: trusting only Traefik makes every visitor the tunnel
+// connector. Set DRUPAL_REVERSE_PROXY_ADDRESS to the edge network's CIDR
+// (comma-separated entries allowed) so both hops are trusted (BATTLE_SCARS §39).
+$proxies = getenv('DRUPAL_REVERSE_PROXY_ADDRESS');
+$settings['reverse_proxy_addresses'] = $proxies
+  ? array_values(array_filter(array_map('trim', explode(',', $proxies))))
+  : array_values(array_filter([$_SERVER['REMOTE_ADDR'] ?? NULL]));
 
 // --- Trusted hosts ----------------------------------------------------------
 // Comma-separated regexes in DRUPAL_TRUSTED_HOSTS, e.g.
@@ -92,9 +99,11 @@ $settings['trusted_host_patterns'] = $trusted
 // so: "Cache-Control: public, max-age=N" (+ "Vary: Cookie"). Drupal's default
 // of 0 sends "must-revalidate, no-cache, private", and the edge then never
 // caches HTML however the CDN is configured (BATTLE_SCARS §32). N, in seconds,
-// is DRUPAL_PAGE_MAX_AGE (default 3600). Until edits purge the edge by cache
-// tag, N bounds how long an edit takes to reach anonymous visitors; a shop or
-// a fast-moving site wants it lower. 0 turns edge caching off for this site.
+// is DRUPAL_PAGE_MAX_AGE (default 3600). Without a purge, N bounds how long an
+// edit takes to reach anonymous visitors; a shop or a fast-moving site wants it
+// lower. With edge_purge enabled and its drainer running, edits leave the edge
+// within a minute, and N can be a day (86400; docs/DEPLOY.md §7). 0 turns edge
+// caching off for this site.
 // Drupal's own page cache is unaffected: it is invalidated by tags either way.
 $page_max_age = getenv('DRUPAL_PAGE_MAX_AGE');
 $config['system.performance']['cache']['page']['max_age'] =

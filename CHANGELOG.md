@@ -26,6 +26,31 @@ The workflow built and deployed every push without running a test. Now a
   `.ddev/config.yaml`.
 - `phpunit.xml.dist`'s `unit` suite now reaches submodules' tests too.
 
+## 2026-10-12 — Behind a CDN: origin certificates, two-proxy client IP, purge traps (BATTLE_SCARS §38–§40)
+
+The edge work was half in the skeleton: the cache settings were, the rest of
+the topology was not, and the template still assumed Let's Encrypt.
+
+- **`deploy/docker-compose.yaml`** — the router asks only for `tls=true`; no
+  `tls.certresolver` label. Behind a CDN, Traefik serves the CDN's origin
+  certificate from its file provider (§38). `TRAEFIK_CERTRESOLVER` removed from
+  `.env.example`; a directly exposed host adds the label back (comment shows it).
+- **`deploy/settings.prod.php`** — `DRUPAL_REVERSE_PROXY_ADDRESS` takes a
+  comma-separated list of IPs/CIDRs; behind a tunnel set the edge network's
+  CIDR, or every visitor logs as the tunnel connector (§39). Documented in
+  `.env.example`. Max-age comment points at `edge_purge` (86400 once purging).
+- **`docs/DEPLOY.md`** — §3 TLS options (origin certificate vs ACME),
+  `deploy-dev` hosts are `<slug>--dev.<apex>`, `deploy-prod` purges and warms
+  behind a CDN; new **§7 Behind a CDN**: DNS, origin TLS, client IP, cache rule,
+  max-age, purge on save and on deploy, sessions, token handling, verification.
+- **`scripts/edge-purge-drain.sh`** (new) — the reference host drainer for
+  `edge_purge`: claim ≤100 tags, purge by tag, ack; a backlog over 500 becomes
+  one hostname purge. Token read from a mode-600 file, passed to curl on stdin,
+  `-4` by default (§40).
+- **BATTLE_SCARS** §25 scoped to ACME-issuing proxies; **§38** closing the
+  origin strands HTTP-01 renewals; **§39** the visitor is two proxies away;
+  **§40** a URL purge that purges nothing, and an IPv4 filter IPv6 walks around.
+
 ## 2026-10-07 — `edge_purge`: purge the CDN by cache tag
 
 With a page max age of an hour, an editor's save could stay invisible behind

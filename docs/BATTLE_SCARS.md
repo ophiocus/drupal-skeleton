@@ -635,7 +635,9 @@ certificate order, fails alone, and self-heals the moment its DNS lands — no
 redeploy required.
 
 **Applies to:** any property with alternate/vanity domains, and any staged
-rollout where some names point at the host before others.
+rollout where some names point at the host before others — **when the proxy
+issues ACME certificates itself.** Behind a CDN the origin carries the CDN's
+long-lived origin certificate instead and there is no order to fail (§38).
 
 ## §26 — Changing a field's storage TYPE means delete + recreate, and the purge can lie (2026-06)
 
@@ -1120,5 +1122,72 @@ import, forever. Write the keys in the stored order (what `cex` writes).
 
 **Tell.** `drush config:status` fails to parse, or reports the same object
 after two imports in a row.
+
+## §38 — Closing the origin leaves its certificates unable to renew (2026-10)
+
+**What bit.** A fleet moved behind a CDN tunnel and the host's :80 and :443
+were closed. Every site kept working, because the CDN terminates TLS for
+visitors and the tunnel accepts any origin certificate. The origin
+certificates were still Let's Encrypt, renewed by Traefik over **HTTP-01 on
+:80**, which no longer reaches the host. Nothing failed that day; every one of
+them would have expired at once about sixty days later, and the first sign
+would have been the tunnel refusing the origin, if it verified at all.
+
+**Fix.** Behind a CDN, give the origin the **CDN's origin certificate**
+(Cloudflare Origin CA: apex + `*.apex`, ECC, 15 years), loaded by Traefik's
+file provider, and drop the ACME resolver. The routers keep `tls=true` and lose
+`tls.certresolver`. A wildcard per zone also covers every one-label host
+(`<slug>--dev.`, `api--app.`; §33). The alternative is ACME over DNS-01 with a
+DNS API token on the host, which keeps renewals and a second secret.
+
+**Then.** Point the tunnel's origin verification at the CDN's origin CA root
+instead of disabling it, and make whatever monitors certificate expiry read the
+**origin** certificate: from outside, `openssl s_client` reaches the CDN's edge
+certificate, not yours.
+
+**Tell.** Behind a CDN, `acme.json` still being written to, or an ACME
+resolver in Traefik's static config.
+
+## §39 — Behind a tunnel, the visitor is two proxies away (2026-10)
+
+**What bit.** With §28's default (trust the connecting peer), a site behind
+`cloudflared → Traefik → Drupal` logged the **tunnel connector's address** for
+every visitor: flood control, bans and the log all keyed on one internal IP.
+
+**Why.** Symfony walks `X-Forwarded-For` from the right and stops at the first
+address it does not trust. The peer is Traefik (trusted); the next hop to the
+left is the tunnel connector (untrusted), so that is "the client". Traefik has
+the same rule: unless its entry point trusts the connector
+(`forwardedHeaders.trustedIPs`), it discards the header the tunnel sent.
+
+**Fix.** Trust the whole edge network at both hops: Traefik's websecure entry
+point `forwardedHeaders.trustedIPs: [<edge network CIDR>]`, and
+`DRUPAL_REVERSE_PROXY_ADDRESS=<edge network CIDR>` (comma-separated entries
+allowed). It is safe only because nothing on that network is reachable from
+outside: the host publishes no ports.
+
+**Tell.** `drush watchdog:show` lists one private address for every visitor.
+
+## §40 — Purge API traps: success that purges nothing, and an IP filter that IPv6 walks around (2026-10)
+
+**What bit, twice.**
+
+1. A purge of the home page **by URL** returned `"success": true` and the edge
+   kept answering `HIT` with the old page: the cached object's key (scheme,
+   host, query, device variant) did not match the URL sent. Purging by
+   **hostname** (apex and `www`) evicted it.
+2. A purge token restricted to the host's IPv4 address verified fine, then
+   every purge answered `"Authentication error"` (code 10000). The host has
+   IPv6 too; curl reached the API over IPv6, which the filter does not allow.
+   The token-verify endpoint does not apply the IP filter, so "verified" proved
+   nothing.
+
+**Fix.** After a deploy, purge by hostname (then warm); after an edit, purge by
+cache tag (`edge_purge`). Call the API with `curl -4` when the filter names an
+IPv4 address. Empty the tag queue before a deploy's hostname purge, or the next
+drain re-purges the config import's tags and undoes the warm.
+
+**Tell.** `cf-cache-status: HIT` right after a successful purge; a purge that
+fails with "Authentication error" while the same token verifies.
 
 ---

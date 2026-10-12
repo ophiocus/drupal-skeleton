@@ -32,8 +32,12 @@ services:
       - "traefik.docker.network=${EDGE_NETWORK:-edge}"
       - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${APEX:?set APEX in .env}`) || Host(`www.${APEX}`)"
       - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
+      # TLS with the proxy's own certificates (behind a CDN: the CDN's origin
+      # certificate, loaded by Traefik's file provider; docs/DEPLOY.md §3).
+      # A proxy that issues ACME certificates instead needs one more label:
+      #   traefik.http.routers.<name>.tls.certresolver=<resolver>
+      # and an open :80 for HTTP-01 (BATTLE_SCARS §25, §38).
       - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls=true"
-      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
       - "traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80"
 
   db:

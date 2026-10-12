@@ -14,7 +14,8 @@ can be kept at the edge for a day and still change the moment an editor saves.
    row per tag, inside the same transaction as the save that invalidated it.
 3. **Purge.** Drupal never calls the CDN and never holds its token. A host
    timer drains the queue at the CDN's rate limit (Cloudflare Free: 5 purge
-   requests a minute, 100 tags each):
+   requests a minute, 100 tags each); `scripts/edge-purge-drain.sh` is the
+   reference drainer, run every minute from the host's cron:
 
    ```
    drush edge-purge:claim --limit=100     # "through <seq> remaining <n>", then one hash per line

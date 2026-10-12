@@ -73,9 +73,17 @@ host's `deploy-prod` knows.
 ## 3. What the host needs (once per property)
 
 1. A shared reverse-proxy network the property attaches to
-   (`docker network create <EDGE_NETWORK>`), a Traefik with a certresolver
-   named `<TRAEFIK_CERTRESOLVER>`, and `docker login ghcr.io` persisted for
-   the deploy user.
+   (`docker network create <EDGE_NETWORK>`), a Traefik holding a certificate
+   for the apex, and `docker login ghcr.io` persisted for the deploy user.
+   The template's router asks only for `tls=true`, so Traefik serves whatever
+   certificate it holds for the host:
+   - **Behind a CDN (the default):** the CDN's origin certificate (e.g.
+     Cloudflare Origin CA, apex + `*.apex`, 15 years), loaded by Traefik's file
+     provider. Nothing renews, and the host can close :80 and :443 entirely
+     when the CDN reaches it through a tunnel (§7, BATTLE_SCARS §38).
+   - **Exposed directly:** an ACME resolver; add
+     `tls.certresolver=<resolver>` to the router and keep :80 open for HTTP-01
+     (BATTLE_SCARS §25).
 2. A property directory, e.g. `/srv/<platform>/sites/<apex>/`, containing
    `docker-compose.yaml` (verbatim copy of `deploy/docker-compose.yaml`) and a
    filled-in `.env` (from `deploy/.env.example`; `openssl rand -hex 32` for
@@ -87,7 +95,9 @@ host's `deploy-prod` knows.
    deploy-prod <site>              # cd <property dir> && docker compose pull && up -d
                                    #   && drush deploy -y || drush cr
                                    #   (idempotent; never touches data/)
-   deploy-dev  <site> <dev-branch> # ephemeral <slug>.dev.<apex> environment
+                                   #   behind a CDN: then purge + warm (§7)
+   deploy-dev  <site> <dev-branch> # ephemeral <slug>--dev.<apex> environment
+                                   #   (one label deep: BATTLE_SCARS §33)
    ```
 
    These are platform infrastructure, not property code — they map `<site>`
@@ -203,3 +213,30 @@ your transport is not wired — go back to the mailsystem defaults.
 
 Also check the apex actually **receives**: `dig +short MX example.com`. An empty
 result means every address you publish on the site bounces, contact form or not.
+
+## 7. Behind a CDN (Cloudflare)
+
+The default topology: the CDN terminates TLS for visitors and reaches the host
+through a **tunnel** (`cloudflared` on the edge network, ingress
+`https://traefik:443`), so the host publishes no ports at all. What the
+property needs for it, layer by layer:
+
+| Layer | Setting | Why |
+| --- | --- | --- |
+| DNS | apex, `www` and one `*` record per zone, proxied, CNAME to the tunnel | names one label deep (`api--app.`, `<slug>--dev.`): the free edge certificate covers one level (BATTLE_SCARS §33) |
+| Origin TLS | the CDN's origin certificate in Traefik (§3) | ACME HTTP-01 cannot renew once :80 closes (BATTLE_SCARS §38) |
+| Client IP | `DRUPAL_REVERSE_PROXY_ADDRESS` = the edge network's CIDR; Traefik's `forwardedHeaders.trustedIPs` the same | two proxies in front, not one (BATTLE_SCARS §39) |
+| Edge cache | one cache rule: cache eligible, edge TTL from origin, bypass when a Drupal session cookie or an admin/cart/checkout/user path is present; browser TTL "respect origin" | the CDN caches no HTML by default, and ignores `Vary: Cookie` (BATTLE_SCARS §32) |
+| Page max-age | `DRUPAL_PAGE_MAX_AGE` 3600; 86400 once purging works | bounds staleness until edits purge |
+| Purge on save | enable `edge_purge` (`edge_purge: 0` in `core.extension.yml`), run `scripts/edge-purge-drain.sh` every minute from the host's cron | each saved page leaves the edge within a minute; Drupal never holds the CDN token |
+| Purge on deploy | after a clean deploy of a live site: `drush edge-purge:clear`, purge the apex and `www` by **hostname**, wait a few seconds, then crawl the sitemap once | the image changed every page; a URL purge is not enough (BATTLE_SCARS §40) |
+| Sessions | nothing on an anonymous page may start a session | one cookie turns every page into a BYPASS (BATTLE_SCARS §35) |
+
+The CDN token is **Zone → Cache Purge → Purge** only, IP-filtered to the host,
+stored on the host in a mode-600 file through a hidden prompt, never in the
+repository, the image or `.env`. A host with IPv6 must call the API over IPv4
+when the filter names an IPv4 address (BATTLE_SCARS §40).
+
+Verify from outside, never from the container: `curl -sI https://example.com/`
+twice must answer `cf-cache-status: HIT` on the second request, with
+`cache-control: max-age=…, public` and no `set-cookie`.
