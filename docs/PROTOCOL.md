@@ -383,3 +383,30 @@ that looks like a setting but is actually a declaration the rest of the system
 was built around. Recording it as its own decision so D20's "declare it at
 scaffold time" carries the weight it needs: at scaffold time it is a keystroke,
 afterwards it is a migration with a data-loss failure mode.
+
+### D22 — The skeleton is an upstream, not only a starter
+
+**Decision.** Sites built on this skeleton keep merging it. The upstream owns an
+exact list of paths (`upstream/OWNERSHIP`): the shared Composer baseline as a
+metapackage (`upstream-configuration/`), the image, the pipeline, the test gate
+and the platform settings. The site owns everything else. `scripts/upstream/sync.sh`
+applies the upstream; `upstream-sync.yml` proposes it weekly as a tested pull
+request. Contract: [UPSTREAM.md](UPSTREAM.md).
+
+**Why.** Copying a skeleton once gives every site a good start and then lets each
+one drift. Each drift is small and has a reason, and together they meant a
+security fix had to be applied by hand per site, every site in a different
+state: a different deploy gate, a missing test job, an older Dockerfile. A
+custom upstream, the Pantheon model, turns "fix it in every site" into "fix it
+once, and let the sites merge it".
+
+**Why ownership is exact rather than a three-way merge.** A file that both sides
+edit is a merge conflict waiting for the worst moment, which for this pipeline
+is a security release. So no file has two owners. A site that needs an upstream
+file to differ either sets a variable that file reads, or uses the site-owned
+file that file includes (`deploy/settings.site.php`), or changes the upstream
+for everyone.
+
+**Why a metapackage.** It keeps the site's root `composer.json` the site's own:
+the upstream changes its requirements without ever editing a file the site
+owns, which is what keeps the sync conflict-free.

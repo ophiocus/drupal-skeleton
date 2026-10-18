@@ -1,0 +1,119 @@
+name: Test gate
+
+# Every check in scripts/ci/tests.sh: coding standards, static analysis, the
+# Unit, Kernel and Functional suites of all custom code, and the npm tests of
+# custom packages. One definition, two callers: build-and-push.yml runs it
+# before any image is built (so before any deploy), and upstream-sync.yml runs
+# it on a synced branch before proposing it. The same script runs by hand in
+# DDEV (`ddev exec bash scripts/ci/tests.sh`), so a red gate here reproduces
+# locally. Versions follow the image (PHP) and .ddev/config.yaml (MariaDB,
+# Node): change them together.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Commit or branch to test; blank = the calling event''s ref.'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  # Runner pinned, not ubuntu-latest: `latest` moves to a new Ubuntu on
+  # GitHub's schedule (24.04 → 26.04 from 2026-10-19), and with it the
+  # system libraries under setup-php and the service containers. A gate
+  # that changes under a push is not a gate. Bump deliberately.
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      db:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: db
+          MARIADB_USER: db
+          MARIADB_PASSWORD: db
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: gd, pdo_mysql, bcmath, intl, zip
+          coverage: none
+          tools: composer:v2
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      # The lock must agree with upstream-configuration/composer.json, or the
+      # site would install a baseline the upstream no longer specifies and
+      # nothing would say so (docs/UPSTREAM.md).
+      - name: Lock matches the upstream baseline
+        run: bash scripts/upstream/sync.sh --check
+
+      # With dev dependencies: the test tooling lives there. The image build
+      # installs without them.
+      - name: Composer install
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # Functional tests drive a real site over HTTP. PHP's built-in server
+      # with Drupal's router script is enough, with two conditions:
+      # - absolute paths: the server resolves the router from inside its
+      #   docroot, so `web/.ht.router.php` is not found and every request
+      #   dies with a fatal;
+      # - ONE worker. With PHP_CLI_SERVER_WORKERS the forked workers log
+      #   "Failed to poll event" and random requests (often the first after
+      #   a login or a form post) answer 500, a different test each run.
+      #   Reproduced in DDEV: 4 workers, 2 of 8 failing; 1 worker, 38 of 38.
+      # Opcache stays off: each test rewrites its site's settings.php.
+      - name: Web server for functional tests
+        run: |
+          mkdir -p web/sites/simpletest /tmp/browser_output
+          php -d opcache.enable=0 -d opcache.enable_cli=0 \
+            -S 127.0.0.1:8080 \
+            -t "$GITHUB_WORKSPACE/web" "$GITHUB_WORKSPACE/web/.ht.router.php" \
+            > /tmp/php-server.log 2>&1 &
+
+      - name: Test gate
+        env:
+          SIMPLETEST_DB: mysql://db:db@127.0.0.1:3306/db
+          SIMPLETEST_BASE_URL: http://127.0.0.1:8080
+          BROWSERTEST_OUTPUT_DIRECTORY: /tmp/browser_output
+        run: bash scripts/ci/tests.sh
+
+      - name: Web server log (on failure)
+        if: failure()
+        run: tail -n 200 /tmp/php-server.log || true
+
+      # The pages functional tests saw, so a failure that does not reproduce
+      # locally can still be read. Kept a week.
+      - name: Functional test pages (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-output
+          path: web/sites/simpletest/browser_output/
+          if-no-files-found: ignore
+          retention-days: 7

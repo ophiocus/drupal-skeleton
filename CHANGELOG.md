@@ -5,6 +5,27 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-18 — the skeleton is now an upstream (docs/UPSTREAM.md, PROTOCOL D22)
+
+Sites built on this skeleton keep merging it, so an advisory resolved here once
+reaches all of them.
+
+- `upstream-configuration/composer.json`: a metapackage with core (floor
+  `~11.4.10`) and the shared contrib. The root `composer.json` requires it with
+  one line through a path repository; a site's own packages sit beside it.
+- `upstream/OWNERSHIP`: the exact list of paths the upstream owns. Everything
+  else belongs to the site.
+- `scripts/upstream/sync.sh`: takes upstream-owned paths exactly, never touches
+  the site's, re-resolves the lock; `--adopt` for a copied site, `--check` for
+  a stale lock.
+- `.github/workflows/test-gate.yml`: the test job, now reusable.
+  `build-and-push.yml` calls it, and so does the new `upstream-sync.yml`
+  (weekly: sync on a branch, audit, test gate, pull request).
+- `build-and-push.yml` warns when `DEPLOY_HOST` is unset on master instead of
+  building green and deploying nothing.
+- `deploy/settings.prod.php` includes `deploy/settings.site.php` last: the
+  site's own settings, which no sync touches.
+
 ## 2026-10-10 — integrity gate: conflict markers and config YAML (BATTLE_SCARS §37)
 
 - `scripts/ci/tests.sh` gains a first gate, `integrity`: it fails on a

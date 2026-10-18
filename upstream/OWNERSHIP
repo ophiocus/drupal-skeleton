@@ -1,0 +1,30 @@
+# Paths this upstream owns (docs/UPSTREAM.md).
+#
+# An upstream sync takes every path listed here exactly as the upstream has it,
+# deletions included. Every path NOT listed belongs to the site, and a sync
+# never changes it: root composer.json and composer.lock (the lock is updated,
+# never replaced), config/, custom modules and themes, deploy/settings.site.php,
+# .ddev/, README, CHANGELOG and the site's own docs.
+#
+# A line ending in "/" is a directory and covers everything under it; any other
+# line is one file. Blank lines and "#" comments are ignored.
+
+upstream-configuration/
+upstream/
+scripts/ci/
+scripts/upstream/
+.github/workflows/build-and-push.yml
+.github/workflows/composer-audit.yml
+.github/workflows/test-gate.yml
+.github/workflows/upstream-sync.yml
+Dockerfile
+.dockerignore
+deploy/entrypoint.sh
+deploy/settings.prod.php
+deploy/docker-compose.yaml
+deploy/.env.example
+phpcs.xml.dist
+phpstan.neon
+phpunit.xml.dist
+docs/UPSTREAM.md
+docs/DEPLOY.md

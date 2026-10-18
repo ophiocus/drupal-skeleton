@@ -176,3 +176,13 @@ else {
   $config['adsense.settings']['adsense_disable'] = TRUE;
   $config['adsense.settings']['adsense_placeholder'] = FALSE;
 }
+
+// --- The site's own settings --------------------------------------------------
+// This file belongs to the upstream and is replaced on every upstream sync, so a
+// site never edits it. Whatever is the site's alone (a page max-age it chose, a
+// module's settings, a value no other site shares) goes in
+// deploy/settings.site.php, which the site owns and no sync touches. Last, so
+// the site can override anything above (docs/UPSTREAM.md).
+if (is_file($app_root . '/../deploy/settings.site.php')) {
+  include $app_root . '/../deploy/settings.site.php';
+}

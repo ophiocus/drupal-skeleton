@@ -64,101 +64,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Runner pinned, not ubuntu-latest: `latest` moves to a new Ubuntu on
-  # GitHub's schedule (24.04 → 26.04 from 2026-10-19), and with it the
-  # system libraries under setup-php and the service containers. A gate
-  # that changes under a push is not a gate. Bump deliberately, both jobs.
   # ─── Test gate ─────────────────────────────────────────────────────
-  # Every check in scripts/ci/tests.sh: coding standards, static analysis,
-  # the Unit, Kernel and Functional suites of all custom code, and the npm
-  # tests of custom packages. The same script runs by hand in DDEV
-  # (`ddev exec bash scripts/ci/tests.sh`), so a red gate here reproduces
-  # locally. Versions follow the image (PHP) and .ddev/config.yaml (MariaDB,
-  # Node): change them together.
+  # scripts/ci/tests.sh in CI, defined once in test-gate.yml so the upstream
+  # sync runs the identical gate. `build` needs it: no image is built, and so
+  # nothing is deployed, from a push whose tests fail (BATTLE_SCARS §36).
   test:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    services:
-      db:
-        image: mariadb:11.4
-        env:
-          MARIADB_DATABASE: db
-          MARIADB_USER: db
-          MARIADB_PASSWORD: db
-          MARIADB_ROOT_PASSWORD: root
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="healthcheck.sh --connect --innodb_initialized"
-          --health-interval=5s --health-timeout=5s --health-retries=30
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          extensions: gd, pdo_mysql, bcmath, intl, zip
-          coverage: none
-          tools: composer:v2
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-
-      - name: Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/cache@v5
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
-
-      # With dev dependencies: the test tooling lives there. The image build
-      # below installs without them, as before.
-      - name: Composer install
-        run: composer install --no-interaction --no-progress --prefer-dist
-
-      # Functional tests drive a real site over HTTP. PHP's built-in server
-      # with Drupal's router script is enough, with two conditions:
-      # - absolute paths: the server resolves the router from inside its
-      #   docroot, so `web/.ht.router.php` is not found and every request
-      #   dies with a fatal;
-      # - ONE worker. With PHP_CLI_SERVER_WORKERS the forked workers log
-      #   "Failed to poll event" and random requests (often the first after
-      #   a login or a form post) answer 500, a different test each run.
-      #   Reproduced in DDEV: 4 workers, 2 of 8 failing; 1 worker, 38 of 38.
-      # Opcache stays off: each test rewrites its site's settings.php.
-      - name: Web server for functional tests
-        run: |
-          mkdir -p web/sites/simpletest /tmp/browser_output
-          php -d opcache.enable=0 -d opcache.enable_cli=0 \
-            -S 127.0.0.1:8080 \
-            -t "$GITHUB_WORKSPACE/web" "$GITHUB_WORKSPACE/web/.ht.router.php" \
-            > /tmp/php-server.log 2>&1 &
-
-      - name: Test gate
-        env:
-          SIMPLETEST_DB: mysql://db:db@127.0.0.1:3306/db
-          SIMPLETEST_BASE_URL: http://127.0.0.1:8080
-          BROWSERTEST_OUTPUT_DIRECTORY: /tmp/browser_output
-        run: bash scripts/ci/tests.sh
-
-      - name: Web server log (on failure)
-        if: failure()
-        run: tail -n 200 /tmp/php-server.log || true
-
-      # The pages functional tests saw, so a failure that does not reproduce
-      # locally can still be read. Kept a week.
-      - name: Functional test pages (on failure)
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: browser-output
-          path: web/sites/simpletest/browser_output/
-          if-no-files-found: ignore
-          retention-days: 7
+    uses: ./.github/workflows/test-gate.yml
 
   build:
     needs: test
@@ -236,6 +147,15 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
               "$DEPLOY_HOST" \
               "deploy-dev $DEPLOY_SITE $DEV_BRANCH"
+
+      # Never silently undeployed. With DEPLOY_HOST unset the image is built and
+      # pushed but nothing deploys it, and a green run hides that — a property
+      # once built images for weeks that no server ever pulled. Say so loudly.
+      - name: Deploy not configured (warn)
+        # The upstream itself never deploys; every site built on it should.
+        if: github.ref == 'refs/heads/master' && vars.DEPLOY_HOST == '' && github.event.repository.name != 'drupal-skeleton'
+        run: |
+          echo "::warning title=Deploy skipped::vars.DEPLOY_HOST is not set on ${{ github.repository }}: the image was built and pushed but NOT deployed. Set DEPLOY_HOST and PROD_URL (Settings → Secrets and variables → Actions → Variables) and the VPS_DEPLOY_KEY secret."
 
       # Production auto-deploy on push to master. deploy-prod on the host:
       #   - docker compose pull   (the :latest image we just built)

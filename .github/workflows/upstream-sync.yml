@@ -1,0 +1,133 @@
+name: Upstream sync
+
+# Proposes the upstream's latest as a pull request: scripts/upstream/sync.sh on
+# a branch, the test gate on the result, then a PR for a human to merge.
+# Merging is a push to master, which deploys the site the usual way.
+# docs/UPSTREAM.md is the contract.
+#
+# This is how an advisory fixed once in the upstream reaches every site: the
+# upstream raises a floor in upstream-configuration/composer.json, and each
+# site's next sync re-resolves its own lock against it.
+#
+# A pull request opened with GITHUB_TOKEN does not trigger other workflows, so
+# its checks would stay empty. The test gate therefore runs here, on the synced
+# branch, and the PR links the run.
+
+on:
+  schedule:
+    # Mondays 07:23 UTC, off the hour.
+    - cron: '23 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+env:
+  SYNC_BRANCH: upstream-sync
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      changed: ${{ steps.sync.outputs.changed }}
+      upstream: ${{ steps.sync.outputs.upstream }}
+      sha: ${{ steps.push.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: gd, pdo_mysql, bcmath, intl, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Sync
+        id: sync
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$SYNC_BRANCH"
+          bash scripts/upstream/sync.sh
+
+      - name: Audit (production deps)
+        if: steps.sync.outputs.changed == 'true'
+        run: composer audit --no-dev --abandoned=report --format=plain --locked
+
+      - name: Push the branch
+        id: push
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          git push -f -q origin "HEAD:refs/heads/$SYNC_BRANCH"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: sync
+    if: needs.sync.outputs.changed == 'true'
+    uses: ./.github/workflows/test-gate.yml
+    with:
+      ref: ${{ needs.sync.outputs.sha }}
+
+  propose:
+    needs: [sync, test]
+    if: needs.sync.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      UP: ${{ needs.sync.outputs.upstream }}
+      SHA: ${{ needs.sync.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.sync.outputs.sha }}
+          fetch-depth: 2
+
+      - name: Open or refresh the pull request
+        run: |
+          set -euo pipefail
+          run="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          title="Upstream sync to ${UP:0:7}"
+          { git log -1 --format=%B "$SHA"
+            echo
+            echo "Test gate and audit passed on this branch: $run"
+            echo
+            echo "Merging deploys this site (push to master)."
+          } > "$RUNNER_TEMP/body.md"
+          pr=$(gh pr list --head "$SYNC_BRANCH" --base master --state open --json number --jq '.[0].number // empty')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          elif ! gh pr create --head "$SYNC_BRANCH" --base master --title "$title" --body-file "$RUNNER_TEMP/body.md"; then
+            # "Allow GitHub Actions to create and approve pull requests" is off
+            # by default per repository. Never silent: an issue links the branch.
+            compare="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/master...${SYNC_BRANCH}"
+            echo "Open the PR by hand: $compare" >> "$RUNNER_TEMP/body.md"
+            n=$(gh issue list --state open --search "in:title \"Upstream sync to\"" --json number --jq '.[0].number // empty')
+            if [ -n "$n" ]; then gh issue edit "$n" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+            else gh issue create --title "$title" --body-file "$RUNNER_TEMP/body.md"; fi
+          fi
+
+  report:
+    needs: [sync, test, propose]
+    if: failure()
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: One open issue, refreshed
+        run: |
+          run="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          title="Upstream sync needs a human"
+          n=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$n" ]; then gh issue comment "$n" --body "Failed again: $run"
+          else gh issue create --title "$title" --body "The upstream sync, its audit or its test gate failed. Nothing was proposed or deployed. Run: $run"; fi
