@@ -43,6 +43,18 @@ $settings['file_temp_path'] = '/tmp';
 // Releases are immutable images; errors go to the log, never to the page.
 $config['system.logging']['error_level'] = 'hide';
 
+// --- Container cache key, one per image -------------------------------------
+// The Dockerfile writes a hash of the image's files to deployment-identifier,
+// one level above the docroot. Drupal keys its compiled service container on
+// it, so a new image compiles its own container on its first request instead
+// of running new code against the previous image's service definitions until
+// the deploy's cache rebuild (BATTLE_SCARS §43). Without the file (an image
+// built before the Dockerfile wrote it), core's own key applies.
+$deployment_identifier = $app_root . '/../deployment-identifier';
+if (is_readable($deployment_identifier)) {
+  $settings['deployment_identifier'] = trim((string) file_get_contents($deployment_identifier));
+}
+
 // --- Reverse proxy (Traefik terminates TLS) ---------------------------------
 // Honour the forwarded proto/host so Drupal builds https:// URLs and sees the
 // real client IP.

@@ -1254,4 +1254,52 @@ export what the import produced. Never hand-edit langcodes back to `en`.
 **Tell.** `config:status` lists many items whose only difference is the
 `langcode:` line, and they come back after every deploy.
 
+## §43 — A new image boots the previous image's cached service container (2026-10)
+
+**What bit.** Five seconds after `docker compose up -d` started a new image, and
+before the deploy's `drush` steps ran, four requests died with
+`ArgumentCountError` in a custom event subscriber's constructor. The release
+had given that service one more constructor argument; the requests built it
+with the old argument list.
+
+**Why.** Drupal compiles the service container once and stores it in
+`cache_container`, in the database, which every image shares. The cache key
+is `service_container`, the environment, a hash of the installed composer
+package versions (`DrupalInstalled::VERSIONS_HASH`),
+`$settings['deployment_identifier']`, the OS and `container_yamls`
+(`DrupalKernel::getContainerCacheKey()`). Nothing in it covers the site's own
+code. A release that changes only custom modules keeps the key, so the new
+image loads the previous image's service definitions until the deploy's cache
+rebuild deletes them. Anything the old definitions describe differently fails
+in that window: a constructor argument, a new service, a removed one. A
+rollback to an older image hits the same window the other way round.
+
+**Fix.** One key per image. The Dockerfile's build stage hashes every file
+under `/opt/drupal` into `/opt/drupal/deployment-identifier`;
+`deploy/settings.prod.php` sets `deployment_identifier` from it. A new image
+finds no container under its key and compiles its own on its first request,
+from its own code and the database's module list. The same tree gives the
+same hash, so rebuilding a commit keeps its container. The identifier also
+prefixes APCu (`Settings::getApcuPrefix()`), which a new container starts
+empty anyway.
+
+**The old rows (measured, 2026-10).** Each image leaves one row of about
+0.7 MB. `drush cr` (and so `drush deploy`) replaces only the current image's
+row: it goes through `drupal_rebuild()`, which invalidates the container
+before the kernel boots, when `invalidateContainer()` does not touch the bin.
+`invalidateContainer()` on a booted kernel empties the bin, and so does
+`drupal_flush_all_caches()` called without a kernel argument (edge_purge's
+`edge-purge:rebuild` does that): after it, only the current image's row is
+left. A site deployed with plain `drush deploy` keeps one row per image
+until something empties the bin.
+
+**What it does not cover.** Other caches still hold the previous image's work
+until the deploy rebuilds them: plugin discovery, routes, rendered pages. A
+release that changes a plugin's definition or a route has the same window
+for those; only the deploy's `drush` steps close it.
+
+**Tell.** `ArgumentCountError`, `ServiceNotFoundException` or "too few
+arguments" in the seconds between a container start and the deploy's
+`drush deploy`, gone after it.
+
 ---

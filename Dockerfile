@@ -82,6 +82,19 @@ COPY . /opt/drupal/
 # etc. during `composer install`; COPY . above cannot clobber them because
 # those files are gitignored and therefore absent from the build context.
 
+# One container cache key per image (BATTLE_SCARS §43). Drupal keys its
+# compiled service container on the installed package versions and on
+# $settings['deployment_identifier'], never on the site's own code. Without
+# this, a new image boots the previous image's cached container until the
+# deploy's cache rebuild runs, and any service whose constructor changed
+# fails in that window. A hash of every file in the image changes with any
+# code change; settings.php reads it. The same tree gives the same hash.
+RUN find . -path ./web/sites/default/files -prune -o -type f -print0 \
+      | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16 \
+      > /tmp/deployment-identifier \
+ && mv /tmp/deployment-identifier /opt/drupal/deployment-identifier \
+ && grep -qxE '[0-9a-f]{16}' /opt/drupal/deployment-identifier
+
 # ─── Stage 2: runtime ────────────────────────────────────────────────
 FROM drupal:11-php8.3-apache
 
@@ -103,6 +116,9 @@ RUN apt-get update \
 #            APCu (chained to the database) as soon as the extension loads.
 #   memory   1024M for the CLI (drush deploy, recipes); 512M per web request.
 #   prefork  20 workers: one peaks near 70 MiB, the container has 2 GiB.
+#   deflate  the base image compresses HTML, CSS, JavaScript and XML, but
+#            not JSON: JSON endpoints (map frames, REST, autocomplete) left
+#            the origin uncompressed, several hundred KB per map frame.
 RUN set -eux; \
     savedAptMark="$(apt-mark showmanual)"; \
     apt-get update; \
@@ -135,6 +151,11 @@ RUN set -eux; \
       '    php_value memory_limit 512M' \
       '</IfModule>' \
       > /etc/apache2/conf-enabled/zz-platform-php.conf; \
+    printf '%s\n' \
+      '<IfModule mod_filter.c>' \
+      '    AddOutputFilterByType DEFLATE application/json' \
+      '</IfModule>' \
+      > /etc/apache2/conf-enabled/zz-platform-deflate.conf; \
     php -m | grep -qx apcu; \
     apache2ctl -t
 

@@ -5,6 +5,17 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-20 — one container cache key per image; Apache compresses JSON; BATTLE_SCARS §43
+
+- `Dockerfile` (build stage): a hash of every file under `/opt/drupal` is
+  written to `/opt/drupal/deployment-identifier`;
+  `deploy/settings.prod.php` sets `$settings['deployment_identifier']` from
+  it. A new image compiles its own service container on its first request
+  instead of running the previous image's until the deploy rebuilds caches.
+- `Dockerfile` (platform tuning block, copy verbatim into every property):
+  `conf-enabled/zz-platform-deflate.conf` adds `application/json` to
+  mod_deflate. The base image's list has no JSON type.
+
 ## 2026-10-20 — a visits report in the admin: ga4_report (PROTOCOL D24)
 
 - `web/modules/upstream/ga4_report`: the visits report (`/admin/reports/ga4`)
