@@ -1,0 +1,15 @@
+ga4_report.report:
+  path: '/admin/reports/ga4'
+  defaults:
+    _controller: '\Drupal\ga4_report\Controller\ReportController::report'
+    _title: 'Visits (Google Analytics)'
+  requirements:
+    _permission: 'view ga4 report'
+
+ga4_report.settings:
+  path: '/admin/config/services/ga4-report'
+  defaults:
+    _form: '\Drupal\ga4_report\Form\SettingsForm'
+    _title: 'GA4 report'
+  requirements:
+    _permission: 'administer ga4 report'

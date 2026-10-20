@@ -1,0 +1,12 @@
+property_id: ''
+cloudflare_zone: ''
+adsense_account: ''
+start_date: 90daysAgo
+end_date: today
+refresh_interval: 24
+internal_traffic: []
+page_kinds: []
+markers: []
+limits:
+  pages: 80
+  landing_pages: 100

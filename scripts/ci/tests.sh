@@ -11,7 +11,7 @@
 #               file in config/sync and custom code parses. The suites below
 #               install from config/install, so a broken config/sync file
 #               would otherwise pass them all and fail only at `drush cim`
-#   phpcs       Drupal + DrupalPractice over custom code (phpcs.xml.dist)
+#   phpcs       Drupal + DrupalPractice over custom and upstream code (phpcs.xml.dist)
 #   phpstan     static analysis over custom code (phpstan.neon)
 #   unit        PHPUnit Unit suites of every custom module, submodule, theme
 #   kernel      PHPUnit Kernel suites (needs SIMPLETEST_DB)
@@ -50,6 +50,7 @@ phpunit_suite() {
   local dirs=(
     web/modules/custom/*/tests/src/"$type"
     web/modules/custom/*/modules/*/tests/src/"$type"
+    web/modules/upstream/*/tests/src/"$type"
     web/themes/custom/*/tests/src/"$type"
   )
   if [ ${#dirs[@]} -eq 0 ]; then
@@ -84,6 +85,7 @@ integrity() {
   yaml=(config/sync/*.yml web/modules/custom/*.yml web/modules/custom/*/*.yml
         web/modules/custom/*/config/*/*.yml web/modules/custom/*/modules/*/*.yml
         web/modules/custom/*/modules/*/config/*/*.yml
+        web/modules/upstream/*/*.yml web/modules/upstream/*/config/*/*.yml
         web/themes/custom/*/*.yml web/themes/custom/*/config/*/*.yml)
   php scripts/ci/yaml_lint.php "${yaml[@]}" || ok=1
   return $ok
@@ -92,6 +94,7 @@ integrity() {
 js_tests() {
   local pkg dir ran=0
   for pkg in web/modules/custom/*/package.json web/modules/custom/*/*/package.json \
+             web/modules/upstream/*/package.json \
              web/themes/custom/*/package.json web/themes/custom/*/*/package.json; do
     case "$pkg" in */node_modules/*) continue ;; esac
     grep -q '"test"[[:space:]]*:' "$pkg" || continue

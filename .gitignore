@@ -12,6 +12,8 @@
 # The local private files path (../private from the docroot), made by
 # scripts/dev/private-path.sh; production's is the ./data/drupal-private volume.
 /private/
+# Credential files read by path (a local GA4 report key, say); never committed.
+/secrets/
 /web/sites/*/settings.local.php
 /web/sites/*/services.yml
 /web/sites/default/

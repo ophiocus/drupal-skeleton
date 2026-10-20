@@ -1,0 +1,10 @@
+view ga4 report:
+  title: 'View the GA4 report'
+  description: 'See the visits report drawn from the stored snapshot.'
+refresh ga4 report:
+  title: 'Refresh the GA4 report'
+  description: 'Fetch a new snapshot from Google Analytics now.'
+administer ga4 report:
+  title: 'Administer the GA4 report'
+  description: 'Choose the property, the dates, internal traffic and kinds of page.'
+  restrict access: true

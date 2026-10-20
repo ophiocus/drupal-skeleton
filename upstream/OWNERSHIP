@@ -11,6 +11,8 @@
 
 upstream-configuration/
 upstream/
+# Modules every site carries and enables as it chooses (docs/UPSTREAM.md).
+web/modules/upstream/
 scripts/ci/
 scripts/upstream/
 .github/workflows/build-and-push.yml

@@ -5,6 +5,27 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-20 — a visits report in the admin: ga4_report (PROTOCOL D24)
+
+- `web/modules/upstream/ga4_report`: the visits report (`/admin/reports/ga4`)
+  from three sources: Google Analytics 4, Cloudflare (edge cache per minute and
+  per day) and AdSense (earnings per day); `drush ga4-report:google-consent`
+  mints the AdSense credential. The GA4 report page,
+  settings (`/admin/config/services/ga4-report`), `drush ga4-report:refresh`
+  and `ga4-report:status`, cron on an interval. Snapshot in key-value; every
+  chart also a table. Unit, Kernel and Functional tests.
+- `web/modules/upstream/` is upstream-owned (`upstream/OWNERSHIP`); phpcs,
+  phpstan, `phpunit.xml.dist` and `scripts/ci/tests.sh` lint and test it.
+- `upstream-configuration/composer.json`: `google/auth` `^1.55`.
+- Root `composer.json` (starter): `npm-asset/echarts` `6.1.0`.
+- `deploy/settings.prod.php`: `GA4_REPORT_CREDENTIALS`,
+  `GA4_REPORT_CLOUDFLARE_TOKEN`, `GA4_REPORT_ADSENSE_CREDENTIALS` (paths of
+  credential files), `GA4_PROPERTY_ID`, `GA4_REPORT_CLOUDFLARE_ZONE`, and
+  `ADSENSE_PUBLISHER_ID` naming the AdSense account; `.env.example` documents
+  them.
+  `deploy/docker-compose.yaml` mounts `./secrets` read-only at
+  `/opt/drupal/secrets`; `/secrets/` is in `.gitignore` and `.dockerignore`.
+
 ## 2026-10-19 — one map for the fleet: maper (PROTOCOL D23); deploy rehearsal; BATTLE_SCARS §41–§42
 
 - `upstream-configuration/composer.json`: `drupal/maper` `1.0.0-alpha1`, exact

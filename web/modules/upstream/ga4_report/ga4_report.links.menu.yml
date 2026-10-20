@@ -1,0 +1,11 @@
+ga4_report.report:
+  title: 'Visits (Google Analytics)'
+  description: 'Visits, sources, places, devices and pages from the last stored snapshot.'
+  route_name: ga4_report.report
+  parent: system.admin_reports
+
+ga4_report.settings:
+  title: 'GA4 report'
+  description: 'Property, dates, internal traffic and kinds of page for the visits report.'
+  route_name: ga4_report.settings
+  parent: system.admin_config_services

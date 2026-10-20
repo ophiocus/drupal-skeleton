@@ -1,0 +1,77 @@
+services:
+  logger.channel.ga4_report:
+    parent: logger.channel_base
+    arguments: ['ga4_report']
+
+  # Google Analytics: the credentials file named by
+  # $settings['ga4_report_credentials'], else GOOGLE_APPLICATION_CREDENTIALS.
+  ga4_report.tokens:
+    class: Drupal\ga4_report\Google\GoogleAccessTokenProvider
+    arguments:
+      - '@http_client'
+      - '@settings'
+      - 'ga4_report_credentials'
+      - 'https://www.googleapis.com/auth/analytics.readonly'
+      - 'GOOGLE_APPLICATION_CREDENTIALS'
+
+  # AdSense: the authorized-user file named by
+  # $settings['ga4_report_adsense_credentials'].
+  ga4_report.adsense_tokens:
+    class: Drupal\ga4_report\Google\GoogleAccessTokenProvider
+    arguments:
+      - '@http_client'
+      - '@settings'
+      - 'ga4_report_adsense_credentials'
+      - 'https://www.googleapis.com/auth/adsense.readonly'
+
+  ga4_report.client:
+    class: Drupal\ga4_report\Google\Ga4Client
+    arguments: ['@http_client', '@ga4_report.tokens']
+
+  ga4_report.cloudflare_client:
+    class: Drupal\ga4_report\Cloudflare\CloudflareClient
+    arguments: ['@http_client', '@settings']
+
+  ga4_report.adsense_client:
+    class: Drupal\ga4_report\AdSense\AdSenseClient
+    arguments: ['@http_client', '@ga4_report.adsense_tokens']
+
+  ga4_report.cities:
+    class: Drupal\ga4_report\Report\CityLocator
+    factory: ['Drupal\ga4_report\Report\CityLocator', 'bundled']
+
+  ga4_report.normalizer:
+    class: Drupal\ga4_report\Report\Normalizer
+    arguments: ['@ga4_report.cities']
+
+  ga4_report.source.ga4:
+    class: Drupal\ga4_report\Source\Ga4Source
+    arguments: ['@ga4_report.client', '@ga4_report.tokens', '@ga4_report.normalizer']
+
+  ga4_report.source.cloudflare:
+    class: Drupal\ga4_report\Source\CloudflareSource
+    arguments: ['@ga4_report.cloudflare_client', '@datetime.time', '@config.factory']
+
+  ga4_report.source.adsense:
+    class: Drupal\ga4_report\Source\AdSenseSource
+    arguments: ['@ga4_report.adsense_client', '@datetime.time', '@config.factory']
+
+  ga4_report.store:
+    class: Drupal\ga4_report\SnapshotStore
+    arguments: ['@keyvalue', '@cache_tags.invalidator']
+
+  ga4_report.refresher:
+    class: Drupal\ga4_report\Refresher
+    arguments:
+      - '@config.factory'
+      - '@ga4_report.store'
+      - '@lock'
+      - '@datetime.time'
+      - '@logger.channel.ga4_report'
+      - ['@ga4_report.source.ga4', '@ga4_report.source.cloudflare', '@ga4_report.source.adsense']
+
+  # Drush's AutowireTrait and the OOP hook class look each constructor type
+  # hint up AS A SERVICE ID; without these aliases a Drush command class
+  # silently disappears whole (BATTLE_SCARS §27).
+  Drupal\ga4_report\Refresher: '@ga4_report.refresher'
+  Drupal\ga4_report\SnapshotStore: '@ga4_report.store'

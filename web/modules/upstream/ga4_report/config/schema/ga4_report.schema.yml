@@ -1,0 +1,77 @@
+ga4_report.settings:
+  type: config_object
+  label: 'GA4 report settings'
+  mapping:
+    property_id:
+      type: string
+      label: 'GA4 property ID (digits only)'
+    cloudflare_zone:
+      type: string
+      label: 'Cloudflare zone ID (32 hex characters)'
+    adsense_account:
+      type: string
+      label: 'AdSense publisher ID (pub-…)'
+    start_date:
+      type: string
+      label: 'First day of the report: YYYY-MM-DD or NdaysAgo'
+    end_date:
+      type: string
+      label: 'Last day of the report: YYYY-MM-DD, today or yesterday'
+    refresh_interval:
+      type: integer
+      label: 'Hours between cron refreshes (0: cron never refreshes)'
+    internal_traffic:
+      type: sequence
+      label: 'Internal traffic: a visit is internal when it matches every condition'
+      sequence:
+        type: mapping
+        label: 'Condition'
+        mapping:
+          dimension:
+            type: string
+            label: 'GA4 dimension'
+          values:
+            type: sequence
+            label: 'Values (any of them)'
+            sequence:
+              type: string
+              label: 'Value'
+    page_kinds:
+      type: sequence
+      label: 'Kinds of page, by address'
+      sequence:
+        type: mapping
+        label: 'Kind'
+        mapping:
+          id:
+            type: string
+            label: 'Machine name'
+          label:
+            type: label
+            label: 'Label'
+          pattern:
+            type: string
+            label: 'Regular expression the whole page path must match'
+    markers:
+      type: sequence
+      label: 'Dates marked on the daily chart'
+      sequence:
+        type: mapping
+        label: 'Marker'
+        mapping:
+          date:
+            type: string
+            label: 'Date (YYYY-MM-DD)'
+          label:
+            type: label
+            label: 'Label'
+    limits:
+      type: mapping
+      label: 'Row limits'
+      mapping:
+        pages:
+          type: integer
+          label: 'Most viewed pages to keep'
+        landing_pages:
+          type: integer
+          label: 'First-page and channel rows to keep'

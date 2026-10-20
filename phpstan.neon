@@ -6,6 +6,7 @@ parameters:
   level: 1
   paths:
     - web/modules/custom
+    - web/modules/upstream
     - web/themes/custom
   excludePaths:
     - '*/tests/fixtures/*'

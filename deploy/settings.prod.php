@@ -190,6 +190,36 @@ if ($maperContact) {
   $config['maper.settings']['contact'] = $maperContact;
 }
 
+// --- Visits report (ga4_report) ---------------------------------------------
+// Three sources, each reading its credentials file by PATH. The files live in
+// ./secrets/ beside the compose file (mounted read-only at /opt/drupal/secrets)
+// and never in the repository or in config. An ID set here wins over the
+// settings form; anything unset leaves the report as it is configured.
+//   GA4_REPORT_CREDENTIALS           Google Analytics: service account key
+//   GA4_REPORT_CLOUDFLARE_TOKEN      Cloudflare: file holding one API token
+//   GA4_REPORT_ADSENSE_CREDENTIALS   AdSense: authorized-user file
+$reportFiles = [
+  'GA4_REPORT_CREDENTIALS' => 'ga4_report_credentials',
+  'GA4_REPORT_CLOUDFLARE_TOKEN' => 'ga4_report_cloudflare_token',
+  'GA4_REPORT_ADSENSE_CREDENTIALS' => 'ga4_report_adsense_credentials',
+];
+foreach ($reportFiles as $env => $key) {
+  if ($path = getenv($env)) {
+    $settings[$key] = $path;
+  }
+}
+$reportIds = [
+  'GA4_PROPERTY_ID' => 'property_id',
+  'GA4_REPORT_CLOUDFLARE_ZONE' => 'cloudflare_zone',
+  // The publisher ID the ads already use names the account to report.
+  'ADSENSE_PUBLISHER_ID' => 'adsense_account',
+];
+foreach ($reportIds as $env => $key) {
+  if ($value = getenv($env)) {
+    $config['ga4_report.settings'][$key] = $value;
+  }
+}
+
 // --- The site's own settings --------------------------------------------------
 // This file belongs to the upstream and is replaced on every upstream sync, so a
 // site never edits it. Whatever is the site's alone (a page max-age it chose, a

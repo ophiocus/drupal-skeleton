@@ -20,6 +20,7 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
+        "npm-asset/echarts": "6.1.0",
         "npm-asset/vue": "3.5.43",
         "oomphinc/composer-installers-extender": "^2.0",
         "ophiocus/upstream-configuration": "^1.0"

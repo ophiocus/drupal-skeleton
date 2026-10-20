@@ -37,6 +37,7 @@
     <testsuites>
         <testsuite name="unit">
             <directory>web/modules/custom/*/tests/src/Unit</directory>
+            <directory>web/modules/upstream/*/tests/src/Unit</directory>
             <directory>web/modules/custom/*/modules/*/tests/src/Unit</directory>
             <directory>web/themes/custom/*/tests/src/Unit</directory>
         </testsuite>
@@ -53,10 +54,12 @@
     <source>
         <include>
             <directory>web/modules/custom</directory>
+            <directory>web/modules/upstream</directory>
             <directory>web/themes/custom</directory>
         </include>
         <exclude>
             <directory>web/modules/custom/*/tests</directory>
+            <directory>web/modules/upstream/*/tests</directory>
             <directory>web/themes/custom/*/tests</directory>
         </exclude>
     </source>

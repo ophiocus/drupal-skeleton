@@ -447,3 +447,61 @@ BATTLE_SCARS §41 and §42.
 **Pinning.** maper is in alpha, and alphas carry no upgrade path (reinstall
 between them), so the baseline pins an exact version, never a range. Moving
 the pin is a deliberate upstream change, with the reinstall in its notes.
+
+### D24 — A visits report in the admin: ga4_report, the first upstream module
+
+**Decision.** `web/modules/upstream/ga4_report` draws a site's Google Analytics 4
+data, its Cloudflare edge cache and its AdSense earnings in its own admin
+(`/admin/reports/ga4`) from stored snapshots, one per source. It is the
+first module the upstream owns: `web/modules/upstream/` is listed in
+`upstream/OWNERSHIP`, so every site receives it and its fixes through the sync,
+and enables it per site. The pieces:
+
+- **Data:** one fixed set of GA4 Data API reports (nine, two more when the site
+  names internal traffic, one per kind of page), fetched through REST
+  `batchRunReports` with core's Guzzle and `google/auth` (in the baseline
+  metapackage), normalised once per refresh and stored in the key-value
+  collection `ga4_report`. Refreshed by a button, `drush ga4-report:refresh`
+  or cron on an interval; a page view never calls Google. A refresh replaces
+  the snapshot only when every report arrived.
+- **Charts:** Apache ECharts 6.1.0 from asset-packagist, pinned in the root
+  `composer.json` like Vue (D23). Every chart's numbers are also a table.
+- **Per site, in config:** property ID, dates, refresh interval,
+  internal-traffic conditions, kinds of page (path patterns), marked dates.
+- **Two more sources, optional and independent:** Cloudflare's GraphQL
+  Analytics API (requests by cache status per minute over 24 hours, and per
+  day) and the AdSense Management API (earnings per day). Each source keeps
+  its own snapshot and its last good one when a refresh fails.
+- **Secrets by reference:** settings.php names one credentials file per source
+  (`GA4_REPORT_CREDENTIALS`, `GA4_REPORT_CLOUDFLARE_TOKEN`,
+  `GA4_REPORT_ADSENSE_CREDENTIALS` in production, mounted read-only from
+  `./secrets`). Google files must be a service account key or an
+  authorized-user file; the Cloudflare file holds one token with Zone ·
+  Analytics · Read. AdSense reads as a person, so its file is a refresh token
+  minted once by the owner with `drush ga4-report:google-consent`, from an
+  OAuth client whose consent screen is published (Testing tokens die in seven
+  days).
+- **City positions:** a bundled GeoNames table (cities of 15,000+, CC BY 4.0),
+  because Analytics names cities and never places them.
+
+**Why stand alone.** Of the drupal.org modules that read GA4 reports, the
+broadest (`google_analytics_reports` 4.0.1) still calls the client class
+google/analytics-data removed in v0.22.0 (its fix sat in review through
+2026-10) and only caches; `google_analytics_counter` keeps page views per path
+and nothing else. Both were looking for maintainers. The report a site needs is
+multi-dimensional and must not depend on Google answering at view time.
+
+**Why REST and not google/analytics-data.** One endpoint does not need gRPC,
+protobuf and a generated client in beta, whose one breaking surface change is
+what broke the contrib module above.
+
+**Why ECharts.** Every form the report draws is native to it (Sankey, sunburst,
+treemap, heatmap, scatter, stacked area and bars) except the mosaic, a short
+custom series; tooltips, legends, ARIA descriptions and resizing come with it.
+d3 would hand-build each chart; Chart.js and Observable Plot lack the Sankey,
+sunburst and treemap.
+
+**Why upstream-owned, not site-owned.** `web/modules/custom/` belongs to each
+site (D22): a module placed there reaches new sites only. The lint and test
+gates (phpcs, phpstan, phpunit, `scripts/ci/tests.sh`) cover
+`web/modules/upstream/` too.

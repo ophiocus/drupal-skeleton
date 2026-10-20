@@ -1,0 +1,24 @@
+# ECharts comes from asset-packagist into web/libraries/echarts (root
+# composer.json: "npm-asset/echarts", pinned). The report page checks the file
+# is there and says so when it is not.
+echarts:
+  version: 6.1.0
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+    gpl-compatible: true
+  js:
+    /libraries/echarts/dist/echarts.min.js: { minified: true }
+
+report:
+  version: VERSION
+  css:
+    component:
+      css/ga4-report.css: {}
+  js:
+    js/ga4-report.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/once
+    - ga4_report/echarts

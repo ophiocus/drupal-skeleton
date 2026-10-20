@@ -7,8 +7,9 @@
     bundles are excluded — they are not ours to restyle.
   </description>
 
-  <!-- Lint only custom code. -->
+  <!-- Lint only our own code: the site's (custom) and the upstream's. -->
   <file>web/modules/custom</file>
+  <file>web/modules/upstream</file>
   <file>web/themes/custom</file>
 
   <rule ref="Drupal"/>

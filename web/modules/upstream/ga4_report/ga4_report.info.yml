@@ -1,0 +1,6 @@
+name: 'GA4 report'
+type: module
+description: 'A visits report in the admin, drawn from a stored snapshot of a Google Analytics 4 property. The snapshot is refreshed by a button, Drush or cron; viewing the report never calls Google.'
+core_version_requirement: ^11.1
+package: Statistics
+configure: ga4_report.settings

@@ -48,6 +48,8 @@ LICENSE*
 .env.*
 **/*.pem
 **/*.key
+# credential files read by path (production mounts its own ./secrets)
+secrets/
 
 # --- OS / editor noise ---
 **/.DS_Store

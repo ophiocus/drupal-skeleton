@@ -20,6 +20,10 @@ services:
     volumes:
       - ./data/drupal-files:/opt/drupal/web/sites/default/files
       - ./data/drupal-private:/opt/drupal/private
+      # Credential files a module reads by path (GA4_REPORT_CREDENTIALS), never
+      # in the image or the repository. Docker creates an empty ./secrets if
+      # the site has none.
+      - ./secrets:/opt/drupal/secrets:ro
     env_file: [.env]
     depends_on:
       db:

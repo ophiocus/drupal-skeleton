@@ -17,6 +17,7 @@
         "drupal/pathauto": "^1.15",
         "drupal/simple_sitemap": "^4.2",
         "drupal/symfony_mailer_lite": "^2.0",
-        "drush/drush": "^13.0"
+        "drush/drush": "^13.0",
+        "google/auth": "^1.55"
     }
 }

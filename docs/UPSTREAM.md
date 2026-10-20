@@ -21,6 +21,7 @@ upstream's or the site's, never both.
 | `.github/workflows/build-and-push.yml`, `composer-audit.yml`, `test-gate.yml`, `upstream-sync.yml` | `config/`: the site's configuration |
 | `scripts/ci/`, `scripts/upstream/`, `phpcs.xml.dist`, `phpstan.neon`, `phpunit.xml.dist` | `web/modules/custom/`, `web/themes/custom/`: the site's code |
 | `docs/UPSTREAM.md`, `docs/DEPLOY.md` | `.ddev/`, `README.md`, `CHANGELOG.md`, its other docs and seeds |
+| `web/modules/upstream/`: modules every site carries and enables as it chooses | |
 
 The skeleton's sample module and theme are copied out when a site is minted and
 belong to the site from then on.
