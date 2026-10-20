@@ -1,0 +1,22 @@
+name: 'Maps with maper'
+description: 'The fleet map (PROTOCOL D23): maper with OpenFreeMap tiles, fetched live once per zoom stage and kept in the private files path. The contact comes from settings.prod.php (APEX). Apply with: drush recipe ../recipes/maper-map'
+type: Site
+install:
+  - maper
+  - maper_openfreemap
+config:
+  actions:
+    maper.settings:
+      simpleConfigUpdate:
+        # Cached live fetch: a zoom stage the cache lacks is fetched the first
+        # time a reader needs it, through maper's gate, and kept. Off by
+        # default in maper itself, because a site opts in to asking somebody
+        # else's server on its readers' behalf; every fleet site with a map
+        # does.
+        fetch.live: true
+    user.role.anonymous:
+      grantPermissions:
+        - 'view maper maps'
+    user.role.authenticated:
+      grantPermissions:
+        - 'view maper maps'

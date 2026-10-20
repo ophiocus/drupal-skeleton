@@ -124,6 +124,18 @@ cannot overwrite.
 | `deploy-prod` | new image running, `drush deploy` ran or `cr` fell back | that config imported cleanly (read the run log) |
 | health gate | HTTP 200 **and** ≥ 5000 bytes **and** no fatal markers, within 10 × 15 s | deeper functional health — add a `/…/health` route (the example module ships one) |
 
+None of these gates runs the new code against production's database, and the
+test gate installs from `config/install`. So a push that adds, removes or
+replaces a module, or changes config/sync broadly, is **rehearsed first**:
+
+1. Fill the local site from production.
+2. Run `drush deploy` on the new code.
+3. Run `drush config:status`, which must report no differences.
+
+That rehearsal is what catches an import that cannot uninstall a module whose
+code is gone (BATTLE_SCARS §41) and locale's langcode rewrite (§42). Neither
+shows anywhere else before production.
+
 Roll back by re-tagging: `docker compose pull` of a previous `sha-…` tag (set
 `IMAGE=` in `.env` temporarily) or push a revert commit. Volumes are never
 touched by the pipeline, so rollback is image-only.

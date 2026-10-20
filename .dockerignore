@@ -13,6 +13,7 @@ web/libraries/
 # --- Per-site runtime state: volumes in production, never in the image ---
 web/sites/*/files/
 web/sites/*/private/
+private/
 web/sites/*/settings.local.php
 web/sites/*/settings.ddev.php
 web/sites/*/services.local.yml

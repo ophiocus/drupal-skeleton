@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "69e1b30b74048401a83cff04ffa4bc14",
+    "content-hash": "970ac9040a22e86499401a530dc3348e",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -1620,6 +1620,56 @@
             }
         },
         {
+            "name": "drupal/maper",
+            "version": "1.0.0-alpha1",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupalcode.org/project/maper.git",
+                "reference": "1.0.0-alpha1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/maper-1.0.0-alpha1.zip",
+                "reference": "1.0.0-alpha1",
+                "shasum": "bf77ed38a5dbcf68d5e64e18c874b947cf2acca0"
+            },
+            "require": {
+                "drupal/core": "^11.2",
+                "ext-zlib": "*",
+                "php": ">=8.3"
+            },
+            "suggest": {
+                "npm-asset/vue": "3.5.43, through asset-packagist into web/libraries/vue, so readers' browsers load Vue from the site instead of jsDelivr."
+            },
+            "type": "drupal-module",
+            "extra": {
+                "drupal": {
+                    "version": "1.0.0-alpha1",
+                    "datestamp": "1791851613",
+                    "security-coverage": {
+                        "status": "not-covered",
+                        "message": "Project has not opted into security advisory coverage!"
+                    }
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "oneliner",
+                    "homepage": "https://www.drupal.org/user/1781526"
+                }
+            ],
+            "description": "Maps at their best zoom plus the surrounding area, drawn server-side from cached vector tiles, with a replaceable Vue skin.",
+            "homepage": "https://www.drupal.org/project/maper",
+            "support": {
+                "source": "https://git.drupalcode.org/project/maper",
+                "issues": "https://www.drupal.org/project/issues/maper"
+            }
+        },
+        {
             "name": "drupal/metatag",
             "version": "2.2.0",
             "source": {
@@ -1947,16 +1997,16 @@
         },
         {
             "name": "drush/drush",
-            "version": "13.7.6",
+            "version": "13.8.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/drush-ops/drush.git",
-                "reference": "051f6b4909728e0d3363aedab19d393f64438de4"
+                "reference": "a5529118232c722c052ad6ae3be587df43c7d6fa"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/drush-ops/drush/zipball/051f6b4909728e0d3363aedab19d393f64438de4",
-                "reference": "051f6b4909728e0d3363aedab19d393f64438de4",
+                "url": "https://api.github.com/repos/drush-ops/drush/zipball/a5529118232c722c052ad6ae3be587df43c7d6fa",
+                "reference": "a5529118232c722c052ad6ae3be587df43c7d6fa",
                 "shasum": ""
             },
             "require": {
@@ -2084,7 +2134,7 @@
                 "issues": "https://github.com/drush-ops/drush/issues",
                 "security": "https://github.com/drush-ops/drush/security/advisories",
                 "slack": "https://drupal.slack.com/messages/C62H9CWQM",
-                "source": "https://github.com/drush-ops/drush/tree/13.7.6"
+                "source": "https://github.com/drush-ops/drush/tree/13.8.0"
             },
             "funding": [
                 {
@@ -2092,7 +2142,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-07-08T10:43:20+00:00"
+            "time": "2026-09-08T18:24:55+00:00"
         },
         {
             "name": "egulias/email-validator",
@@ -2271,22 +2321,22 @@
         },
         {
             "name": "guzzlehttp/guzzle",
-            "version": "7.15.5",
+            "version": "7.16.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "ee80339fd9177ba44c49cdb653ff02a4d1106b9a"
+                "reference": "ffb62ec787050ae4fa9449cdd6b80335db69bda2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/ee80339fd9177ba44c49cdb653ff02a4d1106b9a",
-                "reference": "ee80339fd9177ba44c49cdb653ff02a4d1106b9a",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/ffb62ec787050ae4fa9449cdd6b80335db69bda2",
+                "reference": "ffb62ec787050ae4fa9449cdd6b80335db69bda2",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
-                "guzzlehttp/promises": "^2.5.3",
-                "guzzlehttp/psr7": "^2.13.1",
+                "guzzlehttp/promises": "^2.6",
+                "guzzlehttp/psr7": "^2.13.2",
                 "php": "^7.2.5 || ^8.0",
                 "psr/http-client": "^1.0",
                 "symfony/deprecation-contracts": "^2.5 || ^3.0",
@@ -2379,7 +2429,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/guzzle/issues",
-                "source": "https://github.com/guzzle/guzzle/tree/7.15.5"
+                "source": "https://github.com/guzzle/guzzle/tree/7.16.0"
             },
             "funding": [
                 {
@@ -2395,20 +2445,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-08-24T09:21:06+00:00"
+            "time": "2026-10-18T13:38:36+00:00"
         },
         {
             "name": "guzzlehttp/promises",
-            "version": "2.5.3",
+            "version": "2.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/promises.git",
-                "reference": "cde49999552d185d64715fe9c1f77a2aadd2f9f1"
+                "reference": "3d88c829bd5f13d13847b39067dbf09a60af2154"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/promises/zipball/cde49999552d185d64715fe9c1f77a2aadd2f9f1",
-                "reference": "cde49999552d185d64715fe9c1f77a2aadd2f9f1",
+                "url": "https://api.github.com/repos/guzzle/promises/zipball/3d88c829bd5f13d13847b39067dbf09a60af2154",
+                "reference": "3d88c829bd5f13d13847b39067dbf09a60af2154",
                 "shasum": ""
             },
             "require": {
@@ -2463,7 +2513,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/promises/issues",
-                "source": "https://github.com/guzzle/promises/tree/2.5.3"
+                "source": "https://github.com/guzzle/promises/tree/2.6.0"
             },
             "funding": [
                 {
@@ -2479,20 +2529,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-08-24T09:11:28+00:00"
+            "time": "2026-10-18T12:46:59+00:00"
         },
         {
             "name": "guzzlehttp/psr7",
-            "version": "2.13.1",
+            "version": "2.13.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/psr7.git",
-                "reference": "95e7828100de18b4e269fb1703be530082d5166d"
+                "reference": "adee536f95101929f262b8c59e8a61472f347d58"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/psr7/zipball/95e7828100de18b4e269fb1703be530082d5166d",
-                "reference": "95e7828100de18b4e269fb1703be530082d5166d",
+                "url": "https://api.github.com/repos/guzzle/psr7/zipball/adee536f95101929f262b8c59e8a61472f347d58",
+                "reference": "adee536f95101929f262b8c59e8a61472f347d58",
                 "shasum": ""
             },
             "require": {
@@ -2582,7 +2632,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/psr7/issues",
-                "source": "https://github.com/guzzle/psr7/tree/2.13.1"
+                "source": "https://github.com/guzzle/psr7/tree/2.13.2"
             },
             "funding": [
                 {
@@ -2598,7 +2648,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-08-24T09:13:11+00:00"
+            "time": "2026-10-17T23:49:46+00:00"
         },
         {
             "name": "html2text/html2text",
@@ -2715,16 +2765,16 @@
         },
         {
             "name": "laravel/prompts",
-            "version": "v0.3.22",
+            "version": "v0.3.26",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/prompts.git",
-                "reference": "02b89b39e8972a998db4d5d4ad4719239dd4aee4"
+                "reference": "2d1e9bf6bab8d3f383c254db7f2b4ea8816d55e0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/prompts/zipball/02b89b39e8972a998db4d5d4ad4719239dd4aee4",
-                "reference": "02b89b39e8972a998db4d5d4ad4719239dd4aee4",
+                "url": "https://api.github.com/repos/laravel/prompts/zipball/2d1e9bf6bab8d3f383c254db7f2b4ea8816d55e0",
+                "reference": "2d1e9bf6bab8d3f383c254db7f2b4ea8816d55e0",
                 "shasum": ""
             },
             "require": {
@@ -2767,10 +2817,9 @@
             ],
             "description": "Add beautiful and user-friendly forms to your command-line applications.",
             "support": {
-                "issues": "https://github.com/laravel/prompts/issues",
-                "source": "https://github.com/laravel/prompts/tree/v0.3.22"
+                "source": "https://github.com/laravel/prompts/tree/v0.3.26"
             },
-            "time": "2026-08-04T14:50:50+00:00"
+            "time": "2026-10-09T14:45:13+00:00"
         },
         {
             "name": "league/container",
@@ -3101,12 +3150,412 @@
             "time": "2026-09-13T18:51:52+00:00"
         },
         {
+            "name": "npm-asset/babel--helper-string-parser",
+            "version": "7.29.7",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@babel/helper-string-parser/-/helper-string-parser-7.29.7.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/babel--helper-validator-identifier",
+            "version": "7.29.7",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@babel/helper-validator-identifier/-/helper-validator-identifier-7.29.7.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/babel--parser",
+            "version": "7.29.9",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@babel/parser/-/parser-7.29.9.tgz"
+            },
+            "require": {
+                "npm-asset/babel--types": ">=7.29.8,<8.0.0"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/babel--types",
+            "version": "7.29.8",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@babel/types/-/types-7.29.8.tgz"
+            },
+            "require": {
+                "npm-asset/babel--helper-string-parser": ">=7.29.7,<8.0.0",
+                "npm-asset/babel--helper-validator-identifier": ">=7.29.7,<8.0.0"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/csstype",
+            "version": "3.2.3",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/entities",
+            "version": "7.0.1",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/entities/-/entities-7.0.1.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "BSD-2-Clause"
+            ]
+        },
+        {
+            "name": "npm-asset/estree-walker",
+            "version": "2.0.2",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/estree-walker/-/estree-walker-2.0.2.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/jridgewell--sourcemap-codec",
+            "version": "1.6.0",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.6.0.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/magic-string",
+            "version": "0.30.21",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz"
+            },
+            "require": {
+                "npm-asset/jridgewell--sourcemap-codec": ">=1.5.5,<2.0.0"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/nanoid",
+            "version": "3.3.20",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.20.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/picocolors",
+            "version": "1.1.1",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "ISC"
+            ]
+        },
+        {
+            "name": "npm-asset/postcss",
+            "version": "8.5.30",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/postcss/-/postcss-8.5.30.tgz"
+            },
+            "require": {
+                "npm-asset/nanoid": ">=3.3.20,<4.0.0",
+                "npm-asset/picocolors": ">=1.1.1,<2.0.0",
+                "npm-asset/source-map-js": ">=1.2.2,<2.0.0"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/source-map-js",
+            "version": "1.2.2",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.2.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "BSD-3-Clause"
+            ]
+        },
+        {
+            "name": "npm-asset/vue",
+            "version": "3.5.43",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/vue/-/vue-3.5.43.tgz"
+            },
+            "require": {
+                "npm-asset/vue--compiler-dom": "3.5.43",
+                "npm-asset/vue--compiler-sfc": "3.5.43",
+                "npm-asset/vue--runtime-dom": "3.5.43",
+                "npm-asset/vue--server-renderer": "3.5.43",
+                "npm-asset/vue--shared": "3.5.43"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/vue--compiler-core",
+            "version": "3.5.43",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@vue/compiler-core/-/compiler-core-3.5.43.tgz"
+            },
+            "require": {
+                "npm-asset/babel--parser": ">=7.29.8,<8.0.0",
+                "npm-asset/entities": ">=7.0.1,<8.0.0",
+                "npm-asset/estree-walker": ">=2.0.2,<3.0.0",
+                "npm-asset/source-map-js": ">=1.2.1,<2.0.0",
+                "npm-asset/vue--shared": "3.5.43"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/vue--compiler-dom",
+            "version": "3.5.43",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@vue/compiler-dom/-/compiler-dom-3.5.43.tgz"
+            },
+            "require": {
+                "npm-asset/vue--compiler-core": "3.5.43",
+                "npm-asset/vue--shared": "3.5.43"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/vue--compiler-sfc",
+            "version": "3.5.43",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@vue/compiler-sfc/-/compiler-sfc-3.5.43.tgz"
+            },
+            "require": {
+                "npm-asset/babel--parser": ">=7.29.8,<8.0.0",
+                "npm-asset/estree-walker": ">=2.0.2,<3.0.0",
+                "npm-asset/magic-string": ">=0.30.21,<0.31.0",
+                "npm-asset/postcss": ">=8.5.28,<9.0.0",
+                "npm-asset/source-map-js": ">=1.2.1,<2.0.0",
+                "npm-asset/vue--compiler-core": "3.5.43",
+                "npm-asset/vue--compiler-dom": "3.5.43",
+                "npm-asset/vue--compiler-ssr": "3.5.43",
+                "npm-asset/vue--shared": "3.5.43"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/vue--compiler-ssr",
+            "version": "3.5.43",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@vue/compiler-ssr/-/compiler-ssr-3.5.43.tgz"
+            },
+            "require": {
+                "npm-asset/vue--compiler-dom": "3.5.43",
+                "npm-asset/vue--shared": "3.5.43"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/vue--reactivity",
+            "version": "3.5.43",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@vue/reactivity/-/reactivity-3.5.43.tgz"
+            },
+            "require": {
+                "npm-asset/vue--shared": "3.5.43"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/vue--runtime-core",
+            "version": "3.5.43",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@vue/runtime-core/-/runtime-core-3.5.43.tgz"
+            },
+            "require": {
+                "npm-asset/vue--reactivity": "3.5.43",
+                "npm-asset/vue--shared": "3.5.43"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/vue--runtime-dom",
+            "version": "3.5.43",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@vue/runtime-dom/-/runtime-dom-3.5.43.tgz"
+            },
+            "require": {
+                "npm-asset/csstype": ">=3.2.3,<4.0.0",
+                "npm-asset/vue--reactivity": "3.5.43",
+                "npm-asset/vue--runtime-core": "3.5.43",
+                "npm-asset/vue--shared": "3.5.43"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/vue--server-renderer",
+            "version": "3.5.43",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@vue/server-renderer/-/server-renderer-3.5.43.tgz"
+            },
+            "require": {
+                "npm-asset/vue--compiler-ssr": "3.5.43",
+                "npm-asset/vue--runtime-dom": "3.5.43",
+                "npm-asset/vue--shared": "3.5.43"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "npm-asset/vue--shared",
+            "version": "3.5.43",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/@vue/shared/-/shared-3.5.43.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
+        },
+        {
+            "name": "oomphinc/composer-installers-extender",
+            "version": "2.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/oomphinc/composer-installers-extender.git",
+                "reference": "cbf4b6f9a24153b785d09eee755b995ba87bd5f9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/oomphinc/composer-installers-extender/zipball/cbf4b6f9a24153b785d09eee755b995ba87bd5f9",
+                "reference": "cbf4b6f9a24153b785d09eee755b995ba87bd5f9",
+                "shasum": ""
+            },
+            "require": {
+                "composer-plugin-api": "^1.1 || ^2.0",
+                "composer/installers": "^1.0 || ^2.0",
+                "php": ">=7.1"
+            },
+            "require-dev": {
+                "composer/composer": "^2.0",
+                "phpunit/phpunit": "^7.2",
+                "squizlabs/php_codesniffer": "^3.3"
+            },
+            "type": "composer-plugin",
+            "extra": {
+                "class": "OomphInc\\ComposerInstallersExtender\\Plugin"
+            },
+            "autoload": {
+                "psr-4": {
+                    "OomphInc\\ComposerInstallersExtender\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Stephen Beemsterboer",
+                    "email": "stephen@oomphinc.com",
+                    "homepage": "https://github.com/balbuf"
+                },
+                {
+                    "name": "Nathan Dentzau",
+                    "email": "nate@oomphinc.com",
+                    "homepage": "http://oomph.is/ndentzau"
+                }
+            ],
+            "description": "Extend the composer/installers plugin to accept any arbitrary package type.",
+            "homepage": "http://www.oomphinc.com/",
+            "support": {
+                "issues": "https://github.com/oomphinc/composer-installers-extender/issues",
+                "source": "https://github.com/oomphinc/composer-installers-extender/tree/2.0.1"
+            },
+            "abandoned": true,
+            "time": "2021-12-15T12:32:42+00:00"
+        },
+        {
             "name": "ophiocus/upstream-configuration",
             "version": "1.0.0",
             "dist": {
                 "type": "path",
                 "url": "upstream-configuration",
-                "reference": "97c0d4ccb08670dfd2d72cbe57bdc0c1eddaa5b1"
+                "reference": "3b953d1811a7165fa2377ef407db6800e89ecbbe"
             },
             "require": {
                 "composer/installers": "^2.0",
@@ -3115,6 +3564,7 @@
                 "drupal/core-project-message": "~11.4.10",
                 "drupal/core-recommended": "~11.4.10",
                 "drupal/google_tag": "^2.0",
+                "drupal/maper": "1.0.0-alpha1",
                 "drupal/metatag": "^2.2",
                 "drupal/pathauto": "^1.15",
                 "drupal/simple_sitemap": "^4.2",
@@ -8687,16 +9137,16 @@
         },
         {
             "name": "doctrine/persistence",
-            "version": "4.2.0",
+            "version": "4.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/persistence.git",
-                "reference": "49ab73e0d3e2ac8d1f5ecda3dd8acd5503781e8b"
+                "reference": "d8293831c5b99449b2f63eb1e1bbdc202118daa6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/persistence/zipball/49ab73e0d3e2ac8d1f5ecda3dd8acd5503781e8b",
-                "reference": "49ab73e0d3e2ac8d1f5ecda3dd8acd5503781e8b",
+                "url": "https://api.github.com/repos/doctrine/persistence/zipball/d8293831c5b99449b2f63eb1e1bbdc202118daa6",
+                "reference": "d8293831c5b99449b2f63eb1e1bbdc202118daa6",
                 "shasum": ""
             },
             "require": {
@@ -8761,7 +9211,7 @@
             ],
             "support": {
                 "issues": "https://github.com/doctrine/persistence/issues",
-                "source": "https://github.com/doctrine/persistence/tree/4.2.0"
+                "source": "https://github.com/doctrine/persistence/tree/4.2.1"
             },
             "funding": [
                 {
@@ -8777,7 +9227,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-26T12:12:52+00:00"
+            "time": "2026-10-03T14:15:35+00:00"
         },
         {
             "name": "drupal/coder",

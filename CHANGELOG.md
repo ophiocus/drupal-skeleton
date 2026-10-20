@@ -5,6 +5,32 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-19 — one map for the fleet: maper (PROTOCOL D23); deploy rehearsal; BATTLE_SCARS §41–§42
+
+- `upstream-configuration/composer.json`: `drupal/maper` `1.0.0-alpha1`, exact
+  (alphas reinstall between versions). It is installed everywhere and enabled
+  per site.
+- `recipes/maper-map`: maper + maper_openfreemap, cached live fetch on,
+  `view maper maps` for anonymous and authenticated. Apply with
+  `drush recipe ../recipes/maper-map`.
+- `deploy/settings.prod.php`: maper's contact is `MAPER_CONTACT`, else
+  `+https://$APEX`; `.env.example` documents it.
+- Root `composer.json` (starter): the asset-packagist repository,
+  `oomphinc/composer-installers-extender` with `installer-types`, and
+  `npm-asset/vue` `3.5.43`, so Vue installs to `web/libraries/vue`. A site
+  adopting the upstream adds these to its own root.
+- DDEV: `scripts/dev/private-path.sh` (post-start hook) gives the local site
+  `<repo>/private` as its private files path, as production has
+  `/opt/drupal/private`. `/private/` is in `.gitignore` and `.dockerignore`.
+- The lock was re-resolved the way an upstream sync does it
+  (`update ophiocus/upstream-configuration -W`). That also refreshed drush to
+  13.8.0, guzzle to 7.16.0 and their dependencies. Production audit is clean.
+- `docs/DEPLOY.md` §4: rehearse on production's database before a push that
+  changes modules.
+- BATTLE_SCARS §41: a module whose code leaves composer cannot be uninstalled
+  by that deploy; forget it in an update hook. §42: locale rewrites imported
+  config's langcode on a non-English site; export what the import produced.
+
 ## 2026-10-18 — the skeleton is now an upstream (docs/UPSTREAM.md, PROTOCOL D22)
 
 Sites built on this skeleton keep merging it, so an advisory resolved here once

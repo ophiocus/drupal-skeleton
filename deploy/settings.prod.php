@@ -177,6 +177,19 @@ else {
   $config['adsense.settings']['adsense_placeholder'] = FALSE;
 }
 
+// --- Maps: maper's contact ----------------------------------------------------
+// maper (in the upstream baseline, enabled per site with the maper-map recipe)
+// refuses to fetch a single tile while its contact is empty: the tile server
+// must be able to see who is calling. The contact travels in the User-Agent,
+// so it is the site's public address, derived from APEX (already in .env for
+// the router), or MAPER_CONTACT when a site wants something else. Set here
+// rather than in config/sync so a dev environment and production each name
+// themselves, and no site has to remember it (PROTOCOL D23).
+$maperContact = getenv('MAPER_CONTACT') ?: (getenv('APEX') ? '+https://' . getenv('APEX') : '');
+if ($maperContact) {
+  $config['maper.settings']['contact'] = $maperContact;
+}
+
 // --- The site's own settings --------------------------------------------------
 // This file belongs to the upstream and is replaced on every upstream sync, so a
 // site never edits it. Whatever is the site's alone (a page max-age it chose, a

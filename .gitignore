@@ -9,6 +9,9 @@
 # --- Per-site state (never committed) -------------------------------
 /web/sites/*/files/
 /web/sites/*/private/
+# The local private files path (../private from the docroot), made by
+# scripts/dev/private-path.sh; production's is the ./data/drupal-private volume.
+/private/
 /web/sites/*/settings.local.php
 /web/sites/*/services.yml
 /web/sites/default/

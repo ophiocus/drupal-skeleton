@@ -410,3 +410,40 @@ for everyone.
 **Why a metapackage.** It keeps the site's root `composer.json` the site's own:
 the upstream changes its requirements without ever editing a file the site
 owns, which is what keeps the sync conflict-free.
+
+### D23 — One map for the fleet: maper, with private files by construction
+
+**Decision.** A site that shows a map uses `drupal/maper` with its OpenFreeMap
+provider. The pieces:
+- **Baseline:** `drupal/maper` is in `upstream-configuration/composer.json`,
+  installed everywhere and enabled per site, like google_tag and adsense.
+- **Enabling:** `recipes/maper-map` installs maper and maper_openfreemap,
+  turns cached live fetch on, and grants `view maper maps` to anonymous and
+  authenticated (`drush recipe ../recipes/maper-map`).
+- **Contact:** `deploy/settings.prod.php` sets maper's contact from
+  `MAPER_CONTACT`, else `+https://$APEX`. maper refuses to fetch without one,
+  so no site has to remember it. A DDEV site has no contact and never fetches.
+- **Vue:** maper's browser library comes from asset-packagist into
+  `web/libraries/vue`. Composer reads repositories and plugins from the root
+  only, so the starter's root `composer.json` carries the asset-packagist
+  repository, `oomphinc/composer-installers-extender` and
+  `npm-asset/vue: 3.5.43`. A site adopting the upstream adds them to its own
+  root. Without them maper loads Vue from jsDelivr.
+- **Private files:** maper keeps its tile cache in the private files path.
+  Production has had one by construction since D17: `settings.prod.php`, the
+  `./data/drupal-private` volume, the Dockerfile and the entrypoint's chown.
+  DDEV now gets `<repo>/private` from `scripts/dev/private-path.sh`, a
+  post-start hook, because the local `settings.php` is gitignored.
+
+**Why.** The homogeneity rule: one solved problem applies to every site. A
+fleet site's map ran on a contrib module whose advisory kept that site's
+composer audit red. That held its core security update back while every other
+site took it. Replacing the module also showed what a copied site lacks: it
+had no private files path and no volume for one, because it predates D17 and
+never adopted the upstream. That is a failure by omission which D17 and D22
+exist to make impossible. The two lessons of the swap itself are
+BATTLE_SCARS §41 and §42.
+
+**Pinning.** maper is in alpha, and alphas carry no upgrade path (reinstall
+between them), so the baseline pins an exact version, never a range. Moving
+the pin is a deliberate upstream change, with the reinstall in its notes.

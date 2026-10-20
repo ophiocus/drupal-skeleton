@@ -53,6 +53,9 @@ hooks:
   post-start:
     - exec: php -v
     - exec: composer --version
+    # The private files path production has (/opt/drupal/private), at
+    # <repo>/private: maper's tile cache and any private upload live there.
+    - exec: bash scripts/dev/private-path.sh
   post-pull:
     # Any provider's pull re-imports a remote DB whose cache_discovery may point at
     # code that differs locally → Drupal 500s until cache is rebuilt. Rebuild on pull.

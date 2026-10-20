@@ -1190,4 +1190,68 @@ drain re-purges the config import's tags and undoes the warm.
 **Tell.** `cf-cache-status: HIT` right after a successful purge; a purge that
 fails with "Authentication error" while the same token verifies.
 
+## §41 — A module whose code leaves composer cannot be uninstalled by the deploy that removes it (2026-10)
+
+**What bit.** A contrib module carried a security advisory, and the fix was to
+replace it. The commit took it out of `composer.json` and out of
+`config/sync/core.extension.yml` together. Rehearsed on a copy of production's
+database, `drush deploy` ran `updatedb`, then stopped `config:import` with
+**"The module X does not exist"**. Because the import aborted, the deploy hooks
+never ran either. The same push to production would have shipped an image that
+could not import its own configuration.
+
+**Why.** Uninstalling a module needs its code: the config importer reads the
+module's info and its uninstall hooks. The image no longer has them. The
+textbook route is two deploys, uninstall first and remove the code second, but
+it is closed when the module is there *because* of an advisory: CI's
+`composer audit` refuses to build the first image, which still carries it.
+
+**Fix.** In the same commit, add an update hook in the site's own module. It
+runs in `updatedb`, before `config:import`, and forgets the module the way
+drupal.org/node/3137656 describes:
+
+1. if the code is still present (a local run), uninstall it properly and stop;
+2. otherwise remove its key from `core.extension` (removing one key keeps the
+   list in order);
+3. delete its `system.schema` and `locale.project` key_value entries;
+4. invalidate the container.
+
+Config objects the module owned are deleted by the import, because sync no
+longer has them. Displays that used its plugins are replaced by the sync files
+in the same import. Check the module owned no config that sync does not
+replace.
+
+**Tell.** `drush updatedb:status` notices "Module X has an entry in the
+system.schema key/value storage, but is missing from your site" before the
+import fails.
+
+**How it was caught: rehearse every deploy that changes modules.** Fill the
+local site from production, put the new code on it, and run `drush deploy`
+exactly as production will. Then run `config:status`, which must report no
+differences (see §42). Both this failure and §42 were invisible to the test
+gate, which installs from `config/install`, never from a production database.
+
+## §42 — On a site whose default language is not English, locale rewrites the langcode of imported config (2026-10)
+
+**What bit.** On a Spanish-default site, `config:status` was never clean after a
+deploy: dozens of config objects differed only in `langcode: en` (config/sync)
+against `langcode: es` (active). Every import wrote `en`, then the locale
+module set them back to `es` and refreshed their translations, for example a
+core view's label became "Archivo". Nobody could tell real drift from this
+churn.
+
+**Why (observed; locale's exact code path is not traced).** Config shipped by
+modules is authored in English. On a site whose default language differs, the
+import writes `en` and locale then rewrites `langcode` and translatable strings
+to the site's language. config/sync exported before that step still says `en`.
+
+**Fix.** Export config/sync from a site that has run the import, so sync holds
+what locale leaves (`langcode` in the site's language, plus the translations it
+wrote). Importing that changes nothing, and `config:status` is clean. Expect
+the same rewrite on any new module's config: rehearse the deploy (§41), then
+export what the import produced. Never hand-edit langcodes back to `en`.
+
+**Tell.** `config:status` lists many items whose only difference is the
+`langcode:` line, and they come back after every deploy.
+
 ---
