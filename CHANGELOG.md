@@ -5,6 +5,18 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-21 — maper pin to 1.0.0-alpha2 (PROTOCOL D23)
+
+- `upstream-configuration/composer.json`: `drupal/maper` `1.0.0-alpha1` →
+  `1.0.0-alpha2`, still exact. A site already running alpha2 could not adopt
+  the upstream without being pulled back to alpha1, and alphas carry no upgrade
+  path between them.
+- Reinstall note (D23): a site with maper **enabled** on alpha1 follows
+  maper's alpha2 release notes when its sync brings this in. A site that only
+  carries the code (maper not enabled) needs nothing.
+- The lock re-resolution also took Drupal core 11.4.10 → 11.4.11, within the
+  `~11.4.10` floor. Production audit clean.
+
 ## 2026-10-21 — one cache protocol for every site: edge_purge becomes upstream (PROTOCOL D26)
 
 - `web/modules/custom/edge_purge` → `web/modules/upstream/edge_purge`, now
