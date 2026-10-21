@@ -12,7 +12,13 @@ services:
     tags:
       - { name: cache_tags_invalidator }
 
+  edge_purge.router_rebuild_hold:
+    class: Drupal\edge_purge\EventSubscriber\RouterRebuildHold
+    tags:
+      - { name: event_subscriber }
+
   edge_purge.cache_tag_header:
     class: Drupal\edge_purge\EventSubscriber\CacheTagHeader
+    arguments: ['@asset.query_string']
     tags:
       - { name: event_subscriber }

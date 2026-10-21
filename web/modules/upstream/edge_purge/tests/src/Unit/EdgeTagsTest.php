@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\edge_purge\Unit;
 
+use Drupal\Core\Site\Settings;
 use Drupal\edge_purge\EdgeTags;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -39,6 +40,36 @@ final class EdgeTagsTest extends UnitTestCase {
     $header = EdgeTags::header($tags);
     $this->assertLessThanOrEqual(EdgeTags::MAX_HEADER, strlen($header));
     $this->assertStringStartsWith(EdgeTags::hash('node:1') . ',', $header);
+  }
+
+  /**
+   * Tags no page carries, or carried by every page for no change, never go.
+   */
+  public function testPurgeableDropsInternalTags(): void {
+    new Settings([]);
+    $tags = [
+      'node:1', 'node:1:revisions', 'taxonomy_term:7:revisions', 'node_values',
+      'http_response', 'route_match', 'routes', 'local_task', 'rendered',
+      'config:field.storage.node.field_values', 'oidoenvivo:day', '4xx-response',
+    ];
+    $this->assertSame(
+      ['node:1', 'rendered', 'config:field.storage.node.field_values', 'oidoenvivo:day', '4xx-response'],
+      EdgeTags::purgeable($tags),
+    );
+    new Settings(['edge_purge_ignore_tags' => ['oidoenvivo:day']]);
+    $this->assertSame(['node:1'], EdgeTags::purgeable(['node:1', 'oidoenvivo:day']));
+  }
+
+  /**
+   * The CDN lifetime comes from settings.php; unset or invalid means none.
+   */
+  public function testCdnMaxAgeFromSettings(): void {
+    new Settings([]);
+    $this->assertSame(0, EdgeTags::cdnMaxAge());
+    new Settings(['edge_purge_cdn_max_age' => 2592000]);
+    $this->assertSame(2592000, EdgeTags::cdnMaxAge());
+    new Settings(['edge_purge_cdn_max_age' => -5]);
+    $this->assertSame(0, EdgeTags::cdnMaxAge());
   }
 
 }

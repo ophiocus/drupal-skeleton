@@ -116,6 +116,8 @@ RUN apt-get update \
 #            APCu (chained to the database) as soon as the extension loads.
 #   memory   1024M for the CLI (drush deploy, recipes); 512M per web request.
 #   prefork  20 workers: one peaks near 70 MiB, the container has 2 GiB.
+#   asserts  zend.assertions=-1, the production value: no php.ini is loaded,
+#            so the compiled default (1) ran every assert() on every request.
 #   deflate  the base image compresses HTML, CSS, JavaScript and XML, but
 #            not JSON: JSON endpoints (map frames, REST, autocomplete) left
 #            the origin uncompressed, several hundred KB per map frame.
@@ -136,6 +138,7 @@ RUN set -eux; \
       'opcache.validate_timestamps=0' \
       'apc.shm_size=128M' \
       'memory_limit=1024M' \
+      'zend.assertions=-1' \
       > /usr/local/etc/php/conf.d/zz-platform-tuning.ini; \
     printf '%s\n' \
       '<IfModule mpm_prefork_module>' \

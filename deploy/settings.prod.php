@@ -90,6 +90,12 @@ $proxies = getenv('DRUPAL_REVERSE_PROXY_ADDRESS');
 $settings['reverse_proxy_addresses'] = $proxies
   ? array_values(array_filter(array_map('trim', explode(',', $proxies))))
   : array_values(array_filter([$_SERVER['REMOTE_ADDR'] ?? NULL]));
+// The container's own loopback is always a proxy: the host's verify pass asks
+// Drupal for a fresh render from inside the container, with the edge's
+// forwarded headers, and compares it with the CDN's copy. Untrusted, that
+// render printed http:// links and every page compared as changed
+// (BATTLE_SCARS §45). Nothing outside the container can reach 127.0.0.1.
+$settings['reverse_proxy_addresses'][] = '127.0.0.1';
 
 // --- Trusted hosts ----------------------------------------------------------
 // Comma-separated regexes in DRUPAL_TRUSTED_HOSTS, e.g.
@@ -120,6 +126,34 @@ $settings['trusted_host_patterns'] = $trusted
 $page_max_age = getenv('DRUPAL_PAGE_MAX_AGE');
 $config['system.performance']['cache']['page']['max_age'] =
   ($page_max_age === FALSE || $page_max_age === '') ? 3600 : max(0, (int) $page_max_age);
+
+// --- Edge cache: how long the CDN keeps a tagged page ------------------------
+// With edge_purge, a page leaves the CDN the minute a save invalidates one of
+// its tags, so the CDN can keep it far longer than browsers do: edge_purge
+// sends "Cloudflare-CDN-Cache-Control: max-age=N" on every tagged response,
+// and browsers keep the Cache-Control above. Without it the edge drops every
+// page after max-age and asks the origin to render it again, unchanged
+// (docs/DEPLOY.md §7). N is EDGE_PURGE_CDN_MAX_AGE, default 30 days; 0 sends
+// nothing. Only takes effect where edge_purge is enabled.
+$cdn_max_age = getenv('EDGE_PURGE_CDN_MAX_AGE');
+$settings['edge_purge_cdn_max_age'] =
+  ($cdn_max_age === FALSE || $cdn_max_age === '') ? 2592000 : max(0, (int) $cdn_max_age);
+
+// --- Cache bin row limits ----------------------------------------------------
+// Drupal keeps at most 5,000 rows per database cache bin and its cron deletes
+// the rest. A site with more pages than that loses most of its finished pages
+// every cron run, so a CDN miss renders from nothing, and on a large site the
+// DELETE itself ran for minutes and held cache writes (BATTLE_SCARS §44). Size
+// the page, dynamic page and render bins to the site: about one page row per
+// URL and language, the dynamic page cache a little more, render ~10 rows per
+// page. CACHE_MAX_ROWS_PAGE / _DYNAMIC_PAGE / _RENDER; unset keeps core's 5,000.
+// Raise them only once page rows are small (tens of KB): a bin is a table.
+foreach (['page' => 'PAGE', 'dynamic_page_cache' => 'DYNAMIC_PAGE', 'render' => 'RENDER'] as $bin => $env) {
+  $rows = getenv('CACHE_MAX_ROWS_' . $env);
+  if ($rows !== FALSE && $rows !== '') {
+    $settings['database_cache_max_rows']['bins'][$bin] = max(0, (int) $rows);
+  }
+}
 
 // --- Outbound mail ----------------------------------------------------------
 // Drupal's default transport is PHP mail(), which shells out to sendmail — and

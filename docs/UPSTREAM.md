@@ -114,6 +114,14 @@ from it. Adoption happens once per site, as one pull request:
 4. Set the repository's deploy variables (`DEPLOY_HOST`, `PROD_URL`; see
    `build-and-push.yml`). Without `DEPLOY_HOST` the build warns and deploys
    nothing.
-5. Run the test gate locally (`ddev exec bash scripts/ci/tests.sh`) and make
+5. Delete the site's own copy of any module the upstream now owns under the
+   same name (`web/modules/custom/edge_purge`, PROTOCOL D26): two copies of
+   one module name break discovery. A setting the site gave that copy moves to
+   `deploy/settings.site.php`.
+6. The cache protocol (`docs/DEPLOY.md` §7): set `automated_cron` interval `0`
+   in the site's config/sync once the host runs its cron, and size
+   `CACHE_MAX_ROWS_*` in the host's `.env` if the site has more than ~5,000
+   pages.
+7. Run the test gate locally (`ddev exec bash scripts/ci/tests.sh`) and make
    the site's own code pass it. A site that had no test gate before gets one
    with the adoption.

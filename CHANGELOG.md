@@ -5,6 +5,27 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-21 — one cache protocol for every site: edge_purge becomes upstream (PROTOCOL D26)
+
+- `web/modules/custom/edge_purge` → `web/modules/upstream/edge_purge`, now
+  upstream-owned, with the current module: `X-Edge-Hash` on every tagged
+  response, `Cloudflare-CDN-Cache-Control` from `edge_purge_cdn_max_age`,
+  `drush edge-purge:release` (purges only when render code changed, and then
+  only the pages whose HTML changed), `drush edge-purge:rebuild` (core's full
+  flush with the page, dynamic page and render bins kept unless render code
+  changed), `RouterRebuildHold` and the never-queued tags. Kernel and unit
+  tests.
+- `RenderFingerprint` counts `modules/upstream`; a file moved unchanged
+  between roots is not a change.
+- `deploy/settings.prod.php`: `EDGE_PURGE_CDN_MAX_AGE` (default 30 days),
+  `CACHE_MAX_ROWS_PAGE` / `_DYNAMIC_PAGE` / `_RENDER`, 127.0.0.1 always a
+  trusted proxy. `deploy/.env.example` lists them.
+- `Dockerfile` platform block: `zend.assertions=-1`.
+- `scripts/edge-purge-drain.sh`: drains by tag only, up to 5 requests a run;
+  never a hostname purge.
+- `docs/DEPLOY.md` §7: the edge and origin checklist. BATTLE_SCARS §44–§46,
+  §40 amended by §45.
+
 ## 2026-10-20 — one container cache key per image; Apache compresses JSON; BATTLE_SCARS §43
 
 - `Dockerfile` (build stage): a hash of every file under `/opt/drupal` is

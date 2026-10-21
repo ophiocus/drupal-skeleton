@@ -1305,4 +1305,71 @@ for those; only the deploy's `drush` steps close it.
 arguments" in the seconds between a container start and the deploy's
 `drush deploy`, gone after it.
 
+## §44 — Cron in a reader's request, and a 5,000-row bin it trims by DELETE (2026-10)
+
+**What bit.** A site with ~13,000 pages behind a CDN refilled almost every CDN
+miss from a cold render (0.6–4.6 s instead of 23–350 ms from Drupal's own
+caches). Three things emptied the bins a miss would refill from: every deploy
+(`drush deploy` rebuilds every cache), the garbage collection of `system_cron`,
+and tag invalidation. The garbage collection was the worst: core keeps at most
+5,000 rows per database bin (`database_cache_max_rows` unset) and deletes the
+rest with `DELETE FROM cache_<bin> WHERE created <= ?`. With page rows of
+hundreds of KB, those DELETEs ran 15–215 s; cache INSERTs from readers waited
+the full 50 s lock timeout behind them, and the hour of the worst one had
+47 HTTP 500s. And `automated_cron` ran all of it at the end of a reader's
+request: one run took 8 minutes.
+
+**Fix, in this order.** Make page rows small first (a large inline payload,
+such as a map's data, moves to its own cacheable URL). Then size the page,
+dynamic page and render bins to the site (`CACHE_MAX_ROWS_*` in
+`deploy/settings.prod.php`): about one page row per URL and language, so the
+collection deletes only the overflow. Turn `automated_cron` off (interval `0`
+in config/sync) and run `drush cron` from the host's cron under `flock`, each
+site at its own minute. Deploys replace `drush cr` with `edge-purge:rebuild`,
+which keeps the three page bins unless a file that builds pages changed.
+
+**Tell.** `DELETE FROM cache_render WHERE created <= …` in the slow log; cache
+INSERTs at exactly 50 s; every row of every bin created after the last deploy.
+
+## §45 — A purge by URL that the cache rule does not match evicts nothing (2026-10)
+
+**What bit.** A release purged ~9,600 changed pages one URL at a time; the API
+answered `"success": true` to every request and every page stayed a `HIT` with
+the same `Age`. A purge by single file is a `PURGE` request, and a cache rule
+whose expression starts with `http.request.method in {"GET" "HEAD"}` does not
+match it, so the purge never reaches the cached object. Purge by tag and by
+hostname do not go through the rule and are unaffected, which is why nothing
+looked wrong before. Same pass, second trap: the verify render, asked of Drupal
+from inside the container, came from 127.0.0.1, which was not a trusted proxy,
+so Drupal ignored the forwarded proto and rendered `http://` links. Every page
+then compared as changed.
+
+**Fix.** The cache rule matches `{"GET" "HEAD" "PURGE"}`.
+`deploy/settings.prod.php` always trusts 127.0.0.1 as a proxy (nothing outside
+the container can reach it). This amends §40: hostname purges are no longer
+the deploy's tool. A deploy purges nothing unless render code changed, and
+then only the pages whose `X-Edge-Hash` differs from a fresh render, by URL.
+
+**Tell.** `cf-cache-status: HIT` and a growing `Age` after a URL purge that
+reported success; a verify pass that finds every page changed.
+
+## §46 — A tag on every page turns any save into a whole-site purge (2026-10)
+
+**What bit.** A site's header and footer printed live counts ("312 venues"),
+so every page carried `node_list:<bundle>`, and every save of any node of that
+bundle invalidated every page, in Drupal and, through tag purging, at the edge.
+An importer that re-saved unchanged items on every run did the same many times
+a day. The edge never held more than a sixth of the site.
+
+**Fix.** Pages carry narrow tags for what they list; listings keep
+`node_list:<bundle>`. A live count that every page shows loads after the page
+from its own small JSON route, so only that route carries the list tag.
+Importers save only what changed (`hasTranslationChanges()` across every
+translation) and never write a fetch time into an item. The day's turn
+invalidates only what the date changes, not `rendered`.
+
+**Tell.** Fetch two unrelated pages from inside the container and compare
+their `Cache-Tag` headers (`drush edge-purge:hash <tag>` names one): any tag
+on both, other than `rendered`/`http_response`, purges both on a save.
+
 ---

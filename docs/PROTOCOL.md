@@ -521,3 +521,29 @@ two deploys: uninstall through `config/sync`, then remove the code
 than once, so the `integrity` gate of `scripts/ci/tests.sh` fails on any such
 function, or on any `*.post_update.php` or `*.deploy.php` file, in custom or
 upstream code. A site cannot build an image that carries one.
+
+### D26 — One cache protocol for every site: edge_purge is upstream
+
+**Decision (Carlos, 2026-10-20: "the entire cloudflare/apc/mysql cache
+protocol — need to be applied to all properties").** Every site behind the CDN
+runs the same cache protocol, and it reaches them through the upstream, never
+as a per-site copy:
+
+- `edge_purge` lives in `web/modules/upstream/edge_purge` (upstream-owned).
+  A site that carried its own copy in `web/modules/custom/` deletes it in its
+  adoption pull request; the module keeps its name, so nothing reinstalls.
+  `RenderFingerprint` counts upstream modules as render code, and a file moved
+  unchanged from `modules/custom` to `modules/upstream` is not a change, so the
+  adoption release itself purges nothing.
+- `deploy/settings.prod.php`: the CDN keeps tagged pages 30 days
+  (`EDGE_PURGE_CDN_MAX_AGE`), bin row limits come from `CACHE_MAX_ROWS_*`,
+  127.0.0.1 is a trusted proxy (the verify render).
+- `Dockerfile`: `zend.assertions=-1` joins the platform block.
+- Per site, in its own config: `automated_cron` interval `0`; the host runs
+  `drush cron`.
+- The host half (purge timer, warmer, verify pass, soft rebuild in the
+  deploy, host cron, saturation probes) belongs to the hosting platform; the
+  skeleton ships `scripts/edge-purge-drain.sh` as the minimal purge timer for
+  a host without one. `docs/DEPLOY.md` §7 is the checklist.
+
+The scars behind it: BATTLE_SCARS §40 (amended), §43, §44, §45, §46.

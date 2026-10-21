@@ -238,11 +238,29 @@ property needs for it, layer by layer:
 | DNS | apex, `www` and one `*` record per zone, proxied, CNAME to the tunnel | names one label deep (`api--app.`, `<slug>--dev.`): the free edge certificate covers one level (BATTLE_SCARS §33) |
 | Origin TLS | the CDN's origin certificate in Traefik (§3) | ACME HTTP-01 cannot renew once :80 closes (BATTLE_SCARS §38) |
 | Client IP | `DRUPAL_REVERSE_PROXY_ADDRESS` = the edge network's CIDR; Traefik's `forwardedHeaders.trustedIPs` the same | two proxies in front, not one (BATTLE_SCARS §39) |
-| Edge cache | one cache rule: cache eligible, edge TTL from origin, bypass when a Drupal session cookie or an admin/cart/checkout/user path is present; browser TTL "respect origin" | the CDN caches no HTML by default, and ignores `Vary: Cookie` (BATTLE_SCARS §32) |
-| Page max-age | `DRUPAL_PAGE_MAX_AGE` 3600; 86400 once purging works | bounds staleness until edits purge |
-| Purge on save | enable `edge_purge` (`edge_purge: 0` in `core.extension.yml`), run `scripts/edge-purge-drain.sh` every minute from the host's cron | each saved page leaves the edge within a minute; Drupal never holds the CDN token |
-| Purge on deploy | after a clean deploy of a live site: `drush edge-purge:clear`, purge the apex and `www` by **hostname**, wait a few seconds, then crawl the sitemap once | the image changed every page; a URL purge is not enough (BATTLE_SCARS §40) |
+| Edge cache | one cache rule: cache eligible for methods **`GET`, `HEAD` and `PURGE`**, edge TTL from origin, bypass when a Drupal session cookie or an admin/cart/checkout/user path is present; browser TTL "respect origin" | the CDN caches no HTML by default, and ignores `Vary: Cookie` (BATTLE_SCARS §32); a purge by URL is a `PURGE` request, and a rule that does not match it evicts nothing while the API answers success (BATTLE_SCARS §45) |
+| One host | `www` answers a 301 to the apex at the edge (a redirect rule, path and query kept) | a second host is a second copy of every page at the edge and in Drupal's page cache |
+| Page max-age | `DRUPAL_PAGE_MAX_AGE` 3600; 86400 once purging works | bounds what browsers keep |
+| CDN lifetime | `EDGE_PURGE_CDN_MAX_AGE` (default 30 days, sent as `Cloudflare-CDN-Cache-Control` on tagged pages) | the edge keeps a page until a save purges it, instead of re-asking the origin every max-age |
+| Purge on save | enable `edge_purge` (`edge_purge: 0` in `core.extension.yml`, from `web/modules/upstream`), run `scripts/edge-purge-drain.sh` every minute from the host's cron | each saved page leaves the edge within a minute, by tag only; Drupal never holds the CDN token |
+| Deploy | in place of `drush deploy`'s cache rebuild: `drush edge-purge:rebuild` before and after `config:import`, then `drush edge-purge:release` | a deploy that changed no file that builds pages keeps every finished page, at the edge and in Drupal; one that did is verified page by page (below) |
+| Verify on release | when `edge-purge:release` says render code changed: for every page the CDN holds, compare its `X-Edge-Hash` with a fresh render's (asked inside the container, from 127.0.0.1) and purge by URL only the pages that differ, then fetch them again | never a hostname purge: only the pages whose HTML changed leave the edge |
+| Warm | after anything purged: follow the sitemap and every same-site link the pages carry (not search, accounts, forms or query strings other than `?page=N`), pacing by the host's CPU | a purged page waits for a reader otherwise; Tiered Cache carries one warm to every PoP |
 | Sessions | nothing on an anonymous page may start a session | one cookie turns every page into a BYPASS (BATTLE_SCARS §35) |
+| Whole-page tags | no cache tag on every page except `rendered` and `http_response`: a live count in a footer loads from its own small JSON after the page | one save of anything such a tag names purges the whole site |
+
+### The origin behind the CDN
+
+What a CDN miss costs depends on what Drupal still holds, so the origin keeps
+its finished pages:
+
+| Layer | Setting | Why |
+| --- | --- | --- |
+| Cron | `automated_cron` interval `0` in config/sync, `drush cron` from the host's cron under `flock`, each site at its own minute | cron at the end of a reader's request took minutes, and its garbage collection held cache writes (BATTLE_SCARS §44) |
+| Cache bins | `CACHE_MAX_ROWS_PAGE` / `_DYNAMIC_PAGE` / `_RENDER` sized to the site (one page row per URL and language) once page rows are small | core keeps 5,000 rows per bin and its cron deletes the rest (BATTLE_SCARS §44) |
+| Container | one `deployment_identifier` per image (the Dockerfile writes it) | a new image must not boot the previous image's container (BATTLE_SCARS §43) |
+| PHP | OPcache 256 MB with timestamps off, APCu, `zend.assertions=-1` (the Dockerfile's platform block) | the code is baked into the image; Drupal's fast caches go to APCu |
+| Database | a primary site writing gigabytes of cache rows a day: a larger InnoDB redo log (e.g. 1 G) | the default log cycles every few minutes and forces checkpoint flushes; changing it restarts the database, so plan the window |
 
 The CDN token is **Zone → Cache Purge → Purge** only, IP-filtered to the host,
 stored on the host in a mode-600 file through a hidden prompt, never in the

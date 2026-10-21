@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\edge_purge\Drush\Commands;
 
+use Drupal\Core\State\StateInterface;
 use Drupal\edge_purge\EdgeTags;
 use Drupal\edge_purge\PurgeQueue;
+use Drupal\edge_purge\RenderFingerprint;
 use Drush\Attributes\Argument;
 use Drush\Attributes\Command;
 use Drush\Attributes\Option;
@@ -23,6 +25,7 @@ final class EdgePurgeCommands extends DrushCommands {
 
   public function __construct(
     private readonly PurgeQueue $queue,
+    private readonly StateInterface $state,
   ) {
     parent::__construct();
   }
@@ -68,6 +71,53 @@ final class EdgePurgeCommands extends DrushCommands {
   public function clear(): void {
     $this->queue->clear();
     $this->output()->writeln('cleared');
+  }
+
+  /**
+   * Says whether this release changed render code; purges nothing itself.
+   *
+   * Run once per deploy, after "drush deploy". Compares the files that can
+   * change a page (RenderFingerprint) with the last release's and prints
+   * "rendered …" when any changed, "unchanged …" when none did. On
+   * "rendered" the host verifies every page by its X-Edge-Hash and purges by
+   * URL only those whose HTML changed (Carlos, 2026-10-20: "kill all purge
+   * that is not targeted"); it no longer queues "rendered", which purged
+   * every page. --purge-all still does, by hand. What the release changed
+   * in config or content was queued by its own tags. The first run records
+   * the files. Prints one line, then the changed files.
+   */
+  #[Command(name: 'edge-purge:release')]
+  #[Option(name: 'dry-run', description: 'Report, record nothing, queue nothing.')]
+  #[Option(name: 'purge-all', description: 'On a render change, queue "rendered" (every page) as well.')]
+  public function release(array $options = ['dry-run' => FALSE, 'purge-all' => FALSE]): void {
+    $before = $this->state->get(RenderFingerprint::STATE);
+    $after = RenderFingerprint::files(DRUPAL_ROOT);
+    $changed = is_array($before) ? RenderFingerprint::changed($before, $after) : [];
+    $dry = !empty($options['dry-run']);
+    if (!is_array($before)) {
+      $line = sprintf('baseline %d files, nothing purged', count($after));
+    }
+    elseif (!$changed) {
+      $line = sprintf('unchanged %d files, nothing purged', count($after));
+    }
+    else {
+      $all = !empty($options['purge-all']);
+      $line = sprintf('rendered %d of %d files changed, %s', count($changed), count($after),
+        $all ? 'every page purged' : 'pages to verify by hash');
+      if (!$dry && $all) {
+        $this->queue->add(['rendered']);
+      }
+    }
+    if (!$dry) {
+      $this->state->set(RenderFingerprint::STATE, $after);
+    }
+    $this->output()->writeln(($dry ? '(dry run) ' : '') . $line);
+    foreach (array_slice($changed, 0, 20) as $path) {
+      $this->output()->writeln('  ' . $path);
+    }
+    if (count($changed) > 20) {
+      $this->output()->writeln(sprintf('  … and %d more', count($changed) - 20));
+    }
   }
 
   /**
