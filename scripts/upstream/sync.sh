@@ -104,12 +104,34 @@ for path in "${OWNED[@]}"; do
 done
 
 # Re-resolve the lock when the upstream's requirements moved (or it was stale).
-# Every dependency of the metapackage may move, within its constraints: an
-# upstream sync is a refresh of the shared baseline, gated by the tests and the
-# audit. Lock only: what the image installs is the lock.
+# The smallest change that satisfies them, in widening passes: only the
+# packages whose requirement changed; then those with their dependencies; the
+# whole baseline only as a last resort. A first version of this script moved
+# eleven packages, drupal/core-dev to a beta among them, for a one-line
+# baseline change. Lock only: what the image installs is the lock.
 if ! lock_fresh; then
-  $COMPOSER_CMD update ophiocus/upstream-configuration drupal/core-dev \
-    --with-all-dependencies --no-install --no-scripts --no-interaction
+  mapfile -t moved < <(php -r '
+    $want = json_decode(file_get_contents("upstream-configuration/composer.json"), TRUE)["require"] ?? [];
+    $had = [];
+    foreach (json_decode(file_get_contents("composer.lock"), TRUE)["packages"] ?? [] as $p) {
+      if ($p["name"] === "ophiocus/upstream-configuration") { $had = $p["require"] ?? []; }
+    }
+    foreach ($want as $n => $c) {
+      if (($had[$n] ?? NULL) !== $c && str_contains($n, "/")) { echo $n, PHP_EOL; }
+    }')
+  echo "baseline requirements changed: ${moved[*]:-none}"
+  upd() { $COMPOSER_CMD update "$@" --no-install --no-scripts --no-interaction || echo "pass did not resolve: $*"; }
+  upd ophiocus/upstream-configuration "${moved[@]}"
+  lock_fresh || upd ophiocus/upstream-configuration "${moved[@]}" --with-dependencies
+  lock_fresh || upd ophiocus/upstream-configuration --with-all-dependencies
+  lock_fresh || { echo "the lock cannot meet upstream-configuration; resolve by hand" >&2; exit 1; }
+  # drupal/core-dev is the site's dev tooling (root require-dev); it tracks
+  # core's exact version, never a newer minor or a beta.
+  core="$(php -r 'foreach (json_decode(file_get_contents("composer.lock"), TRUE)["packages"] as $p) if ($p["name"] === "drupal/core") echo $p["version"];')"
+  dev="$(php -r 'foreach (json_decode(file_get_contents("composer.lock"), TRUE)["packages-dev"] ?? [] as $p) if ($p["name"] === "drupal/core-dev") echo $p["version"];')"
+  if [ -n "$dev" ] && [ "$dev" != "$core" ]; then
+    upd drupal/core-dev --with "drupal/core-dev:$core"
+  fi
   git add composer.lock
 fi
 
