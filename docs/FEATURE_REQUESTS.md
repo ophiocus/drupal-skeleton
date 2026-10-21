@@ -97,7 +97,8 @@ removing the re-derivation cost for the builds that want it.
 ### Problem
 
 A project on this skeleton ships code-owned content as seed data: a `data/*.yml`
-file, an idempotent seeder, a thin `hook_deploy_NAME`. The seed file is written
+file and an idempotent seeder that every deploy's seed step runs (never a
+deploy hook, PROTOCOL D25). The seed file is written
 once, by hand, at the moment the content model is invented. **Nothing ever reads
 it back against the running site.**
 

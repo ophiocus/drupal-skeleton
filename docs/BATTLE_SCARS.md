@@ -653,7 +653,7 @@ config deletion has already completed by the time the exception surfaces.
 The site is now in between: config gone, storage bookkeeping half-present.
 
 **Trap 2 — a same-request recreate is blocked by "pending deletion".**
-Creating the replacement storage in the same request/update hook that deleted
+Creating the replacement storage in the same request that deleted
 the old one can fail with a pending-deletion error, because the old storage
 is still queued for purge.
 
@@ -662,9 +662,10 @@ is still queued for purge.
    (migrate values out first).
 2. Wrap the delete in try/catch and tolerate the `42S02` throw — then clear
    any pending-deletion bookkeeping explicitly.
-3. Make the update hook a converge, not a script: every step checks current
-   state and no-ops when already done, so `drush updb` can simply be re-run
-   when the recreate was blocked on the first pass.
+3. Make the seeder a converge, not a script: every step checks current
+   state and no-ops when already done, so the next deploy's seed step simply
+   finishes the recreate when the first pass was blocked. Never an update
+   hook (PROTOCOL D25).
 4. After the swap, restore view/form displays and any language-override
    config that referenced the old field — they are silently dropped with it.
 
@@ -1201,25 +1202,27 @@ never ran either. The same push to production would have shipped an image that
 could not import its own configuration.
 
 **Why.** Uninstalling a module needs its code: the config importer reads the
-module's info and its uninstall hooks. The image no longer has them. The
-textbook route is two deploys, uninstall first and remove the code second, but
-it is closed when the module is there *because* of an advisory: CI's
-`composer audit` refuses to build the first image, which still carries it.
+module's info and its uninstall hooks. The image no longer has them.
 
-**Fix.** In the same commit, add an update hook in the site's own module. It
-runs in `updatedb`, before `config:import`, and forgets the module the way
-drupal.org/node/3137656 describes:
+**Fix: two deploys, no hooks.** Update hooks and deploy hooks are not used on
+this platform (PROTOCOL D25; the test gate fails on them). A module leaves in two steps:
 
-1. if the code is still present (a local run), uninstall it properly and stop;
-2. otherwise remove its key from `core.extension` (removing one key keeps the
-   list in order);
-3. delete its `system.schema` and `locale.project` key_value entries;
-4. invalidate the container.
+1. **Uninstall, code still present.** Remove the module from
+   `config/sync/core.extension.yml`, and replace whatever used it (displays,
+   formatters, library dependencies) in the same sync. Its code stays in
+   `composer.json`. `drush deploy`'s `config:import` uninstalls it normally.
+   If the module carries an advisory, CI's `composer audit` would refuse this
+   image, so list that one advisory under `config.audit.ignore` in
+   `composer.json`, with the reason: "uninstalled by this deploy, removed by
+   the next". The code is in the image but no longer runs.
+2. **Remove the code.** Take the package and the `audit.ignore` entry out of
+   `composer.json`. Nothing references the module any more, so the import has
+   nothing to do with it.
 
-Config objects the module owned are deleted by the import, because sync no
-longer has them. Displays that used its plugins are replaced by the sync files
-in the same import. Check the module owned no config that sync does not
-replace.
+Data the module held that must survive (a field's values, a setting) is
+copied by the site's seeder before the step that drops it. The seeder runs
+after `drush deploy`, so the copy lands in step 1 and the source is dropped
+in step 2.
 
 **Tell.** `drush updatedb:status` notices "Module X has an entry in the
 system.schema key/value storage, but is missing from your site" before the

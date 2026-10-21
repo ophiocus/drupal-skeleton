@@ -88,6 +88,22 @@ integrity() {
         web/modules/upstream/*/*.yml web/modules/upstream/*/config/*/*.yml
         web/themes/custom/*/*.yml web/themes/custom/*/config/*/*.yml)
   php scripts/ci/yaml_lint.php "${yaml[@]}" || ok=1
+
+  # No update, post-update or deploy hooks, ever (PROTOCOL D25). Data changes
+  # ship as seeders; a module leaves in two deploys (BATTLE_SCARS §41). The
+  # rule was written down and broken more than once, so it is enforced here.
+  local hooks
+  hooks="$(grep -r -n -E 'function [a-z0-9_]+_(update_[0-9]+|post_update_[a-z0-9_]+|deploy_[a-z0-9_]+)[[:space:]]*\(' \
+    --include='*.install' --include='*.module' --include='*.php' \
+    web/modules/custom web/modules/upstream web/themes/custom 2>/dev/null)"
+  hooks+="$(find web/modules/custom web/modules/upstream web/themes/custom \( -name '*.post_update.php' -o -name '*.deploy.php' \) 2>/dev/null)"
+  if [ -n "$hooks" ]; then
+    echo "update/post-update/deploy hooks are not allowed (PROTOCOL D25; use a seeder):"
+    echo "$hooks"
+    ok=1
+  else
+    echo "no update, post-update or deploy hooks"
+  fi
   return $ok
 }
 

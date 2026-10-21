@@ -60,7 +60,7 @@ you whether the foundation you cloned is recent enough.
 - `docs/DEPLOY.md` §4: rehearse on production's database before a push that
   changes modules.
 - BATTLE_SCARS §41: a module whose code leaves composer cannot be uninstalled
-  by that deploy; forget it in an update hook. §42: locale rewrites imported
+  by that deploy; remove it in two deploys, never with a hook. §42: locale rewrites imported
   config's langcode on a non-English site; export what the import produced.
 
 ## 2026-10-18 — the skeleton is now an upstream (docs/UPSTREAM.md, PROTOCOL D22)

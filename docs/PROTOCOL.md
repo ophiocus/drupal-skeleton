@@ -274,9 +274,10 @@ actually has indexable content before treating one URL as a defect.
 *content*, not config, so `config:import` cannot ship them — a pattern only
 fires when an entity is saved. Existing nodes predating a pattern keep their
 `/node/N` URLs until something regenerates them, and the sitemap will publish
-those raw paths. Use a `hook_deploy_NAME()` (which `drush deploy` runs after
-`config:import`) to call `pathauto.generator`'s `updateEntityAlias()` over the
-affected bundles; it is idempotent, so it is free on every later deploy.
+those raw paths. Regenerate them in the site's seeder (it runs after
+`drush deploy`, on every deploy): call `pathauto.generator`'s
+`updateEntityAlias()` over the affected bundles. It is idempotent, so it is
+free on every later deploy. Never in a deploy hook (D25).
 
 ### D20 — Language is declared at scaffold time, and everything URL-shaped follows from it
 
@@ -505,3 +506,18 @@ sunburst and treemap.
 site (D22): a module placed there reaches new sites only. The lint and test
 gates (phpcs, phpstan, phpunit, `scripts/ci/tests.sh`) cover
 `web/modules/upstream/` too.
+
+### D25 — Never update, post-update or deploy hooks
+
+**Decision (Carlos, standing rule).** No `hook_update_N()`, no
+`hook_post_update_NAME()`, no `hook_deploy_NAME()`, in any module or theme
+on this platform. Nothing is published that another database depends on, so
+`config/install` is the scaffold and `config/sync` is the contract, and data
+the site needs ships as a seeder that every deploy runs. A module leaves in
+two deploys: uninstall through `config/sync`, then remove the code
+(BATTLE_SCARS §41).
+
+**Enforced, not advised.** The rule was written down and still broken more
+than once, so the `integrity` gate of `scripts/ci/tests.sh` fails on any such
+function, or on any `*.post_update.php` or `*.deploy.php` file, in custom or
+upstream code. A site cannot build an image that carries one.
