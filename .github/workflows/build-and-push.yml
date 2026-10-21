@@ -125,8 +125,13 @@ jobs:
           # repository variable (docs/DEPLOY.md §2).
           build-args: |
             APACHE_PREFORK=${{ vars.APACHE_PREFORK || '3 2 6 20' }}
+          # The layer cache is an optimisation, never a gate: a refused cache
+          # write (GitHub's cache service answered `error writing layer blob:
+          # not_found` on two of three first builds, 2026-10-21) must not fail
+          # a build whose image was fine. ignore-error keeps the build green
+          # and the next run simply rebuilds the missing layers.
           cache-from: type=gha
-          cache-to:   type=gha,mode=max
+          cache-to:   type=gha,mode=max,ignore-error=true
 
       # ─── Deploy ──────────────────────────────────────────────────────
       # dev/<slug> branches get an ephemeral environment; master is production.
