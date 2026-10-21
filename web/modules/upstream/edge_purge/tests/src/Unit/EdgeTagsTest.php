@@ -50,14 +50,14 @@ final class EdgeTagsTest extends UnitTestCase {
     $tags = [
       'node:1', 'node:1:revisions', 'taxonomy_term:7:revisions', 'node_values',
       'http_response', 'route_match', 'routes', 'local_task', 'rendered',
-      'config:field.storage.node.field_values', 'oidoenvivo:day', '4xx-response',
+      'config:field.storage.node.field_values', 'mysite:day', '4xx-response',
     ];
     $this->assertSame(
-      ['node:1', 'rendered', 'config:field.storage.node.field_values', 'oidoenvivo:day', '4xx-response'],
+      ['node:1', 'rendered', 'config:field.storage.node.field_values', 'mysite:day', '4xx-response'],
       EdgeTags::purgeable($tags),
     );
-    new Settings(['edge_purge_ignore_tags' => ['oidoenvivo:day']]);
-    $this->assertSame(['node:1'], EdgeTags::purgeable(['node:1', 'oidoenvivo:day']));
+    new Settings(['edge_purge_ignore_tags' => ['mysite:day']]);
+    $this->assertSame(['node:1'], EdgeTags::purgeable(['node:1', 'mysite:day']));
   }
 
   /**
