@@ -55,6 +55,7 @@ exactly as before. Set one only when the default is wrong for that property:
 | variable | `HEALTH_MIN_BYTES` | `5000` | the front page is legitimately leaner than 5 KB (or much heavier, and you want a tighter floor) |
 | variable | `HEALTH_ATTEMPTS` | `10` | the container needs longer than ~2.5 min to serve |
 | variable | `HEALTH_SLEEP_SECONDS` | `15` | as above |
+| variable | `APACHE_PREFORK` | `3 2 6 20` | the container is larger than 2 GiB and the site gets more Apache workers. Four numbers: StartServers, MinSpareServers, MaxSpareServers, MaxRequestWorkers. A worker peaks near 70 MiB; keep the database's `max_connections` above MaxRequestWorkers. Read at image build time. |
 
 **The production branch is deliberately not a variable.** GitHub forbids
 expressions in `on.push.branches`, so a `PROD_BRANCH` variable would arm the
