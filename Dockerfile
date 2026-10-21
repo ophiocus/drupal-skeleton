@@ -132,6 +132,10 @@ RUN apt-get update \
 #            not JSON: JSON endpoints (map frames, REST, autocomplete) left
 #            the origin uncompressed, several hundred KB per map frame.
 ARG APACHE_PREFORK="3 2 6 20"
+# APCu is built from its tagged GitHub release, not `pecl install`: on
+# 2026-10-21 pecl.php.net answered HTTP 500 for hours and no site could
+# build an image. Pinned, so a rebuild is reproducible; bump deliberately.
+ARG APCU_VERSION=5.1.28
 RUN set -eux; \
     set -- $APACHE_PREFORK; \
     [ "$#" -eq 4 ]; \
@@ -139,8 +143,13 @@ RUN set -eux; \
     savedAptMark="$(apt-mark showmanual)"; \
     apt-get update; \
     apt-get install -y --no-install-recommends $PHPIZE_DEPS; \
-    pecl install apcu; \
-    docker-php-ext-enable apcu; \
+    docker-php-source extract; \
+    mkdir -p /usr/src/php/ext/apcu; \
+    curl -fsSL --retry 5 --retry-all-errors \
+      "https://github.com/krakjoe/apcu/archive/refs/tags/v${APCU_VERSION}.tar.gz" \
+      | tar -xz -C /usr/src/php/ext/apcu --strip-components=1; \
+    docker-php-ext-install -j"$(nproc)" apcu; \
+    docker-php-source delete; \
     apt-mark auto '.*' > /dev/null; \
     apt-mark manual $savedAptMark > /dev/null; \
     apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
