@@ -46,6 +46,15 @@ lock_fresh() {
     exit(1);'
 }
 
+# drupal/core-dev (root require-dev) is at core's exact version.
+core_dev_aligned() {
+  php -r '
+    $v = [];
+    $lock = json_decode(file_get_contents("composer.lock"), TRUE);
+    foreach (array_merge($lock["packages"] ?? [], $lock["packages-dev"] ?? []) as $p) { $v[$p["name"]] = $p["version"]; }
+    exit(!isset($v["drupal/core-dev"]) || $v["drupal/core-dev"] === ($v["drupal/core"] ?? NULL) ? 0 : 1);'
+}
+
 if [ "$MODE" = "--check" ]; then
   if lock_fresh; then echo "lock matches upstream-configuration"; exit 0; fi
   echo "composer.lock does not match upstream-configuration/composer.json:"
@@ -70,7 +79,7 @@ out "upstream=$UP"
 
 if [ "$MODE" != "--adopt" ] && git merge-base --is-ancestor "$UP" HEAD 2>/dev/null; then
   echo "already at upstream ${UP:0:7}"
-  if lock_fresh; then out "changed=false"; exit 0; fi
+  if lock_fresh && core_dev_aligned; then out "changed=false"; exit 0; fi
   echo "…but the lock is stale; re-resolving it"
 fi
 
@@ -125,13 +134,18 @@ if ! lock_fresh; then
   lock_fresh || upd ophiocus/upstream-configuration "${moved[@]}" --with-dependencies
   lock_fresh || upd ophiocus/upstream-configuration --with-all-dependencies
   lock_fresh || { echo "the lock cannot meet upstream-configuration; resolve by hand" >&2; exit 1; }
-  # drupal/core-dev is the site's dev tooling (root require-dev); it tracks
-  # core's exact version, never a newer minor or a beta.
+  git add composer.lock
+fi
+
+# drupal/core-dev is the site's dev tooling (root require-dev); it tracks
+# core's exact version, never a newer minor or a beta. Checked on every sync,
+# not only when the baseline moved: a lock can drift on its own. Its own
+# dependencies (coder, phpstan…) may move with it; none reach the image.
+if ! core_dev_aligned; then
   core="$(php -r 'foreach (json_decode(file_get_contents("composer.lock"), TRUE)["packages"] as $p) if ($p["name"] === "drupal/core") echo $p["version"];')"
-  dev="$(php -r 'foreach (json_decode(file_get_contents("composer.lock"), TRUE)["packages-dev"] ?? [] as $p) if ($p["name"] === "drupal/core-dev") echo $p["version"];')"
-  if [ -n "$dev" ] && [ "$dev" != "$core" ]; then
-    upd drupal/core-dev --with "drupal/core-dev:$core"
-  fi
+  echo "drupal/core-dev -> $core (core's version)"
+  $COMPOSER_CMD update drupal/core-dev --with "drupal/core-dev:$core" --with-all-dependencies \
+    --no-install --no-scripts --no-interaction
   git add composer.lock
 fi
 
