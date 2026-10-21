@@ -121,6 +121,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Apache prefork sizing; a site with a larger container sets the
+          # repository variable (docs/DEPLOY.md §2).
+          build-args: |
+            APACHE_PREFORK=${{ vars.APACHE_PREFORK || '3 2 6 20' }}
           cache-from: type=gha
           cache-to:   type=gha,mode=max
 

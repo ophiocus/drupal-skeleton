@@ -63,6 +63,12 @@ RUN rm -rf /opt/drupal/web /opt/drupal/vendor \
 # PSR-4 lookup, so the runtime loader never gets a chance:
 #   Class "Drupal\mysql\Driver\Database\mysql\Connection" not found
 COPY composer.json composer.lock ./
+# Files composer's scaffold appends to the ones it writes (a site may append
+# assets/robots-additions.txt to robots.txt). The scaffold runs during the
+# install below and stops the build when a file it was told to append is
+# missing. The wildcard makes the directory optional: a site without assets/
+# copies nothing.
+COPY asset[s] ./assets/
 RUN composer install \
       --no-dev \
       --no-interaction \
@@ -116,12 +122,20 @@ RUN apt-get update \
 #            APCu (chained to the database) as soon as the extension loads.
 #   memory   1024M for the CLI (drush deploy, recipes); 512M per web request.
 #   prefork  20 workers: one peaks near 70 MiB, the container has 2 GiB.
+#            The only per-site knob in this block: a site with a larger
+#            container passes APACHE_PREFORK (StartServers MinSpareServers
+#            MaxSpareServers MaxRequestWorkers) through the repository
+#            variable of the same name (docs/DEPLOY.md §2).
 #   asserts  zend.assertions=-1, the production value: no php.ini is loaded,
 #            so the compiled default (1) ran every assert() on every request.
 #   deflate  the base image compresses HTML, CSS, JavaScript and XML, but
 #            not JSON: JSON endpoints (map frames, REST, autocomplete) left
 #            the origin uncompressed, several hundred KB per map frame.
+ARG APACHE_PREFORK="3 2 6 20"
 RUN set -eux; \
+    set -- $APACHE_PREFORK; \
+    [ "$#" -eq 4 ]; \
+    for n in "$@"; do case "$n" in ''|*[!0-9]*) exit 1;; esac; done; \
     savedAptMark="$(apt-mark showmanual)"; \
     apt-get update; \
     apt-get install -y --no-install-recommends $PHPIZE_DEPS; \
@@ -142,10 +156,10 @@ RUN set -eux; \
       > /usr/local/etc/php/conf.d/zz-platform-tuning.ini; \
     printf '%s\n' \
       '<IfModule mpm_prefork_module>' \
-      '    StartServers             3' \
-      '    MinSpareServers          2' \
-      '    MaxSpareServers          6' \
-      '    MaxRequestWorkers       20' \
+      "    StartServers           $1" \
+      "    MinSpareServers        $2" \
+      "    MaxSpareServers        $3" \
+      "    MaxRequestWorkers      $4" \
       '    MaxConnectionsPerChild 500' \
       '</IfModule>' \
       > /etc/apache2/mods-available/mpm_prefork.conf; \

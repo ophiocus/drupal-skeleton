@@ -5,6 +5,18 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-21 — image: optional assets/ for the scaffold, per-site Apache workers
+
+- `Dockerfile`: `assets/` is copied before `composer install`, so a site whose
+  composer scaffold appends a file from it (e.g. `assets/robots-additions.txt`
+  onto robots.txt) builds. The copy is a wildcard: a site without `assets/`
+  copies nothing and builds as before.
+- `Dockerfile` + `build-and-push.yml`: the prefork numbers come from the build
+  argument `APACHE_PREFORK`, fed by the repository variable of the same name
+  (default `3 2 6 20`, the previous values). A site with a larger container
+  sets it, e.g. `4 3 10 40`. The build stops on anything but four integers.
+  The rest of the tuning block stays identical in every site.
+
 ## 2026-10-21 — maper pin to 1.0.0-alpha2 (PROTOCOL D23)
 
 - `upstream-configuration/composer.json`: `drupal/maper` `1.0.0-alpha1` →
