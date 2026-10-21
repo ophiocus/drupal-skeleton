@@ -185,6 +185,14 @@ if ($siteMail) {
   $config['system.site']['mail'] = $siteMail;
 }
 
+// Who the site tells about itself: update and security notices. A site
+// installed with the default "admin@example.com" mails nobody, and every
+// notice became a failed send in the log. ADMIN_MAIL, comma-separated.
+$adminMail = getenv('ADMIN_MAIL');
+if ($adminMail) {
+  $config['update.settings']['notification']['emails'] = array_map('trim', explode(',', $adminMail));
+}
+
 // Where the site-wide contact form delivers. Env-driven because the recipient
 // is per-property and per-environment (a dev env must never mail the real
 // inbox), and because it is a personal address that does not belong in git.
