@@ -2,14 +2,18 @@ name: Test gate
 
 # Every check in scripts/ci/tests.sh: coding standards, static analysis, the
 # Unit, Kernel and Functional suites of all custom code, and the npm tests of
-# custom packages. One definition, two callers: build-and-push.yml runs it
-# before any image is built (so before any deploy), and upstream-sync.yml runs
-# it on a synced branch before proposing it. The same script runs by hand in
-# DDEV (`ddev exec bash scripts/ci/tests.sh`), so a red gate here reproduces
-# locally. Versions follow the image (PHP) and .ddev/config.yaml (MariaDB,
-# Node): change them together.
+# custom packages. One definition, three callers: every pull request, before
+# anything reaches master; build-and-push.yml, before any image is built (so
+# before any deploy); and upstream-sync.yml, on a synced branch before
+# proposing it. Running on pull requests is what keeps master green: a change
+# is tested where it is proposed, not discovered broken after the merge. The
+# same script runs by hand in DDEV (`ddev exec bash scripts/ci/tests.sh`), so a
+# red gate here reproduces locally. Versions follow the image (PHP) and
+# .ddev/config.yaml (MariaDB, Node): change them together. Test locally on
+# MariaDB, as here: SQLite hides MySQL-only behaviour.
 
 on:
+  pull_request:
   workflow_call:
     inputs:
       ref:

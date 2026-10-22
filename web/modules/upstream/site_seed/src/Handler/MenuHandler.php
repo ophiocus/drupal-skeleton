@@ -50,17 +50,18 @@ final class MenuHandler implements SeedHandlerInterface {
       $hit = $storage->loadByProperties(['menu_name' => $row['menu'], 'link__uri' => $row['uri']]);
       $link = $hit ? reset($hit) : NULL;
       if (!$link instanceof ContentEntityInterface) {
-        $storage->create([
+        $context->save($storage->create([
           'title' => $row['title'],
           'link' => ['uri' => $row['uri']],
           'menu_name' => $row['menu'],
           'weight' => $weight,
           'expanded' => FALSE,
-        ])->save();
+        ]));
         $context->count('menu_links');
       }
       elseif ((string) $link->label() !== $row['title'] || (int) $link->get('weight')->value !== $weight) {
-        $link->set('title', $row['title'])->set('weight', $weight)->save();
+        $link->set('title', $row['title'])->set('weight', $weight);
+        $context->save($link);
         $context->count('updated');
       }
     }

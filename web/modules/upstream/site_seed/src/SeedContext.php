@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\site_seed;
 
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityInterface;
 
 /**
  * One run of the seeder: the seed file, what handlers share, and the tally.
@@ -47,11 +48,31 @@ final class SeedContext {
    *   The directory of the seed file; images/ and the like are relative to it.
    * @param array<string, mixed> $options
    *   The seed file's `site_seed:` section: field names and the like.
+   * @param bool $check
+   *   Count what would change and write nothing: every handler writes through
+   *   save() and writes(), which do nothing in a check.
    */
   public function __construct(
     public readonly string $dir,
     public readonly array $options = [],
+    public readonly bool $check = FALSE,
   ) {}
+
+  /**
+   * Saves an entity, unless this run is a check.
+   */
+  public function save(EntityInterface $entity): void {
+    if (!$this->check) {
+      $entity->save();
+    }
+  }
+
+  /**
+   * Whether this run may write (config, files, strings): FALSE in a check.
+   */
+  public function writes(): bool {
+    return !$this->check;
+  }
 
   /**
    * Counts one change (or several) of a kind.

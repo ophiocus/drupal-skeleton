@@ -76,7 +76,7 @@ final class StoreHandler implements SeedHandlerInterface {
         }
         $store = $storage->create($values);
         assert($store instanceof ContentEntityInterface);
-        $store->save();
+        $context->save($store);
         $by_name[$row['name']] = $store;
         $context->count('stores');
       }
@@ -103,14 +103,14 @@ final class StoreHandler implements SeedHandlerInterface {
           }
         }
         if ($dirty) {
-          $store->save();
+          $context->save($store);
           $context->count('updated');
         }
       }
 
       if (!empty($row['default'])) {
         $settings = $this->configFactory->getEditable('commerce_store.settings');
-        if ($settings->get('default_store') !== $store->uuid()) {
+        if ($settings->get('default_store') !== $store->uuid() && $context->writes()) {
           $settings->set('default_store', $store->uuid())->save();
         }
       }

@@ -3,7 +3,6 @@ services:
     class: Drupal\site_seed\SeedRunner
     arguments:
       - !tagged_iterator site_seed.handler
-      - '@database'
       - '@entity_type.manager'
       - '@config.factory'
   # Drush's AutowireTrait looks each constructor type hint up AS A SERVICE ID;

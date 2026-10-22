@@ -6,7 +6,6 @@ namespace Drupal\site_seed;
 
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\site_seed\Handler\SeedHandlerInterface;
 
@@ -24,16 +23,13 @@ final class SeedRunner {
    *
    * @param iterable<\Drupal\site_seed\Handler\SeedHandlerInterface> $handlers
    *   Every service tagged site_seed.handler.
-   * @param \Drupal\Core\Database\Connection $database
-   *   The database, for the transaction a check run rolls back.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
-   *   Entity storages, whose caches a check run resets.
+   *   Entity storages, whose in-memory copies a check run resets.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
-   *   Config, whose cache a check run resets.
+   *   Config, whose in-memory copies a check run resets.
    */
   public function __construct(
     private readonly iterable $handlers,
-    private readonly Connection $database,
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly ConfigFactoryInterface $configFactory,
   ) {}
@@ -44,12 +40,13 @@ final class SeedRunner {
    * @param string $file
    *   The seed file (YAML).
    * @param bool $check
-   *   Report what would change, and change nothing: the whole run happens in
-   *   a database transaction that is rolled back. Image files copied into
-   *   public:// stay (they are identical to the seed's).
+   *   Report what would change, and write nothing. Handlers compare and count
+   *   as in a real run, and every write goes through the context, which skips
+   *   it. Not a rolled-back transaction: on MySQL a table created on first use
+   *   during the run commits it implicitly, and the "rollback" would not.
    *
    * @return array{tally: array<string, int>, unhandled: string[]}
-   *   What changed, by kind, and the sections no handler took.
+   *   What changed (or would), by kind, and the sections no handler took.
    *
    * @throws \Drupal\site_seed\SeedException
    */
@@ -58,7 +55,7 @@ final class SeedRunner {
       throw new SeedException("seed file missing at $file");
     }
     $doc = Yaml::decode((string) file_get_contents($file)) ?: [];
-    $context = new SeedContext(dirname($file), (array) ($doc['site_seed'] ?? []));
+    $context = new SeedContext(dirname($file), (array) ($doc['site_seed'] ?? []), $check);
     unset($doc['site_seed']);
 
     $handlers = [];
@@ -70,7 +67,6 @@ final class SeedRunner {
     usort($handlers, static fn (SeedHandlerInterface $a, SeedHandlerInterface $b): int => $a->weight() <=> $b->weight());
 
     $taken = [];
-    $transaction = $check ? $this->database->startTransaction('site_seed_check') : NULL;
     try {
       foreach ($handlers as $handler) {
         $section = $handler->section();
@@ -82,8 +78,7 @@ final class SeedRunner {
       }
     }
     finally {
-      if ($transaction) {
-        $transaction->rollBack();
+      if ($check) {
         $this->forget();
       }
     }
@@ -95,7 +90,7 @@ final class SeedRunner {
   }
 
   /**
-   * Drops what a rolled-back run left in memory: entity and config caches.
+   * Drops the entities and config a check changed in memory and never saved.
    */
   private function forget(): void {
     foreach (array_keys($this->entityTypeManager->getDefinitions()) as $type) {

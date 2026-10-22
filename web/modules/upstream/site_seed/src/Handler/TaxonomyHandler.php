@@ -59,13 +59,14 @@ final class TaxonomyHandler implements SeedHandlerInterface {
         if (!$term) {
           $term = $storage->create(['vid' => $vid, 'name' => $row['name'], 'weight' => $weight]);
           assert($term instanceof ContentEntityInterface);
-          $term->save();
+          $context->save($term);
           $by_name[$row['name']] = $term;
           $context->count('terms');
         }
         elseif ((string) $term->label() !== $row['name'] || (int) $term->get('weight')->value !== $weight) {
           unset($by_name[(string) $term->label()]);
-          $term->set('name', $row['name'])->set('weight', $weight)->save();
+          $term->set('name', $row['name'])->set('weight', $weight);
+          $context->save($term);
           $by_name[$row['name']] = $term;
           $context->count('updated');
         }
