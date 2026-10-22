@@ -547,3 +547,24 @@ as a per-site copy:
   a host without one. `docs/DEPLOY.md` §7 is the checklist.
 
 The scars behind it: BATTLE_SCARS §40 (amended), §43, §44, §45, §46.
+
+### D27 — One seeder for every site: site_seed is upstream
+
+**Decision (Carlos, 2026-10-22).** The seed step (D25: every deploy runs the
+site's `property:seed`) is one engine in the upstream, `site_seed`, not a
+seeder each site writes. Sites carried their own copies of one shop seeder,
+and a fix had to be made in each copy, or was made in one and missing from the
+others: variations saved before their product exist came out untitled, and
+add-to-cart answered 500 on the sites that lacked the fix.
+
+- `site_seed` converges a seed file section by section (stores, taxonomy,
+  products, menu, shipping methods, aliases, translations), matched on stable
+  keys (SKUs, names with `formerly:`), never on titles; a second run changes
+  nothing; `--check` writes nothing.
+- A site keeps only its data (`data/seeds/`) and its `property:seed` command,
+  which calls the runner; whatever is truly the site's own stays a handler of
+  its own (tag `site_seed.handler`).
+- The default store is born under the uuid `config/sync` names, and every
+  variation gets a title: both fixes live in the engine once.
+- Moving a site onto it is rehearsed on a copy of its production database with
+  `--check` first: an existing entity must be adopted, never duplicated.

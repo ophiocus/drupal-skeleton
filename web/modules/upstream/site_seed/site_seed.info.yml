@@ -1,0 +1,5 @@
+name: 'Site Seed'
+type: module
+description: 'One seeder for every site: converges the entities a site owns as code (data/seeds/*.yml) onto the database, idempotently, matched on stable keys.'
+core_version_requirement: ^10.3 || ^11
+package: Development
