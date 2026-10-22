@@ -1,0 +1,23 @@
+# A seed with no Commerce in it: terms, menu links, aliases, and a section of
+# the site's own that site_seed leaves to the site.
+taxonomy:
+  tags:
+    - name: 'Granos'
+      weight: 0
+    - name: 'Café'
+      formerly: ['Bebidas']
+      weight: 1
+menu:
+  - menu: main
+    uri: 'internal:/tienda'
+    title: 'Tienda'
+    weight: 0
+  - menu: main
+    uri: 'internal:/contacto'
+    title: 'Contacto'
+    weight: 5
+aliases:
+  - path: /user/login
+    alias: /entrar
+site_specific:
+  - anything: 'the site handles this itself'

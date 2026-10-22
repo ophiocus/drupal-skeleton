@@ -1,0 +1,42 @@
+# A shop catalogue in the format the shops minted from the kit use.
+stores:
+  - name: 'Tienda de prueba'
+    formerly: ['Tienda vieja']
+    mail: 'tienda@example.com'
+    currency: COP
+    timezone: America/Bogota
+    default: true
+    address:
+      country_code: CO
+      locality: 'Bogotá'
+    billing_countries: [CO]
+taxonomy:
+  categoria:
+    - name: 'Granos'
+      weight: 0
+    - name: 'Café'
+      formerly: ['Bebidas']
+      weight: 1
+products:
+  - title: 'Arroz integral'
+    category: 'Granos'
+    stores: ['Tienda de prueba']
+    variations:
+      - sku: ARROZ-500
+        price: 12000
+        currency: COP
+      - sku: ARROZ-1000
+        price: '22000.00'
+        currency: COP
+  - title: 'Café de origen'
+    category: 'Café'
+    stores: ['Tienda de prueba']
+    variations:
+      - sku: CAFE-250
+        price: 30000
+        currency: COP
+menu:
+  - menu: main
+    uri: 'internal:/tienda'
+    title: 'Tienda'
+    weight: 0

@@ -1,0 +1,49 @@
+services:
+  site_seed.runner:
+    class: Drupal\site_seed\SeedRunner
+    arguments:
+      - !tagged_iterator site_seed.handler
+      - '@database'
+      - '@entity_type.manager'
+      - '@config.factory'
+  # Drush's AutowireTrait looks each constructor type hint up AS A SERVICE ID;
+  # without this alias it silently drops the whole command class.
+  Drupal\site_seed\SeedRunner: '@site_seed.runner'
+
+  # One handler per section of a seed file. A site adds its own section by
+  # tagging a service of its own with site_seed.handler.
+  site_seed.handler.stores:
+    class: Drupal\site_seed\Handler\StoreHandler
+    arguments: ['@entity_type.manager', '@config.factory']
+    tags:
+      - { name: site_seed.handler }
+  site_seed.handler.taxonomy:
+    class: Drupal\site_seed\Handler\TaxonomyHandler
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: site_seed.handler }
+  site_seed.handler.products:
+    class: Drupal\site_seed\Handler\ProductHandler
+    arguments: ['@entity_type.manager', '@file_system']
+    tags:
+      - { name: site_seed.handler }
+  site_seed.handler.menu:
+    class: Drupal\site_seed\Handler\MenuHandler
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: site_seed.handler }
+  site_seed.handler.shipping_methods:
+    class: Drupal\site_seed\Handler\ShippingMethodHandler
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: site_seed.handler }
+  site_seed.handler.aliases:
+    class: Drupal\site_seed\Handler\AliasHandler
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: site_seed.handler }
+  site_seed.handler.translations:
+    class: Drupal\site_seed\Handler\TranslationHandler
+    arguments: ['@module_handler', '@?locale.storage']
+    tags:
+      - { name: site_seed.handler }

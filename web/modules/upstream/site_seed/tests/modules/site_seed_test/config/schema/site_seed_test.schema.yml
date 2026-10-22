@@ -1,0 +1,9 @@
+# Commerce keeps the default store's uuid in commerce_store.settings and ships
+# no schema for it; strict schema checking in kernel tests needs one.
+commerce_store.settings:
+  type: config_object
+  label: 'Commerce store settings'
+  mapping:
+    default_store:
+      type: string
+      label: 'Default store UUID'

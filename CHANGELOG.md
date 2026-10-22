@@ -5,6 +5,17 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-22 — site_seed: one seeder for every site (D27)
+
+- New upstream module `web/modules/upstream/site_seed`: converges a site's
+  seed file (stores, taxonomy, products, menu, shipping methods, aliases,
+  translations) onto the database, matched on SKUs and names (with
+  `formerly:`), idempotently. `drush site-seed:run <file> [--check]`.
+- Every variation gets a title (an untitled one made add-to-cart answer 500),
+  and the default store is born under the uuid `config/sync` names.
+- Kernel tests: the core handlers everywhere; the Commerce handlers wherever
+  Commerce is installed (skipped in the upstream itself).
+
 ## 2026-10-22 — ga4_report: no empty page-kinds card
 
 - The report page draws the page-kinds card only when the settings name at
