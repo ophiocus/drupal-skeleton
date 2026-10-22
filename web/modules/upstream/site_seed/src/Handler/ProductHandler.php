@@ -81,7 +81,7 @@ final class ProductHandler implements SeedHandlerInterface {
       if (!$product) {
         $product = $product_storage->create(['type' => $type, 'title' => $row['title']]);
         assert($product instanceof ContentEntityInterface);
-        $product->save();
+        $context->save($product);
         $context->count('products');
       }
 
@@ -124,7 +124,7 @@ final class ProductHandler implements SeedHandlerInterface {
           $dirty = TRUE;
         }
         if ($dirty) {
-          $variation->save();
+          $context->save($variation);
           $context->count('updated');
         }
         else {
@@ -193,7 +193,7 @@ final class ProductHandler implements SeedHandlerInterface {
         $dirty = TRUE;
       }
       if ($dirty) {
-        $product->save();
+        $context->save($product);
         $context->count('updated');
       }
     }
@@ -260,7 +260,7 @@ final class ProductHandler implements SeedHandlerInterface {
     }
     $dir = (string) $context->option('image_directory', 'public://productos/seed');
     $uri = $dir . '/' . basename($source);
-    if (!is_file($uri)) {
+    if (!is_file($uri) && $context->writes()) {
       $this->fileSystem->prepareDirectory($dir, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
       $this->fileSystem->copy($source, $uri, FileExists::Replace);
     }
@@ -270,7 +270,7 @@ final class ProductHandler implements SeedHandlerInterface {
     if (!$file instanceof ContentEntityInterface) {
       $file = $storage->create(['uri' => $uri, 'uid' => 1, 'status' => 1]);
       assert($file instanceof ContentEntityInterface);
-      $file->save();
+      $context->save($file);
     }
     return $file;
   }

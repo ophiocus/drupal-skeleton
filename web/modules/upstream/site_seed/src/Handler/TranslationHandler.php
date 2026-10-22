@@ -55,14 +55,14 @@ final class TranslationHandler implements SeedHandlerInterface {
       if (!is_file($path)) {
         throw new SeedException('translation file missing: ' . $row['file']);
       }
-      $context->count('translations', $this->file($path, (string) $row['langcode']));
+      $context->count('translations', $this->file($path, (string) $row['langcode'], $context->writes()));
     }
   }
 
   /**
-   * Converges one .po file; returns how many strings were written.
+   * Converges one .po file; returns how many strings it wrote (or would).
    */
-  private function file(string $path, string $langcode): int {
+  private function file(string $path, string $langcode, bool $write): int {
     $reader = new PoStreamReader();
     $reader->setLangcode($langcode);
     $reader->setURI($path);
@@ -80,12 +80,16 @@ final class TranslationHandler implements SeedHandlerInterface {
         'context' => $context,
         'language' => $langcode,
       ]);
+      if ($target && (!empty($target->customized) || (string) ($target->translation ?? '') === $translation)) {
+        continue;
+      }
+      if (!$write) {
+        $lids[] = 0;
+        continue;
+      }
       if (!$target) {
         $lid = $this->localeStorage->createString(['source' => $source, 'context' => $context])->save()->lid;
         $target = $this->localeStorage->createTranslation(['lid' => $lid, 'language' => $langcode]);
-      }
-      if (!empty($target->customized) || (string) ($target->translation ?? '') === $translation) {
-        continue;
       }
       // A source found without a translation in this language is a new
       // translation row; one found with it is an update of that row.
@@ -97,7 +101,7 @@ final class TranslationHandler implements SeedHandlerInterface {
       $lids[] = (int) $target->lid;
     }
     $reader->close();
-    if ($lids) {
+    if ($write && $lids) {
       $this->moduleHandler->loadInclude('locale', 'module');
       if (function_exists('_locale_refresh_translations')) {
         _locale_refresh_translations([$langcode], $lids);

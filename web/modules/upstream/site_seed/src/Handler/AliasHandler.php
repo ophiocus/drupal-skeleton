@@ -49,11 +49,16 @@ final class AliasHandler implements SeedHandlerInterface {
       $hit = $storage->loadByProperties(['path' => $row['path']]);
       $alias = $hit ? reset($hit) : NULL;
       if (!$alias instanceof ContentEntityInterface) {
-        $storage->create(['path' => $row['path'], 'alias' => $row['alias'], 'langcode' => $row['langcode'] ?? 'und'])->save();
+        $context->save($storage->create([
+          'path' => $row['path'],
+          'alias' => $row['alias'],
+          'langcode' => $row['langcode'] ?? 'und',
+        ]));
         $context->count('aliases');
       }
       elseif ((string) $alias->get('alias')->value !== $row['alias']) {
-        $alias->set('alias', $row['alias'])->save();
+        $alias->set('alias', $row['alias']);
+        $context->save($alias);
         $context->count('updated');
       }
     }

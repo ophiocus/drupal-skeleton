@@ -66,7 +66,7 @@ final class ShippingMethodHandler implements SeedHandlerInterface {
           $ids[] = (int) $stores[$name]->id();
         }
       }
-      $storage->create([
+      $context->save($storage->create([
         'name' => $row['name'],
         'stores' => $ids,
         'plugin' => [
@@ -74,7 +74,7 @@ final class ShippingMethodHandler implements SeedHandlerInterface {
           'target_plugin_configuration' => $row['configuration'] ?? [],
         ],
         'status' => TRUE,
-      ])->save();
+      ]));
       $context->count('shipping_methods');
     }
   }
