@@ -218,6 +218,15 @@ jobs:
               exit 0
             fi
 
+            # A site the operator put in maintenance answers Drupal's maintenance
+            # page with 503. deploy-prod restores that state on purpose and never
+            # lifts it (lifting is the operator's keystroke), so that page is the
+            # expected answer, not a fault. Any other 503, or a PHP fatal, still fails.
+            if [ "$code" = "503" ] && grep -q 'class="maintenance-page' /tmp/health.html && [ "$fatal" = "0" ]; then
+              echo "::notice::$HEALTH_URL answers its maintenance page, as the operator left it. The deploy is verified; lifting maintenance stays the operator's call."
+              exit 0
+            fi
+
             fail_body=$(head -c 800 /tmp/health.html)
             # The container needs a moment after `docker compose up -d`.
             sleep "$SLEEP_SECONDS"
