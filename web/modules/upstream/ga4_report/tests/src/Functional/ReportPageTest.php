@@ -123,6 +123,26 @@ final class ReportPageTest extends BrowserTestBase {
   }
 
   /**
+   * With no kinds of page there is no empty kinds card.
+   */
+  public function testNoKindsNoKindsCard(): void {
+    $settings = ['page_kinds' => []] + self::fixtureSettings();
+    $this->config('ga4_report.settings')->setData($settings)->save();
+    $table = self::fixtureCityTable();
+    $snapshot = (new Normalizer(new CityLocator($table)))->normalize(self::fixtureReports(), $settings);
+    unlink($table);
+    $this->container->get('ga4_report.store')->save('ga4', $snapshot, ['fetched' => 1767225600]);
+
+    $this->drupalLogin($this->drupalCreateUser(['view ga4 report']));
+    $this->drupalGet('admin/reports/ga4');
+    $session = $this->assertSession();
+    $session->elementNotExists('css', '#ga4r-kinds');
+    $session->elementExists('css', '#ga4r-landing');
+    $session->pageTextContains('Name kinds of page in the settings to group them.');
+    $session->elementsCount('css', '[data-ga4r-chart]', 8);
+  }
+
+  /**
    * The settings form reads and writes the line lists.
    */
   public function testSettingsForm(): void {

@@ -5,6 +5,12 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-22 — ga4_report: no empty page-kinds card
+
+- The report page draws the page-kinds card only when the settings name at
+  least one kind. Without kinds, the landing-pages card stands alone with a
+  note pointing to the settings. Functional test `testNoKindsNoKindsCard`.
+
 ## 2026-10-21 — image: optional assets/ for the scaffold, per-site Apache workers
 
 - `Dockerfile`: `assets/` is copied before `composer install`, so a site whose

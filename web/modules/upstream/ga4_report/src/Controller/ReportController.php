@@ -227,24 +227,33 @@ final class ReportController extends ControllerBase {
         'users' => $this->t('Users'),
         'engagement' => $this->t('Engagement (s)'),
       ]), TRUE);
-    $build['pair3'] = $this->pair(
-      $this->card('kinds', $this->t('Page views by kind of page'),
-        $this->t('Every page on the site, not only the most viewed. A page can count in more than one kind when patterns overlap.'),
-        $this->table($snapshot['kinds'], [
-          'label' => $this->t('Kind'),
-          'views' => $this->t('Views'),
-          'users' => $this->t('Users'),
-        ])),
-      $this->card('landing', $this->t('First page of a visit, by channel'),
-        $this->t('The most common first pages, grouped by kind of page.'),
-        $this->table(array_map($kindOf, $snapshot['landing']), [
-          'page' => $this->t('First page'),
-          'kindLabel' => $this->t('Kind'),
-          'channel' => $this->t('Channel'),
-          'sessions' => $this->t('Visits'),
-          'engaged' => $this->t('Engaged'),
-        ])),
-    );
+    $landing = $this->card('landing', $this->t('First page of a visit, by channel'),
+      $snapshot['kinds']
+        ? $this->t('The most common first pages, grouped by kind of page.')
+        : $this->t('The most common first pages. Name kinds of page in the settings to group them.'),
+      $this->table(array_map($kindOf, $snapshot['landing']), [
+        'page' => $this->t('First page'),
+        'kindLabel' => $this->t('Kind'),
+        'channel' => $this->t('Channel'),
+        'sessions' => $this->t('Visits'),
+        'engaged' => $this->t('Engaged'),
+      ]));
+    // Without kinds of page there is nothing to count by kind: no empty card.
+    if ($snapshot['kinds']) {
+      $build['pair3'] = $this->pair(
+        $this->card('kinds', $this->t('Page views by kind of page'),
+          $this->t('Every page on the site, not only the most viewed. A page can count in more than one kind when patterns overlap.'),
+          $this->table($snapshot['kinds'], [
+            'label' => $this->t('Kind'),
+            'views' => $this->t('Views'),
+            'users' => $this->t('Users'),
+          ])),
+        $landing,
+      );
+    }
+    else {
+      $build['landing'] = $landing;
+    }
     $build['events'] = $this->card('events', $this->t('What Analytics records'),
       $this->t('Every event name the property recorded in the period.'),
       NULL, FALSE, [
