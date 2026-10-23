@@ -17,6 +17,7 @@ scripts/ci/
 scripts/upstream/
 .github/workflows/build-and-push.yml
 .github/workflows/composer-audit.yml
+.github/workflows/security-scan.yml
 .github/workflows/test-gate.yml
 .github/workflows/upstream-sync.yml
 Dockerfile

@@ -1,0 +1,5 @@
+services:
+  sign_in_guard.overrides:
+    class: Drupal\sign_in_guard\Config\SignInGuardOverrides
+    tags:
+      - { name: config.factory.override, priority: 5 }

@@ -568,3 +568,27 @@ add-to-cart answered 500 on the sites that lacked the fix.
   variation gets a title: both fixes live in the engine once.
 - Moving a site onto it is rehearsed on a copy of its production database with
   `--check` first: an existing entity must be adopted, never duplicated.
+
+### D28 — Sign-in is guarded the same way on every site, switched on by the host
+
+**Decision (Carlos, 2026-10-21: "anything allowed in the free tier will be
+done", on a security pass whose staff and sign-in items belong upstream).**
+Every site's staff accounts can rewrite the site, and every sign-in form faced
+the internet with no challenge. One upstream module, `sign_in_guard`, carries
+the answer for all of them:
+
+- **Two-factor sign-in** (`tfa`, TOTP plus recovery codes) required for
+  `administrator` and `content_editor`; three sign-ins to enrol, then a code
+  every time.
+- **Cloudflare Turnstile** on `/user/login` and `/user/password`, free, with
+  no puzzle for people.
+- Each is switched on by the host's environment (`TFA_ENCRYPTION_KEY`,
+  `TURNSTILE_KEYS`), through runtime config overrides, never by `config/sync`.
+  A local copy, CI or a fresh build has no keys and changes nothing, so no
+  environment can lock itself out by importing another's config, and
+  `config:status` stays clean everywhere.
+- Secrets never enter config: both Key entities read the environment.
+- A weekly OWASP ZAP baseline (`security-scan.yml`, passive, report only)
+  reads each live site at its repository variable `SITE_URL`;
+  `security_review` ships in the baseline for a local review
+  (`drush en security_review && drush secrev`, never exported).

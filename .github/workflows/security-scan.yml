@@ -1,0 +1,30 @@
+# Weekly OWASP ZAP baseline scan of the live site: a spider plus ZAP's passive
+# rules, so it reads pages and sends no attack. The report is this run's
+# artifact (zap_scan) and its summary; the run never fails and opens no issue.
+# The target is the repository variable SITE_URL; without it the job is
+# skipped (a fresh copy of the upstream has no site yet).
+#
+# Owned by the upstream (upstream/OWNERSHIP): sites get it through the sync.
+name: Security scan
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap-baseline:
+    if: vars.SITE_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: ZAP baseline
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ vars.SITE_URL }}
+          allow_issue_writing: false
+          fail_action: false
+          cmd_options: '-a'
