@@ -6,11 +6,13 @@ namespace Drupal\Tests\appointments\Kernel;
 
 use Drupal\appointments\Entity\AppointmentInterface;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Which start times the calendar offers.
  */
 #[Group('appointments')]
+#[RunTestsInSeparateProcesses]
 final class CalendarTest extends AppointmentsKernelTestBase {
 
   /**

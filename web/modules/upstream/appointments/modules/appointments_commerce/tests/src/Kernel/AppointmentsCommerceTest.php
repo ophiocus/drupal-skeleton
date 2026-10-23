@@ -11,11 +11,13 @@ use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Tests\appointments\Kernel\FrozenTime;
 use Drupal\Tests\commerce_cart\Kernel\CartKernelTestBase;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Paid bookings: the cart, the checkout, and what placing the order does.
  */
 #[Group('appointments')]
+#[RunTestsInSeparateProcesses]
 final class AppointmentsCommerceTest extends CartKernelTestBase {
 
   /**

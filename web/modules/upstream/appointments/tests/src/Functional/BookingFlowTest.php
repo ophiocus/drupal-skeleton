@@ -11,11 +11,13 @@ use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\user\RoleInterface;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * A client books, opens, downloads and cancels; staff see the list.
  */
 #[Group('appointments')]
+#[RunTestsInSeparateProcesses]
 final class BookingFlowTest extends BrowserTestBase {
 
   use AssertMailTrait;

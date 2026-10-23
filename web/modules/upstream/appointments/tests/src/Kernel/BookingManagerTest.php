@@ -8,12 +8,14 @@ use Drupal\appointments\Entity\AppointmentInterface;
 use Drupal\appointments\Ics;
 use Drupal\appointments\SlotUnavailableException;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\TestWith;
 
 /**
  * Booking, moving, cancelling, and the mails they send.
  */
 #[Group('appointments')]
+#[RunTestsInSeparateProcesses]
 final class BookingManagerTest extends AppointmentsKernelTestBase {
 
   /**
