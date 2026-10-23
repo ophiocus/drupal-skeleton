@@ -7,11 +7,13 @@ namespace Drupal\Tests\site_seed\Kernel;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\site_seed\SeedException;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * The engine and its core handlers, on any site: terms, menu links, aliases.
  */
 #[Group('site_seed')]
+#[RunTestsInSeparateProcesses]
 final class SeedRunnerCoreTest extends KernelTestBase {
 
   /**

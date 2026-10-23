@@ -5,6 +5,14 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-23 — Kernel tests run in separate processes
+
+- `edge_purge` (`PurgeQueueInvalidatorTest`, `SoftRebuildTest`) and
+  `site_seed` (`SeedRunnerCoreTest`, `SeedRunnerCommerceTest`) Kernel tests
+  carry `#[RunTestsInSeparateProcesses]`. Without it, Drupal 11.3+ reports a
+  deprecation and Drupal 12 throws. Every upstream Kernel and Functional test
+  now has it.
+
 ## 2026-10-23 — sign_in_guard: two-factor for staff, Turnstile on sign-in (D28)
 
 - New upstream module `web/modules/upstream/sign_in_guard`: TOTP two-factor
