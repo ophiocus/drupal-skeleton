@@ -1,0 +1,6 @@
+services:
+  image_fallback.settings_saved:
+    class: Drupal\image_fallback\EventSubscriber\SettingsSaved
+    arguments: ['@cache_tags.invalidator']
+    tags:
+      - { name: event_subscriber }

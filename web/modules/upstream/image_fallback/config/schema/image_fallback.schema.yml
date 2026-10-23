@@ -1,0 +1,53 @@
+image_fallback.image:
+  type: mapping
+  label: 'Fallback image'
+  mapping:
+    source:
+      type: string
+      label: 'Source: logo (the default theme''s logo), path or none'
+      constraints:
+        Choice:
+          choices:
+            - logo
+            - path
+            - none
+    path:
+      type: string
+      label: 'File path relative to the Drupal root, when the source is path'
+    alt:
+      type: label
+      label: 'Alternative text (empty: decorative)'
+
+image_fallback.settings:
+  type: config_object
+  label: 'Image fallback settings'
+  mapping:
+    default:
+      type: image_fallback.image
+      label: 'The fallback of every field that names no source of its own'
+    fields:
+      type: sequence
+      label: 'Image and media fields that get a fallback when empty'
+      sequence:
+        type: mapping
+        label: 'Field'
+        mapping:
+          field:
+            type: string
+            label: 'entity_type.bundle.field_name'
+          source:
+            type: string
+            label: 'Source: empty for the default, else logo, path or none'
+            constraints:
+              Choice:
+                choices:
+                  - ''
+                  - logo
+                  - path
+                  - none
+          path:
+            type: string
+            label: 'File path relative to the Drupal root, when the source is path'
+          alt:
+            type: label
+            label: 'Alternative text (empty: decorative)'

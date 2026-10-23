@@ -1,0 +1,5 @@
+name: 'Image fallback'
+type: module
+description: 'Renders a fallback image (the theme logo or a file in the codebase) in place of an empty image field, at render time. Which fields, and what image, are configuration; no file is stored.'
+core_version_requirement: ^11.3
+package: Media
