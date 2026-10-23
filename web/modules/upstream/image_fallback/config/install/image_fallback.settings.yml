@@ -1,0 +1,5 @@
+default:
+  source: logo
+  path: ''
+  alt: ''
+fields: []

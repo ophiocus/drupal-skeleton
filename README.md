@@ -37,6 +37,7 @@ drupal-skeleton/
 │   └── BATTLE_SCARS.md               ← lessons that earn permanent residence
 ├── web/modules/custom/example_module/   ← contrib-grade module template
 ├── web/modules/upstream/ga4_report/     ← GA4 visits report in the admin (upstream-owned; PROTOCOL D24)
+├── web/modules/upstream/image_fallback/ ← logo (or a file) in place of an empty image/media field (upstream-owned)
 └── web/themes/custom/example_theme/     ← Olivero-child theme template
 └── optional/vite-bundle/             ← drop-in for themes that want a modern JS pipeline
 ```

@@ -5,6 +5,19 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-22 — image_fallback: the logo in place of an empty image or media field
+
+- New upstream module `web/modules/upstream/image_fallback`: an empty listed
+  field renders a fallback image at render time, inside the field's own
+  wrapper plus an `image-fallback` class. `image_fallback.settings` holds a
+  `default` (`logo`, the default theme's logo; `path`, a file relative to the
+  Drupal root; or `none`) and a list of `fields`, each taking the default or
+  naming its own source, path and alt. No field is listed by default, so
+  enabling it changes nothing. No file entity, no field config, no update
+  hook. Cache tags only on the renders it touches; listing a field
+  invalidates that entity type's renders once. Kernel test
+  `ImageFallbackTest`; README in the module.
+
 ## 2026-10-22 — site_seed: one seeder for every site (D27)
 
 - New upstream module `web/modules/upstream/site_seed`: converges a site's
