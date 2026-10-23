@@ -610,9 +610,14 @@ their site in them. Both are the defect D22 exists to prevent.
   does not depend on the engine (`appointments` for `appointment_services`).
 - **Generic features move upstream under generic names**: `appointments`
   (with `appointments_commerce`) and `shop_delivery`. A site enables them
-  where it uses them. A module is renamed when it moves only while no
-  production database holds it. A module already live under a site name moves
-  in two deploys (BATTLE_SCARS §41), never by an update hook (D25).
+  where it uses them. A site whose module moves under the same name deletes
+  its copy in the pull request that syncs the upstream copy in. A site whose
+  module moves under a new name, and whose module any deployed database holds
+  (a lab counts), keeps running its own copy until a planned switch: the
+  old module is uninstalled while its code is still there (two deploys,
+  BATTLE_SCARS §41), and stored plugin ids move by a data step, never by an
+  update hook (D25). Rehearsed: deleting the code in the same deploy stops
+  `drush deploy` with "The module … does not exist".
 - **An upstream module may need contrib that not every site carries.** The
   test gate leaves such a module out of phpstan and PHPUnit where its
   dependencies are missing (`scripts/ci/unmet_upstream.php`), so a site without
