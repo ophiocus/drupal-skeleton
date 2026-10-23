@@ -1,0 +1,18 @@
+# Spanish translation of Appointments: Commerce.
+msgid ""
+msgstr ""
+"Project-Id-Version: appointments_commerce\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+"Language: es\n"
+
+msgid "Appointments: Commerce"
+msgstr "Citas: Commerce"
+
+msgid "Online payment for appointments through the Drupal Commerce checkout: a deposit or the full price, chosen in the appointment settings."
+msgstr "Pago en línea de citas por el checkout de Drupal Commerce: un abono o el precio completo, según los ajustes de citas."
+
+msgid "%item was removed from your cart: the time is no longer held. Please book again."
+msgstr "%item salió de tu carrito: la hora ya no está reservada. Por favor agenda de nuevo."

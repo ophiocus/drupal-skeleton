@@ -1,0 +1,8 @@
+shop_delivery.board:
+  title: 'Despacho'
+  route_name: shop_delivery.board
+  base_route: shop_delivery.board
+shop_delivery.settlement:
+  title: 'Liquidación'
+  route_name: shop_delivery.settlement
+  base_route: shop_delivery.board

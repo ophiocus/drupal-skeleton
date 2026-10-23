@@ -1,0 +1,19 @@
+langcode: es
+status: true
+dependencies:
+  module:
+    - commerce_shipping
+    - user
+id: commerce_shipment.field_repartidor
+field_name: field_repartidor
+entity_type: commerce_shipment
+type: entity_reference
+settings:
+  target_type: user
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

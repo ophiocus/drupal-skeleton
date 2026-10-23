@@ -1,6 +1,6 @@
 name: 'Site Seed test support'
 type: module
-description: 'Test-only: the config schema Commerce does not ship for commerce_store.settings.'
+description: 'Test-only: the config schema Commerce does not ship for commerce_store.settings, and a data/seeds/ file for runSite().'
 package: Testing
 core_version_requirement: ^10.3 || ^11
 hidden: true

@@ -1,0 +1,37 @@
+services:
+  logger.channel.shop_delivery:
+    parent: logger.channel_base
+    arguments: ['shop_delivery']
+
+  shop_delivery.deliveries:
+    class: Drupal\shop_delivery\Deliveries
+    arguments:
+      - '@entity_type.manager'
+      - '@datetime.time'
+  Drupal\shop_delivery\Deliveries: '@shop_delivery.deliveries'
+
+  # maper_nominatim's client when that module is enabled, NULL otherwise.
+  shop_delivery.address_search:
+    class: Drupal\shop_delivery\AddressSearch
+    arguments: ['@?maper_nominatim.client']
+  Drupal\shop_delivery\AddressSearch: '@shop_delivery.address_search'
+
+  shop_delivery.tracking_token:
+    class: Drupal\shop_delivery\TrackingToken
+    arguments: ['@private_key']
+  Drupal\shop_delivery\TrackingToken: '@shop_delivery.tracking_token'
+
+  shop_delivery.maps:
+    class: Drupal\shop_delivery\DeliveryMaps
+    arguments:
+      - '@maper.map_builder'
+      - '@shop_delivery.deliveries'
+  Drupal\shop_delivery\DeliveryMaps: '@shop_delivery.maps'
+
+  shop_delivery.shipment_subscriber:
+    class: Drupal\shop_delivery\EventSubscriber\ShipmentSubscriber
+    arguments:
+      - '@shop_delivery.deliveries'
+      - '@datetime.time'
+    tags:
+      - { name: event_subscriber }

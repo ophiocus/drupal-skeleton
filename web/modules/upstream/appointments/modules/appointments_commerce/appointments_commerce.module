@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * @file
+ * Hooks for appointments_commerce.
+ */
+
+declare(strict_types=1);
+
+use Drupal\appointments\Entity\AppointmentInterface;
+use Drupal\appointments_commerce\CommerceCheckout;
+use Drupal\commerce_order\Entity\OrderItemInterface;
+
+/**
+ * Implements hook_ENTITY_TYPE_delete() for commerce_order_item.
+ *
+ * Taking an unpaid appointment out of the cart frees its time at once.
+ */
+function appointments_commerce_commerce_order_item_delete(OrderItemInterface $item): void {
+  if ($item->bundle() !== CommerceCheckout::ORDER_ITEM_TYPE || !$item->getData('appointment_id')) {
+    return;
+  }
+  $appointment = \Drupal::entityTypeManager()->getStorage('appointment')->load((int) $item->getData('appointment_id'));
+  if ($appointment instanceof AppointmentInterface && $appointment->getStatus() === AppointmentInterface::PENDING) {
+    \Drupal::service('appointments.booking')->cancel($appointment, 'silent');
+  }
+}

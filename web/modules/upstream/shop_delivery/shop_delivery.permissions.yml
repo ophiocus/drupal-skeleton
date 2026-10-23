@@ -1,0 +1,9 @@
+dispatch shop deliveries:
+  title: 'Despachar domicilios'
+  description: 'See the dispatch board, assign couriers and release deliveries.'
+settle shop deliveries:
+  title: 'Liquidar domicilios'
+  description: 'Settle the cash couriers collected on delivery, which receives the order payments.'
+deliver shop shipments:
+  title: 'Entregar domicilios'
+  description: 'See the deliveries assigned to oneself and mark them picked up and delivered.'

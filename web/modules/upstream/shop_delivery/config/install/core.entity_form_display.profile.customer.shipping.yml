@@ -1,0 +1,49 @@
+langcode: es
+status: true
+dependencies:
+  config:
+    - core.entity_form_mode.profile.shipping
+    - field.field.profile.customer.address
+    - field.field.profile.customer.field_indicaciones
+    - field.field.profile.customer.field_telefono
+    - field.field.profile.customer.field_ubicacion
+    - profile.type.customer
+  module:
+    - address
+    - shop_delivery
+    - telephone
+id: profile.customer.shipping
+targetEntityType: profile
+bundle: customer
+mode: shipping
+content:
+  address:
+    type: address_default
+    weight: 0
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_indicaciones:
+    type: string_textarea
+    weight: 2
+    region: content
+    settings:
+      rows: 2
+      placeholder: 'Torre 3, apto 502; portería con citófono'
+    third_party_settings: {  }
+  field_telefono:
+    type: telephone_default
+    weight: 1
+    region: content
+    settings:
+      placeholder: '300 123 4567'
+    third_party_settings: {  }
+  field_ubicacion:
+    type: shop_delivery_pin
+    weight: 3
+    region: content
+    settings:
+      require_pin: true
+    third_party_settings: {  }
+hidden:
+  is_default: true

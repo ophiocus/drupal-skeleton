@@ -1,0 +1,16 @@
+langcode: es
+status: true
+dependencies:
+  module:
+    - commerce_order
+    - shop_delivery
+    - system
+id: despachador
+label: 'Despachador'
+weight: 6
+is_admin: false
+permissions:
+  - 'dispatch shop deliveries'
+  - 'settle shop deliveries'
+  - 'view commerce_order'
+  - 'view the administration theme'

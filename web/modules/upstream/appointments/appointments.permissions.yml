@@ -1,0 +1,10 @@
+administer appointments:
+  title: 'Administer appointments'
+  description: 'Change the opening hours, closures, payment mode and services, and edit or delete any appointment.'
+  restrict access: true
+view appointments:
+  title: 'View and manage appointments'
+  description: 'See the appointment list and confirm, complete or cancel appointments. For clinic staff.'
+book appointments:
+  title: 'Book appointments'
+  description: 'Use the public booking pages. Give it to anonymous users for a public calendar.'

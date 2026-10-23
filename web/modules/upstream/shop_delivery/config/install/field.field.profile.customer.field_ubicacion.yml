@@ -1,0 +1,20 @@
+langcode: es
+status: true
+dependencies:
+  config:
+    - field.storage.profile.field_ubicacion
+    - profile.type.customer
+  module:
+    - maper
+id: profile.customer.field_ubicacion
+field_name: field_ubicacion
+entity_type: profile
+bundle: customer
+label: 'Ubicación de entrega'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: maper_point

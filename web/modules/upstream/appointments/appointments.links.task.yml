@@ -1,0 +1,15 @@
+entity.appointment.collection:
+  title: 'Appointments'
+  route_name: entity.appointment.collection
+  base_route: entity.appointment.collection
+  weight: 0
+entity.appointment_service.collection:
+  title: 'Services'
+  route_name: entity.appointment_service.collection
+  base_route: entity.appointment.collection
+  weight: 10
+appointments.settings:
+  title: 'Settings'
+  route_name: appointments.settings
+  base_route: entity.appointment.collection
+  weight: 20

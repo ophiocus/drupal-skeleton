@@ -1,0 +1,94 @@
+<?php
+
+/**
+ * @file
+ * Install for shop_delivery: wires Commerce for home delivery.
+ *
+ * The module's own config (fields, roles, the delivery address form) is in
+ * config/install. What it changes in config other modules own is done here,
+ * idempotently, and then travels in config/sync like everything else:
+ *
+ * - the default variation type becomes shippable (the weight field), which
+ *   is what commerce_shipping looks for before it packs an order;
+ * - the default order type gets shipments and the fulfillment workflow, so
+ *   a placed order waits for its delivery instead of completing at once;
+ * - checkout asks for the delivery address and shows the tracking link;
+ * - the store gets its point on its form.
+ *
+ * No update hooks, ever (DATAFLOW rule 7): a site that already has the
+ * module gets changes through config/sync.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_install().
+ */
+function shop_delivery_install(bool $is_syncing): void {
+  if ($is_syncing) {
+    // A config import brings all of this from config/sync.
+    return;
+  }
+  _shop_delivery_wire_commerce();
+}
+
+/**
+ * Makes the default order type deliverable. Idempotent.
+ */
+function _shop_delivery_wire_commerce(): void {
+  $etm = \Drupal::entityTypeManager();
+
+  // ----------------------------------------------- shippable variations
+  $variation_type = $etm->getStorage('commerce_product_variation_type')->load('default');
+  if ($variation_type && !$variation_type->hasTrait('purchasable_entity_shippable')) {
+    $trait_manager = \Drupal::service('plugin.manager.commerce_entity_trait');
+    $trait = $trait_manager->createInstance('purchasable_entity_shippable');
+    $trait_manager->installTrait($trait, 'commerce_product_variation', 'default');
+    $variation_type->setTraits(array_merge($variation_type->getTraits(), ['purchasable_entity_shippable']));
+    $variation_type->save();
+  }
+
+  // ---------------------------------------- shipments + fulfillment
+  $order_type = $etm->getStorage('commerce_order_type')->load('default');
+  if ($order_type) {
+    $order_type->setWorkflowId('order_fulfillment');
+    $order_type->setThirdPartySetting('commerce_shipping', 'shipment_type', 'default');
+    $order_type->save();
+  }
+
+  // --------------------------------------------------------- checkout
+  $flow = $etm->getStorage('commerce_checkout_flow')->load('default');
+  if ($flow) {
+    $configuration = $flow->get('configuration');
+    $panes = &$configuration['panes'];
+    $panes['shipping_information'] = [
+      'step' => 'order_information',
+      'weight' => 1,
+      'auto_recalculate' => TRUE,
+      'require_shipping_profile' => TRUE,
+    ] + ($panes['shipping_information'] ?? []);
+    if (isset($panes['contact_information'])) {
+      $panes['contact_information']['weight'] = 0;
+    }
+    if (isset($panes['billing_information'])) {
+      $panes['billing_information']['weight'] = 2;
+    }
+    $panes['shop_delivery_tracking'] = [
+      'step' => 'complete',
+      'weight' => 10,
+    ] + ($panes['shop_delivery_tracking'] ?? []);
+    unset($panes);
+    $flow->set('configuration', $configuration);
+    $flow->save();
+  }
+
+  // ------------------------------------------------- the store's point
+  $display = \Drupal::service('entity_display.repository')->getFormDisplay('commerce_store', 'online');
+  if (!$display->getComponent('field_ubicacion')) {
+    $display->setComponent('field_ubicacion', [
+      'type' => 'shop_delivery_pin',
+      'weight' => 5,
+      'settings' => ['require_pin' => FALSE],
+    ])->save();
+  }
+}

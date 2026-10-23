@@ -1,0 +1,155 @@
+/**
+ * @file
+ * Delivery pages: the pin, the courier's cards, the board, the tracking.
+ */
+
+/* The pin ---------------------------------------------------------------- */
+.delivery-pin__help {
+  margin-block: 0 0.5rem;
+}
+.delivery-pin__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-end: 0.5rem;
+}
+.delivery-pin__paste {
+  inline-size: 100%;
+  max-inline-size: 36rem;
+}
+.delivery-pin__status:empty {
+  display: none;
+}
+.delivery-pin__choices ul {
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+.delivery-pin__choices button {
+  display: block;
+  inline-size: 100%;
+  padding: 0.35rem 0;
+  border: 0;
+  border-block-end: 1px solid #e5e7eb;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9em;
+  text-align: start;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.delivery-pin__number {
+  display: inline-block;
+  margin-inline-end: 1rem;
+}
+.delivery-pin__empty {
+  font-style: italic;
+}
+
+/* States --------------------------------------------------------------- */
+.delivery-card__state {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #fff;
+  background: #6b7280;
+}
+.delivery-card__state.delivery-state--ready,
+.delivery-board__summary .delivery-state--ready {
+  background: #c2410c;
+}
+.delivery-card__state.delivery-state--asignado,
+.delivery-board__summary .delivery-state--asignado {
+  background: #1d4ed8;
+}
+.delivery-card__state.delivery-state--en_camino,
+.delivery-board__summary .delivery-state--en_camino {
+  background: #15803d;
+}
+.delivery-board__summary span {
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  color: #fff;
+}
+.delivery-board__nopin {
+  color: #b91c1c;
+}
+
+/* The courier ---------------------------------------------------------- */
+.delivery-courier {
+  display: grid;
+  gap: 0.75rem;
+  margin-block-end: 1.5rem;
+}
+.delivery-card {
+  display: grid;
+  gap: 0.25rem;
+  padding: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  color: inherit;
+  text-decoration: none;
+}
+.delivery-card:focus-visible,
+.delivery-card:hover {
+  border-color: currentColor;
+}
+.delivery-card .delivery-card__state {
+  justify-self: start;
+}
+.delivery-card__address {
+  font-size: 1.15em;
+}
+.delivery-card__meta {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+.delivery-courier--done .delivery-card {
+  opacity: 0.7;
+}
+.shop-delivery__name {
+  font-weight: 700;
+  margin-block-end: 0.25rem;
+}
+.shop-delivery__address {
+  margin-block: 0;
+  font-size: 1.15em;
+}
+.shop-delivery__contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block: 1rem;
+}
+.shop-delivery__collect {
+  font-size: 1.2em;
+}
+.shop-delivery .form-actions .button {
+  min-block-size: 3rem;
+}
+
+/* The customer's tracking ---------------------------------------------- */
+.delivery-track__steps {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.delivery-track__steps li {
+  padding: 0.5rem 0.75rem;
+  border-inline-start: 4px solid #d1d5db;
+  opacity: 0.6;
+}
+.delivery-track__steps li.is-done {
+  border-color: #15803d;
+  opacity: 0.85;
+}
+.delivery-track__steps li.is-now {
+  border-color: #c2410c;
+  font-weight: 700;
+  opacity: 1;
+}

@@ -1,0 +1,38 @@
+services:
+  logger.channel.appointments:
+    parent: logger.channel_base
+    arguments: ['appointments']
+
+  appointments.calendar:
+    class: Drupal\appointments\Calendar
+    arguments: ['@config.factory', '@entity_type.manager', '@datetime.time']
+  Drupal\appointments\Calendar: '@appointments.calendar'
+
+  appointments.booking:
+    class: Drupal\appointments\BookingManager
+    arguments:
+      - '@appointments.calendar'
+      - '@config.factory'
+      - '@lock'
+      - '@entity_type.manager'
+      - '@datetime.time'
+      - '@plugin.manager.mail'
+      - '@language_manager'
+      - '@logger.channel.appointments'
+      - '@?appointments.checkout'
+  Drupal\appointments\BookingManager: '@appointments.booking'
+
+  appointments.messages:
+    class: Drupal\appointments\Messages
+    arguments:
+      - '@appointments.calendar'
+      - '@date.formatter'
+      - '@config.factory'
+      - '@string_translation'
+      - '@?commerce_price.currency_formatter'
+  Drupal\appointments\Messages: '@appointments.messages'
+
+  appointments.seeder:
+    class: Drupal\appointments\ServiceSeeder
+    arguments: ['@entity_type.manager']
+  Drupal\appointments\ServiceSeeder: '@appointments.seeder'

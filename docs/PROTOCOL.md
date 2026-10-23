@@ -561,9 +561,9 @@ add-to-cart answered 500 on the sites that lacked the fix.
   products, menu, shipping methods, aliases, translations), matched on stable
   keys (SKUs, names with `formerly:`), never on titles; a second run changes
   nothing; `--check` writes nothing.
-- A site keeps only its data (`data/seeds/`) and its `property:seed` command,
-  which calls the runner; whatever is truly the site's own stays a handler of
-  its own (tag `site_seed.handler`).
+- A site keeps only its data (`data/seeds/`); whatever is truly the site's own
+  stays a handler of its own (tag `site_seed.handler`). *Amended by D29:* the
+  `property:seed` command is the engine's too, not the site's.
 - The default store is born under the uuid `config/sync` names, and every
   variation gets a title: both fixes live in the engine once.
 - Moving a site onto it is rehearsed on a copy of its production database with
@@ -592,3 +592,29 @@ the answer for all of them:
   reads each live site at its repository variable `SITE_URL`;
   `security_review` ships in the baseline for a local review
   (`drush en security_review && drush secrev`, never exported).
+
+### D29 — Code two sites could run is upstream code; the seed command is the engine's
+
+**Decision (Carlos, 2026-10-23, on a fleet audit of custom modules).** The
+audit found the same code in several sites and site modules with nothing of
+their site in them. Both are the defect D22 exists to prevent.
+
+- **`property:seed` belongs to `site_seed`** (`drush site-seed:site`). After
+  D27, every shop still carried its own seed command and install glue, the
+  same file in each but for the brand. The engine now runs `data/seeds/*.yml`
+  of every installed site module, so a site keeps its data and nothing else. A
+  site that enables `site_seed` deletes its own `property:seed`: two commands
+  under one alias are a defect.
+- **A module's own seed section is a handler the module ships**, registered
+  from its service provider only where `site_seed` is installed, so the module
+  does not depend on the engine (`appointments` for `appointment_services`).
+- **Generic features move upstream under generic names**: `appointments`
+  (with `appointments_commerce`) and `shop_delivery`. A site enables them
+  where it uses them. A module is renamed when it moves only while no
+  production database holds it. A module already live under a site name moves
+  in two deploys (BATTLE_SCARS §41), never by an update hook (D25).
+- **An upstream module may need contrib that not every site carries.** The
+  test gate leaves such a module out of phpstan and PHPUnit where its
+  dependencies are missing (`scripts/ci/unmet_upstream.php`), so a site without
+  Commerce stays green while carrying `shop_delivery`. The module stays in the
+  codebase either way, because ownership is exact.

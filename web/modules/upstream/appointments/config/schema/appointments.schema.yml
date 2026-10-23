@@ -1,0 +1,65 @@
+appointments.settings:
+  type: config_object
+  label: 'Appointments settings'
+  mapping:
+    timezone:
+      type: string
+      label: 'Calendar time zone (empty: the site default)'
+    currency:
+      type: string
+      label: 'Currency code of service prices'
+    slot_step:
+      type: integer
+      label: 'Minutes between offered start times'
+    lead_time:
+      type: integer
+      label: 'Minimum notice in minutes'
+    horizon:
+      type: integer
+      label: 'Days ahead that can be booked'
+    capacity:
+      type: integer
+      label: 'Appointments that can run at the same time'
+    hold:
+      type: integer
+      label: 'Minutes an unpaid booking holds its slot'
+    cancel_cutoff:
+      type: integer
+      label: 'Minutes before the start after which the client can no longer cancel or move'
+    notify:
+      type: string
+      label: 'Staff e-mail addresses (comma-separated; empty: the site e-mail)'
+    hours:
+      type: sequence
+      label: 'Opening hours'
+      sequence:
+        type: mapping
+        mapping:
+          day:
+            type: integer
+            label: 'ISO weekday (1 = Monday)'
+          start:
+            type: string
+            label: 'Opens (HH:MM)'
+          end:
+            type: string
+            label: 'Closes (HH:MM)'
+    closures:
+      type: sequence
+      label: 'Closed dates'
+      sequence:
+        type: string
+        label: 'Date (YYYY-MM-DD)'
+    payment:
+      type: mapping
+      label: 'Payment'
+      mapping:
+        mode:
+          type: string
+          label: 'none, deposit or full'
+        deposit_type:
+          type: string
+          label: 'fixed or percent'
+        deposit_value:
+          type: string
+          label: 'Deposit amount or percentage'
