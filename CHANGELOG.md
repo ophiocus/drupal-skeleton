@@ -5,6 +5,23 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-23 — sign_in_guard: two-factor for staff, Turnstile on sign-in (D28)
+
+- New upstream module `web/modules/upstream/sign_in_guard`: TOTP two-factor
+  sign-in required for administrators and content editors once the host sets
+  `TFA_ENCRYPTION_KEY`, and Cloudflare Turnstile on the sign-in and
+  password-reset forms once it sets `TURNSTILE_KEYS`. Runtime overrides only;
+  without the keys it changes nothing. Kernel test `SignInGuardTest`; README in
+  the module.
+- `upstream-configuration`: `drupal/tfa` ^1.13, `drupal/key` ^1.22,
+  `drupal/encrypt` ^3.2, `drupal/real_aes` ^2.6, `drupal/captcha` ^2.0,
+  `drupal/turnstile` ^1.2, and `drupal/security_review` ^3.1 (for a local
+  review, never enabled in `config/sync`).
+- New workflow `security-scan.yml` (upstream-owned): a weekly OWASP ZAP
+  baseline of the live site at the repository variable `SITE_URL`; passive,
+  report as the run's artifact, never fails, opens no issue.
+- `deploy/.env.example`: `TFA_ENCRYPTION_KEY`, `TURNSTILE_KEYS`.
+
 ## 2026-10-22 — image_fallback: the logo in place of an empty image or media field
 
 - New upstream module `web/modules/upstream/image_fallback`: an empty listed

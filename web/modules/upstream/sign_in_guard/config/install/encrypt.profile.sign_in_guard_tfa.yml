@@ -1,0 +1,12 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - key.key.sign_in_guard_tfa
+  module:
+    - real_aes
+id: sign_in_guard_tfa
+label: 'Two-factor secrets'
+encryption_method: real_aes
+encryption_method_configuration: {  }
+encryption_key: sign_in_guard_tfa

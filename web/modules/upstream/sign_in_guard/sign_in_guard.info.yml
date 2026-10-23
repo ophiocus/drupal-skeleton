@@ -1,0 +1,12 @@
+name: 'Sign-in guard'
+type: module
+description: 'Two-factor sign-in (TOTP) required for administrators and content editors, and Cloudflare Turnstile on the sign-in and password-reset forms. Each switches on only where the host gives its key in the environment; without the keys nothing changes.'
+core_version_requirement: ^11.3
+package: Security
+dependencies:
+  - captcha:captcha
+  - encrypt:encrypt
+  - key:key
+  - real_aes:real_aes
+  - tfa:tfa
+  - turnstile:turnstile
