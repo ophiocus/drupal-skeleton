@@ -8,11 +8,13 @@ use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\edge_purge\SoftRebuild;
 use Drupal\KernelTests\KernelTestBase;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * A soft rebuild keeps the page bins and empties the rest; a hard one, all.
  */
 #[Group('edge_purge')]
+#[RunTestsInSeparateProcesses]
 final class SoftRebuildTest extends KernelTestBase {
 
   /**

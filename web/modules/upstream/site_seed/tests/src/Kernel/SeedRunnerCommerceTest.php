@@ -6,6 +6,7 @@ namespace Drupal\Tests\site_seed\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * The shop catalogue: stores, products, variations.
@@ -15,6 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
  * upstream itself.
  */
 #[Group('site_seed')]
+#[RunTestsInSeparateProcesses]
 final class SeedRunnerCommerceTest extends KernelTestBase {
 
   /**

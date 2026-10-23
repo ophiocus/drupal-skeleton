@@ -7,11 +7,13 @@ namespace Drupal\Tests\edge_purge\Kernel;
 use Drupal\Core\Cache\Cache;
 use Drupal\KernelTests\KernelTestBase;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * What reaches the purge queue, and what a router rebuild leaves out.
  */
 #[Group('edge_purge')]
+#[RunTestsInSeparateProcesses]
 final class PurgeQueueInvalidatorTest extends KernelTestBase {
 
   /**
