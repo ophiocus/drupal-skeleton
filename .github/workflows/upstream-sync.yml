@@ -40,10 +40,17 @@ jobs:
       upstream: ${{ steps.sync.outputs.upstream }}
       sha: ${{ steps.push.outputs.sha }}
     steps:
+      # The built-in token cannot push a change under .github/workflows/ (GitHub
+      # refuses it without the `workflows` permission, which that token never
+      # has), and a sync that carries a workflow change then fails. A
+      # repository secret UPSTREAM_SYNC_TOKEN (a fine-grained token: Contents,
+      # Workflows, Pull requests and Issues, read and write) is used when set;
+      # without it the sync runs as before and only workflow changes fail.
       - uses: actions/checkout@v7
         with:
           ref: master
           fetch-depth: 0
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -83,7 +90,10 @@ jobs:
     if: needs.sync.outputs.changed == 'true'
     runs-on: ubuntu-24.04
     env:
-      GH_TOKEN: ${{ github.token }}
+      # The same token opens the pull request, so the pull request's own
+      # checks (the test gate) run on it: GitHub starts no workflow for a pull
+      # request the built-in token opened.
+      GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
       UP: ${{ needs.sync.outputs.upstream }}
       SHA: ${{ needs.sync.outputs.sha }}
     steps:
