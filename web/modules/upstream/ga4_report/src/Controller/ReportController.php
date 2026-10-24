@@ -428,6 +428,14 @@ final class ReportController extends ControllerBase {
     if ($cloudflare !== NULL && $cloudflare['totals']['minuteHitRate'] !== NULL) {
       $tiles[] = [$this->t('Edge hit rate, 24 h'), round($cloudflare['totals']['minuteHitRate'] * 100, 1) . ' %'];
       $tiles[] = [$this->t('Edge requests, 24 h'), number_format($cloudflare['totals']['minuteRequests'])];
+      // A snapshot taken before the warmer was counted apart has no such key.
+      if (!empty($cloudflare['totals']['warmRequests'])) {
+        $warm = $this->t('@n requests, @rate % from cache', [
+          '@n' => number_format($cloudflare['totals']['warmRequests']),
+          '@rate' => round((float) $cloudflare['totals']['warmHitRate'] * 100, 1),
+        ]);
+        $tiles[] = [$this->t('Cache warmer, 24 h'), $warm];
+      }
     }
     if ($adsense !== NULL) {
       $earnings = number_format($adsense['totals']['earnings'], 2) . ' ' . $adsense['currency'];

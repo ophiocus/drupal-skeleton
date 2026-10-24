@@ -5,6 +5,16 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-24 — ga4_report: the edge hit rate is readers', the cache warmer counted apart
+
+- `CloudflareSource`: the minute series (the 24 h hit-rate tile, the minute
+  card) leaves out the platform's cache warmer (`webrunners-cache-warm/1`,
+  `userAgent_neq`), and a second aggregate counts the warmer over the same
+  window (`warmRequests`, `warmHitRate`, its own tile). On one site and day,
+  the warmer made 53 % of the edge's requests, and the tile read 64.5 % while
+  readers got 88 %. The daily dataset cannot be filtered by user agent and
+  still includes it; the README says so.
+
 ## 2026-10-23 — Kernel tests run in separate processes
 
 - `edge_purge` (`PurgeQueueInvalidatorTest`, `SoftRebuildTest`) and

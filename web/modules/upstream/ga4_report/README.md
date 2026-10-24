@@ -134,7 +134,14 @@ broken credential is not retried on every cron run.
   (`hit`, `stale`, `updating`, `revalidated`) against those plus `miss`,
   `expired`, `dynamic` and `bypass`. Requests with no cache status, mostly
   Cloudflare's own analytics beacons, are left out and shown apart.
-- **Edge cache per day**: Cloudflare's daily totals, beacons included, as its
+  So is the platform's cache warmer (user agent `webrunners-cache-warm/1`):
+  after each purge it fetches every page, mostly misses by design, and on a
+  busy site makes about half of a day's requests. Counted in, it halved the
+  rate readers got (one day on one site: 48 % for the warmer, 88 % for
+  everyone else, 64.5 % mixed). Its own requests and hit rate are a tile of
+  their own.
+- **Edge cache per day**: Cloudflare's daily totals, beacons and the cache
+  warmer included (that dataset cannot be filtered by user agent), as its
   dashboard counts them, so a day reads lower than the minutes.
 - **Visits per minute** come from GA4 in the property's time zone and are moved
   to UTC to meet Cloudflare's minutes. Google can take hours to process them.
