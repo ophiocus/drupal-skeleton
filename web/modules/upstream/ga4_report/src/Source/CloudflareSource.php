@@ -13,9 +13,13 @@ use Drupal\ga4_report\ReportException;
 /**
  * The edge: requests and cache status from Cloudflare, per minute and per day.
  *
- * Two datasets in one query. The last 24 hours minute by minute come from
- * httpRequestsAdaptiveGroups, grouped by cache status. Days come from
- * httpRequests1dGroups over the report's dates, at most the last 30.
+ * Three datasets in one query. The last 24 hours minute by minute come from
+ * httpRequestsAdaptiveGroups, grouped by cache status, without the platform's
+ * own cache warmer: it fetches every page after each purge, so it can make
+ * half of a day's requests and halve the hit rate readers actually got. The
+ * warmer's share is counted apart over the same window. Days come from
+ * httpRequests1dGroups over the report's dates, at most the last 30; that
+ * dataset cannot be filtered by user agent, so its totals include the warmer.
  */
 final class CloudflareSource implements SourceInterface {
 
@@ -38,6 +42,11 @@ final class CloudflareSource implements SourceInterface {
    * Days the daily dataset is asked for, at most.
    */
   public const MAX_DAYS = 30;
+
+  /**
+   * The user agent of the platform's cache warmer (webrunners tec-cache-warm).
+   */
+  public const WARMER_UA = 'webrunners-cache-warm/1';
 
   public function __construct(
     private readonly CloudflareClient $client,
@@ -83,7 +92,7 @@ final class CloudflareSource implements SourceInterface {
     return [
       'snapshot' => $snapshot,
       'meta' => ['zone' => $zone, 'from' => gmdate('c', $from), 'to' => gmdate('c', $to), 'days' => $days],
-      'summary' => sprintf('Zone %s: %d requests in 24 h, %s %% from cache.', substr($zone, 0, 8), $snapshot['totals']['minuteRequests'], $snapshot['totals']['minuteHitRate'] === NULL ? '–' : round($snapshot['totals']['minuteHitRate'] * 100, 1)),
+      'summary' => sprintf('Zone %s: %d requests in 24 h, %s %% from cache; the cache warmer %d more.', substr($zone, 0, 8), $snapshot['totals']['minuteRequests'], $snapshot['totals']['minuteHitRate'] === NULL ? '–' : round($snapshot['totals']['minuteHitRate'] * 100, 1), $snapshot['totals']['warmRequests']),
     ];
   }
 
@@ -106,13 +115,18 @@ final class CloudflareSource implements SourceInterface {
   public static function query(string $zone, int $from, int $to, string $firstDay, string $lastDay): string {
     $fromIso = gmdate('Y-m-d\TH:i:s\Z', $from);
     $toIso = gmdate('Y-m-d\TH:i:s\Z', $to);
+    $ua = self::WARMER_UA;
     return <<<GRAPHQL
 {
   viewer {
     zones(filter: {zoneTag: "$zone"}) {
-      minutes: httpRequestsAdaptiveGroups(limit: 10000, filter: {datetime_geq: "$fromIso", datetime_lt: "$toIso"}, orderBy: [datetimeMinute_ASC]) {
+      minutes: httpRequestsAdaptiveGroups(limit: 10000, filter: {datetime_geq: "$fromIso", datetime_lt: "$toIso", userAgent_neq: "$ua"}, orderBy: [datetimeMinute_ASC]) {
         count
         dimensions { datetimeMinute cacheStatus }
+      }
+      warm: httpRequestsAdaptiveGroups(limit: 100, filter: {datetime_geq: "$fromIso", datetime_lt: "$toIso", userAgent: "$ua"}) {
+        count
+        dimensions { cacheStatus }
       }
       days: httpRequests1dGroups(limit: 100, filter: {date_geq: "$firstDay", date_leq: "$lastDay"}, orderBy: [date_ASC]) {
         dimensions { date }
@@ -130,8 +144,10 @@ GRAPHQL;
    *
    * Minutes: [UTC minute "Y-m-d\TH:i", cached, missed, other, beacons]; every
    * minute of the window is present. Hit rate counts cached against cached +
-   * missed + other (dynamic, bypass), leaving beacons out. Days carry
-   * Cloudflare's own totals, beacons included, as its dashboard counts them.
+   * missed + other (dynamic, bypass), leaving beacons out. Minutes are
+   * everyone but the cache warmer, whose requests and hit rate are totalled
+   * apart (warmRequests, warmHitRate) the same way. Days carry Cloudflare's own
+   * totals, beacons and the warmer included, as its dashboard counts them.
    */
   public static function normalize(array $data, int $from, int $to): array {
     $zone = $data['viewer']['zones'][0] ?? [];
@@ -160,6 +176,17 @@ GRAPHQL;
       $cached += $c;
       $all += $c + $m + $o;
     }
+    $warmCached = $warmAll = 0;
+    foreach ($zone['warm'] ?? [] as $row) {
+      $status = (string) ($row['dimensions']['cacheStatus'] ?? '');
+      if ($status === self::BEACON) {
+        continue;
+      }
+      $warmAll += (int) ($row['count'] ?? 0);
+      if (in_array($status, self::CACHED, TRUE)) {
+        $warmCached += (int) ($row['count'] ?? 0);
+      }
+    }
     $days = [];
     $dayRequests = $dayCached = 0;
     foreach ($zone['days'] ?? [] as $row) {
@@ -183,6 +210,8 @@ GRAPHQL;
       'totals' => [
         'minuteRequests' => $all,
         'minuteHitRate' => $all ? $cached / $all : NULL,
+        'warmRequests' => $warmAll,
+        'warmHitRate' => $warmAll ? $warmCached / $warmAll : NULL,
         'dayRequests' => $dayRequests,
         'dayHitRate' => $dayRequests ? $dayCached / $dayRequests : NULL,
       ],

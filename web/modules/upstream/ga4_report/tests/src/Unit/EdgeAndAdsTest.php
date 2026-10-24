@@ -58,6 +58,33 @@ final class EdgeAndAdsTest extends UnitTestCase {
     $this->assertStringContainsString('zoneTag: "' . str_repeat('a', 32) . '"', $query);
     $this->assertStringContainsString('datetime_geq: "2026-01-01T00:00:00Z", datetime_lt: "2026-01-02T00:00:00Z"', $query);
     $this->assertStringContainsString('httpRequests1dGroups', $query);
+    // Readers' minutes leave the cache warmer out; the warmer is asked apart.
+    $this->assertStringContainsString('userAgent_neq: "webrunners-cache-warm/1"', $query);
+    $this->assertStringContainsString('warm: httpRequestsAdaptiveGroups', $query);
+    $this->assertStringContainsString('userAgent: "webrunners-cache-warm/1"', $query);
+  }
+
+  /**
+   * The cache warmer is totalled apart and leaves readers' figures alone.
+   */
+  public function testCloudflareWarmerApart(): void {
+    $from = 1767312000;
+    $data = self::fixtureCloudflare();
+    $data['viewer']['zones'][0]['warm'] = [
+      ['count' => 30, 'dimensions' => ['cacheStatus' => 'hit']],
+      ['count' => 60, 'dimensions' => ['cacheStatus' => 'miss']],
+      ['count' => 10, 'dimensions' => ['cacheStatus' => 'expired']],
+      ['count' => 7, 'dimensions' => ['cacheStatus' => 'none']],
+    ];
+    $snapshot = CloudflareSource::normalize($data, $from, $from + 180);
+    $this->assertSame(100, $snapshot['totals']['warmRequests']);
+    $this->assertSame(0.3, $snapshot['totals']['warmHitRate']);
+    $this->assertSame(12, $snapshot['totals']['minuteRequests']);
+    $this->assertSame(0.5, $snapshot['totals']['minuteHitRate']);
+
+    $none = CloudflareSource::normalize(self::fixtureCloudflare(), $from, $from + 180);
+    $this->assertSame(0, $none['totals']['warmRequests']);
+    $this->assertNull($none['totals']['warmHitRate']);
   }
 
   /**
