@@ -592,3 +592,25 @@ the answer for all of them:
   reads each live site at its repository variable `SITE_URL`;
   `security_review` ships in the baseline for a local review
   (`drush en security_review && drush secrev`, never exported).
+
+### D29 — The managing admins exist on every site, kept by code, listed by the host
+
+**Decision (Carlos, 2026-10-26: the managing admin accounts, "both admin",
+seeded into every property).** The people who manage the fleet had accounts
+only where someone had made one by hand, under whatever name and role that
+day. One upstream module, `managing_admins`, keeps them:
+
+- The host lists them in each site's environment, `MANAGING_ADMINS`
+  (`Name:mail,Name:mail`). **Never in this repository or in config:** the
+  skeleton is public and the list is personal data. A local copy, CI and a
+  fresh build have no list and change nothing.
+- On every deploy the host's seed step runs `drush managing-admins:converge`
+  after the site's `property:seed` (seeders only, D25): each listed account
+  exists, matched by e-mail, with `administrator`. A missing one is created
+  active and **without a password**; its owner gets in through a password
+  reset to their own mailbox, then enrols two-factor (D28).
+- It never touches another account, never changes an existing account's name,
+  password, status or other roles, and sends no mail. Leaving the list does not
+  remove an account or its role: that is done by hand.
+- An ambiguous match (two accounts on one listed e-mail) stops the deploy's
+  seed step instead of guessing.
