@@ -5,6 +5,14 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-26 — site_seed: a store's place on the map
+
+- `stores:` rows take an optional `location: {field, lat, lon}`: the store's
+  Maper point field, converged like any seeded field (compared at the
+  column's seven decimals; a point moved by hand returns). A shop with a map
+  no longer writes a handler of its own for it. Commerce kernel test
+  `testStoreLocation`; README updated.
+
 ## 2026-10-26 — property:seed is site_seed's; appointments and shop_delivery are upstream (D30)
 
 - `site_seed`: `drush site-seed:site` (alias `property:seed`, `--check`) runs

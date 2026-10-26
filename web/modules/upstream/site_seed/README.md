@@ -34,7 +34,7 @@ with a section of its own ships a handler for it instead (below);
 
 | Section | Matched by | Notes |
 |---|---|---|
-| `stores` | name, or a name under `formerly:` | the default store is born under the uuid `commerce_store.settings` names; address keys the row leaves out are kept |
+| `stores` | name, or a name under `formerly:` | the default store is born under the uuid `commerce_store.settings` names; address keys the row leaves out are kept; an optional `location: {field, lat, lon}` puts the store on the map through its Maper point field (compared at seven decimals) |
 | `taxonomy` | vocabulary + name, or `formerly:` | keyed by vocabulary id |
 | `products` | the variations' SKUs, never the title | price, status, body, stores, category, image; variations titled (see below) |
 | `menu` | menu + link URI | |

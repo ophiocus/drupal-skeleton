@@ -48,6 +48,7 @@ final class SeedRunnerCommerceTest extends KernelTestBase {
     'commerce_price',
     'commerce_store',
     'commerce_product',
+    'maper',
     'site_seed',
     'site_seed_test',
   ];
@@ -72,6 +73,18 @@ final class SeedRunnerCommerceTest extends KernelTestBase {
     $this->container->get('entity_type.manager')->getStorage('taxonomy_vocabulary')
       ->create(['vid' => 'categoria', 'name' => 'Categoría'])->save();
     $this->config('commerce_store.settings')->set('default_store', self::CONFIGURED_STORE)->save();
+    // The store's place, as a shop with a map keeps it.
+    $this->container->get('entity_type.manager')->getStorage('field_storage_config')->create([
+      'field_name' => 'field_location',
+      'entity_type' => 'commerce_store',
+      'type' => 'maper_point',
+    ])->save();
+    $this->container->get('entity_type.manager')->getStorage('field_config')->create([
+      'field_name' => 'field_location',
+      'entity_type' => 'commerce_store',
+      'bundle' => 'online',
+      'label' => 'Location',
+    ])->save();
   }
 
   /**
@@ -179,6 +192,24 @@ final class SeedRunnerCommerceTest extends KernelTestBase {
     $this->assertCount(1, $stores);
     $this->assertSame('Tienda de prueba', $stores[$store->id()]->label());
     $this->assertSame('tienda@example.com', $stores[$store->id()]->get('mail')->value);
+  }
+
+  /**
+   * A store row's location fills the store's point, and a moved point returns.
+   */
+  public function testStoreLocation(): void {
+    $this->seed();
+    $stores = $this->all('commerce_store');
+    $store = reset($stores);
+    $this->assertEqualsWithDelta(4.6097100, (float) $store->get('field_location')->lat, 0.0000001);
+    $this->assertEqualsWithDelta(-74.0817500, (float) $store->get('field_location')->lon, 0.0000001);
+
+    // Somebody moved it by hand: the seed owns the point and puts it back.
+    $store->set('field_location', ['lat' => 1.0, 'lon' => 2.0])->save();
+    $tally = $this->seed();
+    $this->assertSame(1, $tally['updated']);
+    $stores = $this->all('commerce_store');
+    $this->assertEqualsWithDelta(4.6097100, (float) reset($stores)->get('field_location')->lat, 0.0000001);
   }
 
   /**
