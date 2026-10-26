@@ -5,6 +5,22 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-26 — managing_admins: the fleet's managing admins on every site
+
+- New upstream module `web/modules/upstream/managing_admins` (PROTOCOL D29).
+  `drush managing-admins:converge [--check]` makes every account the host
+  lists in `MANAGING_ADMINS` (`Name:mail,…`, the site's `.env`) exist, matched
+  by e-mail, with the `administrator` role. New accounts get no password;
+  existing ones only gain the role; no other account is touched and no mail
+  is sent. It prints names, never addresses.
+- The list stays off this public repository: the host is its source. Without
+  `MANAGING_ADMINS` (local, CI, a fresh build) the command does nothing.
+- `deploy/.env.example` documents the key.
+- **A site syncing to this** enables the module in the same pull request
+  (`managing_admins: 0` in `core.extension.yml`; it ships no config). The
+  host's seed step (`tec-seed`) runs the command on every deploy where it
+  exists.
+
 ## 2026-10-26 — maper 1.0.0-alpha3: one location field
 
 - `upstream-configuration`: `drupal/maper` 1.0.0-alpha2 → **1.0.0-alpha3**.

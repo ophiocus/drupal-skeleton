@@ -1,0 +1,7 @@
+name: 'Managing admins'
+type: module
+description: 'The accounts that manage every site, kept by code: each one listed in the host environment (MANAGING_ADMINS) exists, matched by e-mail, with the administrator role. Never sets a password and never touches another account.'
+core_version_requirement: ^11.3
+package: Security
+dependencies:
+  - drupal:user

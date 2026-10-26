@@ -1,0 +1,7 @@
+services:
+  managing_admins.converger:
+    class: Drupal\managing_admins\ManagingAdmins
+    arguments: ['@entity_type.manager', '@email.validator', '@database', '@language_manager']
+  # Drush's AutowireTrait looks each constructor type hint up AS A SERVICE ID;
+  # without this alias it silently drops the whole command class.
+  Drupal\managing_admins\ManagingAdmins: '@managing_admins.converger'
