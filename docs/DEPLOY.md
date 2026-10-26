@@ -21,7 +21,7 @@ config/sync/                  audit gate (composer.lock)          deploy-prod / 
 
 | File | Role | Edit per property? |
 | --- | --- | --- |
-| `Dockerfile` | Multi-stage build: `composer install --no-dev` from the committed lock, then a runtime image with the docroot at `/opt/drupal/web`, drush on `PATH`, `deploy/settings.prod.php` installed as `settings.php`, a hash of the image's files in `/opt/drupal/deployment-identifier` (the service container's cache key, BATTLE_SCARS §43). Base pinned to `drupal:11-php8.3-apache` (D6). | Rarely. Add PHP extensions or `--build-arg PHP_MEMORY_LIMIT=…` if the stack needs them. |
+| `Dockerfile` | Multi-stage build: `composer install --no-dev` from the committed lock, then a runtime image with the docroot at `/opt/drupal/web`, drush on `PATH`, `deploy/settings.prod.php` installed as `settings.php`, a hash of the image's files in `/opt/drupal/deployment-identifier` (the service container's cache key, BATTLE_SCARS §43). Base pinned to `drupal:11-php8.4-apache` (D6, D31). | Rarely. Add PHP extensions or `--build-arg PHP_MEMORY_LIMIT=…` if the stack needs them. |
 | `.dockerignore` | Keeps composer-managed, DDEV-only, per-site and secret paths out of the build context. The Dockerfile does `COPY . /opt/drupal/`, so this file is the whole safety net. | When you add a top-level directory that must not ship. |
 | `deploy/settings.prod.php` | The tracked production `settings.php`. Everything from `getenv()`; reverse-proxy aware; `config_sync_directory = ../config/sync`. | Only below the *Project settings* marker, env-driven. |
 | `deploy/entrypoint.sh` | Container entrypoint: re-asserts `www-data` ownership of the two bind-mounted writable paths on every start (Docker creates missing host dirs as `root` on first boot), then hands off to the base image's entrypoint. Removes the manual `chown 33:33` from first deploy. | No. |
@@ -157,7 +157,7 @@ mythingname:local drush --version`.)
 
 ## 6. Outbound mail
 
-**The runtime image has no MTA.** `drupal:11-php8.3-apache` ships no sendmail,
+**The runtime image has no MTA.** `drupal:11-php8.4-apache` ships no sendmail,
 so Drupal's default transport — PHP `mail()` — cannot deliver anything. Left
 alone, a site sends no password resets, no order receipts, and no contact-form
 enquiries. The contact form is the dangerous one: Drupal tells the visitor

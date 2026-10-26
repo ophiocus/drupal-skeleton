@@ -645,3 +645,20 @@ their site in them. Both are the defect D22 exists to prevent.
   dependencies are missing (`scripts/ci/unmet_upstream.php`), so a site without
   Commerce stays green while carrying `shop_delivery`. The module stays in the
   codebase either way, because ownership is exact.
+
+### D31 — PHP 8.4 everywhere (supersedes the PHP half of D1 and D6's tag)
+
+**Decision (Carlos, 2026-10-23, on the PHP RCE advisory CVE-2026-109618 /
+CVE-2026-109619, CERT-EU 2026-018).** The production image is
+`FROM drupal:11-php8.4-apache`; DDEV runs `php_version: "8.4"`; the test gate
+and the upstream sync run setup-php `8.4`. D6's rule stands: a minor-pinned
+tag, never `drupal:11-apache`.
+
+Reason: D6 assumed the `php8.3-apache` tag would keep receiving 8.3.x patches.
+It did not: the official Drupal image last published that tag on 2026-01-09
+(PHP 8.3.29), so every rebuild since then shipped the same unpatched PHP, and
+the 2026-10-21 fixes (8.3.36) could never arrive through it. The 8.4 tag was
+rebuilt with 8.4.27 the day after the release. Moving to a plain `php:8.3`
+base would have kept 8.3 at the cost of rebuilding the Drupal image's
+extensions by hand. A minor-pinned tag is only as good as its publisher:
+check its last push date when a PHP security release lands (BATTLE_SCARS §47).

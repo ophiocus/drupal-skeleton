@@ -5,6 +5,16 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-26 — PHP 8.4 (security: CVE-2026-109618, CVE-2026-109619)
+
+- `Dockerfile`: both stages `FROM drupal:11-php8.4-apache` (PHP 8.4.27). The
+  `php8.3-apache` tag has not been rebuilt since 2026-01-09 and still ships
+  PHP 8.3.29, so no rebuild could pick up the 2026-10-21 fixes (D31,
+  BATTLE_SCARS §47).
+- `test-gate.yml` and `upstream-sync.yml` run setup-php `8.4`.
+- `.ddev/config.yaml`: `php_version: "8.4"`. `.ddev/` belongs to each site, so
+  a site moves its own DDEV to 8.4; the sync does not.
+
 ## 2026-10-26 — appointments: rooms and a one-page picker
 
 - Rooms: a config entity `appointment_room` (the services each offers, the

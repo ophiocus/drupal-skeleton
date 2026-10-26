@@ -11,13 +11,13 @@ type: drupal
 docroot: web
 
 # ─── PHP / DB / web server ───────────────────────────────────────────
-php_version: "8.3"
+php_version: "8.4"
 database:
   type: mariadb
   version: "11.4"
 
 # apache-fpm — parity with the production image (Dockerfile:
-# drupal:11-php8.3-apache) from day one, so .htaccess semantics, rewrite
+# drupal:11-php8.4-apache) from day one, so .htaccess semantics, rewrite
 # behaviour and Traefik upstream routing are exercised locally exactly as
 # they run in prod (PROTOCOL D17 supersedes D3). nginx-fpm is marginally
 # lighter, and behind Traefik it historically hit "service can't reach

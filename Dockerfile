@@ -12,12 +12,14 @@
 #     environment (deploy/.env.example lists the keys).
 #   - Docroot is /opt/drupal/web; drush is on PATH; files live on volumes.
 #
-# Base image pin: `drupal:11-php8.3-apache`, never the floating
-# `drupal:11-apache` meta-tag (PROTOCOL D6) — the explicit tag follows 8.3.x
-# patch releases but will not silently cross to PHP 8.4.
+# Base image pin: `drupal:11-php8.4-apache`, never the floating
+# `drupal:11-apache` meta-tag (PROTOCOL D6, D31) — the explicit tag follows
+# 8.4.x patch releases but will not silently cross to PHP 8.5. A pinned tag
+# is only patched while the Drupal image still publishes it: the 8.3 tag
+# stopped in 2026-01 and froze every site on PHP 8.3.29 (BATTLE_SCARS §47).
 
 # ─── Stage 1: resolve and scaffold the Drupal project ────────────────
-FROM drupal:11-php8.3-apache AS build
+FROM drupal:11-php8.4-apache AS build
 
 WORKDIR /opt/drupal
 
@@ -102,7 +104,7 @@ RUN find . -path ./web/sites/default/files -prune -o -type f -print0 \
  && grep -qxE '[0-9a-f]{16}' /opt/drupal/deployment-identifier
 
 # ─── Stage 2: runtime ────────────────────────────────────────────────
-FROM drupal:11-php8.3-apache
+FROM drupal:11-php8.4-apache
 
 WORKDIR /opt/drupal
 
