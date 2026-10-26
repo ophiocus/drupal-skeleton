@@ -22,11 +22,15 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * The public booking pages.
+ *
+ * One page picks the time: a service dropdown, the rooms that offer it
+ * (hidden when there is only one), and the free start times a week of open
+ * days at a time. A chosen time opens the client's details form.
  */
 final class BookingController extends ControllerBase {
 
   /**
-   * Days shown per page of the slot picker.
+   * Days shown per page of the picker.
    */
   private const DAYS_PER_PAGE = 7;
 
@@ -50,61 +54,78 @@ final class BookingController extends ControllerBase {
   }
 
   /**
-   * The page title for a service's pages.
+   * The page title for the details form.
    */
   public function serviceTitle(AppointmentServiceInterface $appointment_service): string {
     return (string) $this->t('Book: @service', ['@service' => $appointment_service->label()]);
   }
 
   /**
-   * Step 1: the bookable services.
+   * The picker: service, room and free time on one page.
+   *
+   * Query: service (a service key), room (a room machine name), from (the
+   * first date shown, Y-m-d), reschedule (the manage token of an appointment
+   * being moved; its service is then fixed).
    *
    * @return array<string, mixed>
    *   A render array.
    */
-  public function services(): array {
-    $storage = $this->entityTypeManager()->getStorage('appointment_service');
-    $ids = $storage->getQuery()
-      ->accessCheck(TRUE)
-      ->condition('status', 1)
-      ->sort('weight')
-      ->sort('label')
-      ->execute();
+  public function picker(Request $request): array {
     $langcode = $this->languageManager()->getCurrentLanguage()->getId();
-    $items = [];
-    /** @var \Drupal\appointments\Entity\AppointmentServiceInterface $service */
-    foreach ($storage->loadMultiple($ids) as $service) {
-      $items[] = [
-        'label' => $service->label(),
-        'description' => (string) $service->get('description')->value,
-        'duration' => $this->t('@min min', ['@min' => $service->getDuration()]),
-        'price' => (float) $service->getPrice() > 0 ? $this->messages->price($service->getPrice(), $langcode) : '',
-        'online' => $this->paymentNote($service, $langcode),
-        'url' => Url::fromRoute('appointments.book_service', ['appointment_service' => $service->id()])->toString(),
+    $services = $this->bookableServices();
+    if (!$services) {
+      return [
+        '#markup' => '<p>' . $this->t('There is nothing to book at the moment.') . '</p>',
+        '#cache' => ['max-age' => 0],
       ];
     }
-    return [
-      '#theme' => 'appointments_services',
-      '#services' => $items,
-      '#attached' => ['library' => ['appointments/booking']],
-      '#cache' => [
-        'tags' => ['appointment_service_list', 'config:appointments.settings'],
-        'contexts' => ['languages:language_interface'],
-      ],
-    ];
-  }
 
-  /**
-   * Step 2: the free start times of a service, a week at a time.
-   *
-   * @return array<string, mixed>
-   *   A render array.
-   */
-  public function slots(AppointmentServiceInterface $appointment_service, Request $request): array {
-    if (!$appointment_service->isPublished()) {
-      throw new NotFoundHttpException();
-    }
     $moving = $this->movingAppointment($request);
+    $service = $moving?->getService();
+    if (!$service) {
+      $key = (string) $request->query->get('service', '');
+      $service = $services[$key] ?? reset($services);
+    }
+
+    // Rooms: listed when more than one offers the service. In "any" mode the
+    // list starts with "Any room" and no room is preselected; in "required"
+    // mode the client always books a named room, the first by default.
+    $rooms = $this->calendar->roomsFor($service);
+    $required = $this->calendar->settings()->get('room_choice') === 'required';
+    $room = (string) $request->query->get('room', '');
+    $room = isset($rooms[$room]) ? $room : NULL;
+    if ($room === NULL && $required && count($rooms) > 1) {
+      $room = (string) array_key_first($rooms);
+    }
+    if (count($rooms) <= 1) {
+      $room = NULL;
+    }
+
+    $base = array_filter([
+      'service' => $moving ? NULL : $service->getKey(),
+      'reschedule' => $moving?->getToken(),
+    ]);
+    $here = static fn (array $query): string => Url::fromRoute('appointments.book', [], ['query' => array_filter($query)])->toString();
+
+    $room_links = [];
+    if (count($rooms) > 1) {
+      if (!$required) {
+        $room_links[] = [
+          'label' => $this->t('Any room'),
+          'url' => $here($base),
+          'active' => $room === NULL,
+        ];
+      }
+      foreach ($rooms as $id => $candidate) {
+        $room_links[] = [
+          'label' => $candidate->label(),
+          'url' => $here($base + ['room' => $id]),
+          'active' => $room === $id,
+        ];
+      }
+    }
+
+    // A week of open days, from ?from=.
     $dates = $this->calendar->openDates();
     $from = (string) $request->query->get('from', '');
     $offset = 0;
@@ -116,75 +137,99 @@ final class BookingController extends ControllerBase {
         }
       }
     }
-    $page = array_slice($dates, $offset, self::DAYS_PER_PAGE);
-    $langcode = $this->languageManager()->getCurrentLanguage()->getId();
     $tz = $this->calendar->timezone();
-    $formatter = $this->dateFormatter;
     $days = [];
-    foreach ($page as $date) {
+    $any = FALSE;
+    foreach (array_slice($dates, $offset, self::DAYS_PER_PAGE) as $date) {
       $slots = [];
-      foreach ($this->calendar->slots($appointment_service, $date, $moving ? (int) $moving->id() : NULL) as $start) {
+      foreach ($this->calendar->slots($service, $date, $moving ? (int) $moving->id() : NULL, $room) as $start) {
+        $query = array_filter(['room' => $room]);
         $url = $moving
-          ? Url::fromRoute('appointments.move', ['token' => $moving->getToken(), 'start' => $start])
-          : Url::fromRoute('appointments.book_slot', [
-            'appointment_service' => $appointment_service->id(),
-            'start' => $start,
-          ]);
+          ? Url::fromRoute('appointments.move', ['token' => $moving->getToken(), 'start' => $start], ['query' => $query])
+          : Url::fromRoute('appointments.book_slot', ['appointment_service' => $service->id(), 'start' => $start], ['query' => $query]);
         $slots[] = [
-          'time' => $formatter->format($start, 'custom', 'H:i', $tz, $langcode),
+          'time' => $this->dateFormatter->format($start, 'custom', 'H:i', $tz, $langcode),
           'url' => $url->toString(),
         ];
       }
+      $any = $any || $slots;
       $noon = (new \DateTimeImmutable($date . ' 12:00', new \DateTimeZone($tz)))->getTimestamp();
-      $days[] = [
-        'label' => $this->messages->day($noon, $langcode),
-        'slots' => $slots,
-      ];
+      $days[] = ['label' => $this->messages->day($noon, $langcode), 'slots' => $slots];
     }
-
-    $query = $moving ? ['reschedule' => $moving->getToken()] : [];
     $prev = $offset > 0 ? $dates[max(0, $offset - self::DAYS_PER_PAGE)] : NULL;
     $next = $dates[$offset + self::DAYS_PER_PAGE] ?? NULL;
-    $route = ['appointment_service' => $appointment_service->id()];
+    $paging = $base + ['room' => $room];
+
+    $options = [];
+    foreach ($services as $key => $candidate) {
+      $options[] = ['key' => $key, 'label' => $candidate->label(), 'selected' => $candidate->id() === $service->id()];
+    }
+    $price = (float) $service->getPrice() > 0 ? $this->messages->price($service->getPrice(), $langcode) : '';
 
     return [
-      '#theme' => 'appointments_slots',
+      '#theme' => 'appointments_picker',
+      '#action' => Url::fromRoute('appointments.book')->toString(),
+      '#services' => $moving ? [] : $options,
       '#service' => [
-        'label' => $appointment_service->label(),
-        'duration' => $this->t('@min min', ['@min' => $appointment_service->getDuration()]),
-        'online' => $this->paymentNote($appointment_service, $langcode),
+        'label' => $service->label(),
+        'description' => (string) $service->get('description')->value,
+        'duration' => $this->t('@min min', ['@min' => $service->getDuration()]),
+        'price' => $price,
+        'online' => $this->paymentNote($service, $langcode),
       ],
+      '#rooms' => $room_links,
       '#days' => $days,
+      '#any' => $any,
       '#moving' => $moving ? $this->messages->when($moving, $langcode) : '',
-      '#prev' => $prev ? Url::fromRoute('appointments.book_service', $route, ['query' => $query + ['from' => $prev]])->toString() : '',
-      '#next' => $next ? Url::fromRoute('appointments.book_service', $route, ['query' => $query + ['from' => $next]])->toString() : '',
-      '#back' => Url::fromRoute('appointments.book')->toString(),
+      '#prev' => $prev ? $here($paging + ['from' => $prev]) : '',
+      '#next' => $next ? $here($paging + ['from' => $next]) : '',
       '#timezone' => $tz,
-      '#attached' => ['library' => ['appointments/booking']],
+      '#attached' => ['library' => ['appointments/booking', 'appointments/picker']],
+      // Free times move with the clock as well as with bookings: never
+      // cached, by Drupal or by the edge (the route is no_cache too).
       '#cache' => ['max-age' => 0],
     ];
   }
 
   /**
-   * Step 3: the client's details for a chosen start.
+   * The old per-service picker address: on to the picker with it selected.
+   */
+  public function legacy(AppointmentServiceInterface $appointment_service, Request $request): RedirectResponse {
+    $query = array_filter([
+      'service' => $appointment_service->getKey(),
+      'reschedule' => (string) $request->query->get('reschedule', ''),
+      'from' => (string) $request->query->get('from', ''),
+    ]);
+    return $this->redirect('appointments.book', [], ['query' => $query]);
+  }
+
+  /**
+   * The client's details for a chosen start (and room, from ?room=).
    *
    * @return array<string, mixed>|\Symfony\Component\HttpFoundation\RedirectResponse
-   *   The booking form, or a redirect back to the free times.
+   *   The booking form, or a redirect back to the picker.
    */
-  public function form(AppointmentServiceInterface $appointment_service, int $start): array|RedirectResponse {
+  public function form(AppointmentServiceInterface $appointment_service, int $start, Request $request): array|RedirectResponse {
     if (!$appointment_service->isPublished()) {
       throw new NotFoundHttpException();
     }
-    if (!$this->calendar->isAvailable($appointment_service, $start)) {
+    $room = (string) $request->query->get('room', '');
+    $room = isset($this->calendar->roomsFor($appointment_service)[$room]) ? $room : NULL;
+    if (!$this->calendar->isAvailable($appointment_service, $start, NULL, $room)) {
       $this->messenger()->addWarning($this->t('That time is no longer free. Please choose another.'));
-      return $this->redirect('appointments.book_service', ['appointment_service' => $appointment_service->id()], [
-        'query' => ['from' => $this->calendar->dateOf($start)],
+      return $this->redirect('appointments.book', [], [
+        'query' => array_filter([
+          'service' => $appointment_service->getKey(),
+          'room' => $room,
+          'from' => $this->calendar->dateOf($start),
+        ]),
       ]);
     }
-    $appointment = $this->entityTypeManager()->getStorage('appointment')->create([
-      'service' => $appointment_service->id(),
-      'start' => $start,
-    ]);
+    $values = ['service' => $appointment_service->id(), 'start' => $start];
+    if ($room !== NULL) {
+      $values['room'] = $room;
+    }
+    $appointment = $this->entityTypeManager()->getStorage('appointment')->create($values);
     return $this->entityFormBuilder()->getForm($appointment, 'book');
   }
 
@@ -203,6 +248,11 @@ final class BookingController extends ControllerBase {
     $details = [
       (string) $this->t('Service') => $service ? $service->label() : '',
       (string) $this->t('When') => $this->messages->when($appointment, $langcode),
+    ];
+    if (($room = $appointment->getRoom()) && count($this->calendar->rooms()) > 1) {
+      $details[(string) $this->t('Room')] = (string) $room->label();
+    }
+    $details += [
       (string) $this->t('Status') => (string) ($statuses[$appointment->getStatus()] ?? $appointment->getStatus()),
       (string) $this->t('Name') => (string) $appointment->get('name')->value,
     ] + $this->messages->extraFields($appointment);
@@ -221,7 +271,7 @@ final class BookingController extends ControllerBase {
     if ($can_change && $service && $service->isPublished()) {
       $links[] = [
         'title' => $this->t('Choose another time'),
-        'url' => Url::fromRoute('appointments.book_service', ['appointment_service' => $service->id()], ['query' => ['reschedule' => $token]])->toString(),
+        'url' => Url::fromRoute('appointments.book', [], ['query' => ['reschedule' => $token]])->toString(),
       ];
     }
     if ($can_change) {
@@ -247,14 +297,38 @@ final class BookingController extends ControllerBase {
   public function ics(string $token, Request $request): Response {
     $appointment = $this->load($token);
     $site = (string) $this->config('system.site')->get('name');
+    $room = $appointment->getRoom();
+    $where = $room && count($this->calendar->rooms()) > 1 ? $site . ', ' . $room->label() : $site;
     $url = Url::fromRoute('appointments.manage', ['token' => $token], ['absolute' => TRUE])->toString();
-    $body = Ics::build($appointment, $site, $url, $request->getHost());
+    $body = Ics::build($appointment, $where, $url, $request->getHost());
     return new Response($body, 200, [
       'Content-Type' => 'text/calendar; charset=utf-8',
       'Content-Disposition' => 'attachment; filename="appointment-' . $appointment->id() . '.ics"',
       'Cache-Control' => 'private, no-store',
       'X-Robots-Tag' => 'noindex',
     ]);
+  }
+
+  /**
+   * The published services, keyed by service key, lightest first.
+   *
+   * @return array<string, \Drupal\appointments\Entity\AppointmentServiceInterface>
+   *   Services.
+   */
+  private function bookableServices(): array {
+    $storage = $this->entityTypeManager()->getStorage('appointment_service');
+    $ids = $storage->getQuery()
+      ->accessCheck(TRUE)
+      ->condition('status', 1)
+      ->sort('weight')
+      ->sort('label')
+      ->execute();
+    $services = [];
+    /** @var \Drupal\appointments\Entity\AppointmentServiceInterface $service */
+    foreach ($storage->loadMultiple($ids) as $service) {
+      $services[$service->getKey()] = $service;
+    }
+    return $services;
   }
 
   /**

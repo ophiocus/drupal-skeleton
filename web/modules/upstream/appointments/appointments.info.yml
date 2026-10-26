@@ -5,6 +5,7 @@ core_version_requirement: ^11
 package: Appointments
 configure: appointments.settings
 dependencies:
+  - drupal:field
   - drupal:options
   - drupal:user
 'interface translation project': appointments

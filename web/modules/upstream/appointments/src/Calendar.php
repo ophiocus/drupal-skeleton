@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\appointments;
 
 use Drupal\appointments\Entity\AppointmentInterface;
+use Drupal\appointments\Entity\AppointmentRoomInterface;
 use Drupal\appointments\Entity\AppointmentServiceInterface;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -99,6 +100,35 @@ final class Calendar {
   }
 
   /**
+   * The bookable rooms, lightest first. Empty: the calendar has no rooms.
+   *
+   * @return array<string, \Drupal\appointments\Entity\AppointmentRoomInterface>
+   *   Rooms keyed by machine name.
+   */
+  public function rooms(): array {
+    $rooms = array_filter(
+      $this->entityTypeManager->getStorage('appointment_room')->loadMultiple(),
+      static fn (AppointmentRoomInterface $room): bool => $room->status(),
+    );
+    uasort(
+      $rooms,
+      static fn (AppointmentRoomInterface $a, AppointmentRoomInterface $b): int
+        => [$a->getWeight(), $a->label()] <=> [$b->getWeight(), $b->label()],
+    );
+    return $rooms;
+  }
+
+  /**
+   * The bookable rooms that offer a service.
+   *
+   * @return array<string, \Drupal\appointments\Entity\AppointmentRoomInterface>
+   *   Rooms keyed by machine name, lightest first.
+   */
+  public function roomsFor(AppointmentServiceInterface $service): array {
+    return array_filter($this->rooms(), static fn (AppointmentRoomInterface $room): bool => $room->offers($service));
+  }
+
+  /**
    * The free start times of a service on a date.
    *
    * @param \Drupal\appointments\Entity\AppointmentServiceInterface $service
@@ -107,11 +137,13 @@ final class Calendar {
    *   The date, Y-m-d, in the calendar's time zone.
    * @param int|null $ignore
    *   An appointment id that does not count as busy (the one being moved).
+   * @param string|null $room
+   *   A room machine name to restrict to; NULL for any room.
    *
    * @return list<int>
    *   Start timestamps, ascending.
    */
-  public function slots(AppointmentServiceInterface $service, string $date, ?int $ignore = NULL): array {
+  public function slots(AppointmentServiceInterface $service, string $date, ?int $ignore = NULL, ?string $room = NULL): array {
     if (!$this->withinHorizon($date)) {
       return [];
     }
@@ -123,7 +155,6 @@ final class Calendar {
     $step = max(5, (int) $settings->get('slot_step')) * 60;
     $length = $service->getDuration() * 60;
     $busy_length = $length + $service->getBuffer() * 60;
-    $capacity = max(1, (int) $settings->get('capacity'));
     $now = $this->time->getCurrentTime();
     $earliest = $now + max(0, (int) $settings->get('lead_time')) * 60;
 
@@ -134,16 +165,7 @@ final class Calendar {
     $slots = [];
     foreach ($windows as [$open, $close]) {
       for ($t = $open; $t + $length <= $close; $t += $step) {
-        if ($t < $earliest) {
-          continue;
-        }
-        $overlaps = 0;
-        foreach ($busy as [$b_start, $b_end]) {
-          if ($b_start < $t + $busy_length && $b_end > $t) {
-            $overlaps++;
-          }
-        }
-        if ($overlaps < $capacity) {
+        if ($t >= $earliest && $this->freeRoom($service, $t, $busy, $room) !== NULL) {
           $slots[] = $t;
         }
       }
@@ -154,27 +176,79 @@ final class Calendar {
   /**
    * Whether a start time is offered for a service right now.
    */
-  public function isAvailable(AppointmentServiceInterface $service, int $start, ?int $ignore = NULL): bool {
-    return in_array($start, $this->slots($service, $this->dateOf($start), $ignore), TRUE);
+  public function isAvailable(AppointmentServiceInterface $service, int $start, ?int $ignore = NULL, ?string $room = NULL): bool {
+    return in_array($start, $this->slots($service, $this->dateOf($start), $ignore, $room), TRUE);
   }
 
   /**
-   * Whether the time from a start is free of other bookings, capacity-wise.
+   * The room a booking from a start would get, or NULL when none is free.
    *
    * Unlike isAvailable() it ignores hours, notice and horizon: it answers
-   * only whether the calendar has room, for a booking that already exists.
+   * only whether the calendar has room, for a booking being placed or one
+   * that already exists.
+   *
+   * @return string|null
+   *   The room's machine name ('' when the calendar has no rooms), or NULL.
    */
-  public function slotIsFree(AppointmentServiceInterface $service, int $start, ?int $ignore = NULL): bool {
+  public function roomFor(AppointmentServiceInterface $service, int $start, ?int $ignore = NULL, ?string $room = NULL): ?string {
     $busy_length = ($service->getDuration() + $service->getBuffer()) * 60;
-    $capacity = max(1, (int) $this->settings()->get('capacity'));
-    $overlaps = 0;
     $busy = $this->busy($start - 86400, $start + $busy_length, $ignore, $this->time->getCurrentTime());
-    foreach ($busy as [$b_start, $b_end]) {
-      if ($b_start < $start + $busy_length && $b_end > $start) {
-        $overlaps++;
+    return $this->freeRoom($service, $start, $busy, $room);
+  }
+
+  /**
+   * Whether the time from a start is free of other bookings.
+   */
+  public function slotIsFree(AppointmentServiceInterface $service, int $start, ?int $ignore = NULL, ?string $room = NULL): bool {
+    return $this->roomFor($service, $start, $ignore, $room) !== NULL;
+  }
+
+  /**
+   * The first free room for a service from a start, against busy intervals.
+   *
+   * Without rooms the calendar is one room of `capacity` parallel places.
+   * With rooms each takes one appointment at a time; an appointment that
+   * names no known room (booked before rooms existed) takes one free room
+   * of the whole calendar.
+   *
+   * @param \Drupal\appointments\Entity\AppointmentServiceInterface $service
+   *   The service.
+   * @param int $t
+   *   The start.
+   * @param list<array{0: int, 1: int, 2: string}> $busy
+   *   Busy intervals: start, busy until, room ('' for none).
+   * @param string|null $room
+   *   The room asked for, or NULL for any.
+   *
+   * @return string|null
+   *   The room ('' without rooms), or NULL when nothing is free.
+   */
+  private function freeRoom(AppointmentServiceInterface $service, int $t, array $busy, ?string $room): ?string {
+    $end = $t + ($service->getDuration() + $service->getBuffer()) * 60;
+    $overlapping = array_filter($busy, static fn (array $b): bool => $b[0] < $end && $b[1] > $t);
+    $rooms = $this->rooms();
+    if (!$rooms) {
+      return count($overlapping) < max(1, (int) $this->settings()->get('capacity')) ? '' : NULL;
+    }
+    $occupied = [];
+    $loose = 0;
+    foreach ($overlapping as [, , $in]) {
+      if (isset($rooms[$in])) {
+        $occupied[$in] = TRUE;
+      }
+      else {
+        $loose++;
       }
     }
-    return $overlaps < $capacity;
+    if (count($rooms) - count($occupied) <= $loose) {
+      return NULL;
+    }
+    foreach ($this->roomsFor($service) as $id => $candidate) {
+      if (($room === NULL || $room === $id) && !isset($occupied[$id])) {
+        return (string) $id;
+      }
+    }
+    return NULL;
   }
 
   /**
@@ -213,8 +287,8 @@ final class Calendar {
   /**
    * Busy intervals of holding appointments that touch a time range.
    *
-   * @return list<array{0: int, 1: int}>
-   *   [start, busy until] pairs.
+   * @return list<array{0: int, 1: int, 2: string}>
+   *   [start, busy until, room] ('' for no room).
    */
   private function busy(int $from, int $to, ?int $ignore, int $now): array {
     $storage = $this->entityTypeManager->getStorage('appointment');
@@ -230,7 +304,7 @@ final class Calendar {
     /** @var \Drupal\appointments\Entity\AppointmentInterface $appointment */
     foreach ($storage->loadMultiple($query->execute()) as $appointment) {
       if ($appointment->isHolding($now)) {
-        $busy[] = [$appointment->getStart(), $appointment->getBusyUntil()];
+        $busy[] = [$appointment->getStart(), $appointment->getBusyUntil(), $appointment->getRoomId()];
       }
     }
     return $busy;

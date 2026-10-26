@@ -1,22 +1,24 @@
 appointments.book:
   path: '/book'
   defaults:
-    _controller: '\Drupal\appointments\Controller\BookingController::services'
+    _controller: '\Drupal\appointments\Controller\BookingController::picker'
     _title: 'Book an appointment'
   requirements:
     _permission: 'book appointments'
+  options:
+    # Free times move with the clock (notice, today) as well as with bookings,
+    # so this page is never cached, by Drupal or by the edge.
+    no_cache: TRUE
 
+# The per-service address of earlier versions: redirects to the picker.
 appointments.book_service:
   path: '/book/{appointment_service}'
   defaults:
-    _controller: '\Drupal\appointments\Controller\BookingController::slots'
-    _title_callback: '\Drupal\appointments\Controller\BookingController::serviceTitle'
+    _controller: '\Drupal\appointments\Controller\BookingController::legacy'
   requirements:
     _permission: 'book appointments'
     appointment_service: '\d+'
   options:
-    # Free times move with the clock (notice, today) as well as with bookings,
-    # so this page is never cached, by Drupal or by the edge.
     no_cache: TRUE
     parameters:
       appointment_service:

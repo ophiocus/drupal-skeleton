@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.appointment.room
+  module:
+    - appointments
+id: appointment.appointment.room
+field_name: room
+entity_type: appointment
+bundle: appointment
+label: Room
+description: 'Set when the appointment is booked: the room the client chose, or the first free one.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:appointment_room'
+  handler_settings: {  }
+field_type: entity_reference

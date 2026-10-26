@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\appointments\Functional;
 
 use Drupal\appointments\Entity\AppointmentInterface;
+use Drupal\appointments\Entity\AppointmentRoom;
 use Drupal\Core\Test\AssertMailTrait;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -84,12 +85,13 @@ final class BookingFlowTest extends BrowserTestBase {
   public function testBookAndCancel(): void {
     $assert = $this->assertSession();
 
+    // One page: the service dropdown, the free times; no room list without
+    // rooms.
     $this->drupalGet('/book');
     $assert->statusCodeEquals(200);
-    $assert->pageTextContains('Consult');
+    $assert->optionExists('service', 'consult');
     $assert->pageTextContains('A general check-up.');
-    $this->clickLink('See free times');
-    $assert->statusCodeEquals(200);
+    $assert->elementNotExists('css', '.appointments-rooms');
 
     $slot = $this->getSession()->getPage()->find('css', 'a.appointments-slot');
     $this->assertNotNull($slot, 'The slot picker offers at least one time.');
@@ -139,6 +141,49 @@ final class BookingFlowTest extends BrowserTestBase {
     $assert->statusCodeEquals(200);
     $assert->pageTextContains('Ana · Luna');
     $assert->pageTextContains('Cancelled');
+  }
+
+  /**
+   * Rooms: listed when several offer the service, booked as chosen.
+   */
+  public function testRoomsInPicker(): void {
+    $assert = $this->assertSession();
+    $storage = $this->container->get('entity_type.manager')->getStorage('appointment_service');
+    $storage->create(['key' => 'groom', 'label' => 'Grooming', 'duration' => 60, 'status' => TRUE])->save();
+    AppointmentRoom::create(['id' => 'one', 'label' => 'Room one', 'services' => ['consult'], 'weight' => 0])->save();
+    AppointmentRoom::create(['id' => 'two', 'label' => 'Room two', 'services' => ['consult'], 'weight' => 1])->save();
+    AppointmentRoom::create(['id' => 'salon', 'label' => 'Salon', 'services' => ['groom'], 'weight' => 2])->save();
+
+    // "Any room" mode: the list starts with Any room, which is active.
+    $this->drupalGet('/book', ['query' => ['service' => 'consult']]);
+    $assert->elementTextContains('css', '.appointments-room.is-active', 'Any room');
+    $assert->linkExists('Room two');
+    $assert->linkNotExists('Salon');
+
+    // A service one room offers: no list.
+    $this->drupalGet('/book', ['query' => ['service' => 'groom']]);
+    $assert->elementNotExists('css', '.appointments-rooms');
+
+    // Choose Room two, book, and the appointment is in Room two.
+    $this->drupalGet('/book', ['query' => ['service' => 'consult']]);
+    $this->clickLink('Room two');
+    $this->getSession()->getPage()->find('css', 'a.appointments-slot')->click();
+    $assert->pageTextContains('Room two');
+    $this->submitForm([
+      'name[0][value]' => 'Ana',
+      'email[0][value]' => 'ana@example.com',
+      'phone[0][value]' => '3001234567',
+      'field_pet[0][value]' => 'Luna',
+    ], 'Confirm the appointment');
+    $assert->pageTextContains('Your appointment is booked.');
+    $found = $this->container->get('entity_type.manager')->getStorage('appointment')->loadByProperties(['name' => 'Ana']);
+    $this->assertSame('two', reset($found)->getRoomId());
+
+    // "Required" mode: no Any room, the first room preselected.
+    $this->config('appointments.settings')->set('room_choice', 'required')->save();
+    $this->drupalGet('/book', ['query' => ['service' => 'consult']]);
+    $assert->linkNotExists('Any room');
+    $assert->elementTextContains('css', '.appointments-room.is-active', 'Room one');
   }
 
   /**

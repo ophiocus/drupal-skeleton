@@ -96,12 +96,15 @@ final class BookingManager {
     $start = $appointment->getStart();
     $amount = $this->amountDue($service);
     $paid = (float) $amount > 0;
+    // The room the client chose, or NULL for any free room.
+    $want = $appointment->getRoomId() !== '' ? $appointment->getRoomId() : NULL;
 
-    $this->claim(function () use ($appointment, $service, $start, $amount, $paid): void {
-      if (!$this->calendar->isAvailable($service, $start)) {
+    $this->claim(function () use ($appointment, $service, $start, $amount, $paid, $want): void {
+      if (!$this->calendar->isAvailable($service, $start, NULL, $want)) {
         throw new SlotUnavailableException('The start time is not free.');
       }
       $this->place($appointment, $service, $start);
+      $this->assignRoom($appointment, $service, $want, NULL);
       $appointment->set('payment', $paid ? $this->paymentMode() : 'none');
       $appointment->set('amount', $amount);
       if ($paid) {
@@ -143,7 +146,7 @@ final class BookingManager {
       $now = $this->time->getCurrentTime();
       $service = $appointment->getService();
       $still_held = $appointment->isHolding($now);
-      if (!$still_held && $service && $this->overlapsFree($appointment)) {
+      if (!$still_held && $service && $this->regainSlot($appointment)) {
         $still_held = TRUE;
       }
       if ($reference !== '') {
@@ -173,21 +176,30 @@ final class BookingManager {
   }
 
   /**
-   * Moves an appointment to a new start.
+   * Moves an appointment to a new start, and to another room if needed.
+   *
+   * @param \Drupal\appointments\Entity\AppointmentInterface $appointment
+   *   The appointment.
+   * @param int $start
+   *   The new start.
+   * @param string|null $room
+   *   The room asked for, or NULL to keep the current one when it is free.
    *
    * @throws \Drupal\appointments\SlotUnavailableException
    *   When the new start is not free.
    */
-  public function reschedule(AppointmentInterface $appointment, int $start): void {
+  public function reschedule(AppointmentInterface $appointment, int $start, ?string $room = NULL): void {
     $service = $appointment->getService();
     if (!$service) {
       throw new SlotUnavailableException('The service no longer exists.');
     }
-    $this->claim(function () use ($appointment, $service, $start): void {
-      if (!$this->calendar->isAvailable($service, $start, (int) $appointment->id())) {
+    $this->claim(function () use ($appointment, $service, $start, $room): void {
+      $id = (int) $appointment->id();
+      if (!$this->calendar->isAvailable($service, $start, $id, $room)) {
         throw new SlotUnavailableException('The start time is not free.');
       }
       $this->place($appointment, $service, $start);
+      $this->assignRoom($appointment, $service, $room, $id);
       $appointment->save();
     });
     $this->notify($appointment, 'rescheduled');
@@ -232,7 +244,7 @@ final class BookingManager {
     }
     $held = FALSE;
     $this->claim(function () use ($appointment, $now, &$held): void {
-      if ($this->overlapsFree($appointment)) {
+      if ($this->regainSlot($appointment)) {
         $appointment->set('hold_expires', $now + max(5, (int) $this->calendar->settings()->get('hold')) * 60);
         $appointment->save();
         $held = TRUE;
@@ -340,12 +352,54 @@ final class BookingManager {
   }
 
   /**
-   * Whether the appointment's own slot is still free (its hold ran out).
+   * Gives a lapsed appointment its time back, in its room or another one.
+   *
+   * @return bool
+   *   FALSE when no room is free at its time any more.
    */
-  private function overlapsFree(AppointmentInterface $appointment): bool {
+  private function regainSlot(AppointmentInterface $appointment): bool {
     $service = $appointment->getService();
-    return $service !== NULL
-      && $this->calendar->slotIsFree($service, $appointment->getStart(), (int) $appointment->id());
+    return $service !== NULL && $this->assignRoom($appointment, $service, NULL, (int) $appointment->id());
+  }
+
+  /**
+   * Sets the room of an appointment placed at its start.
+   *
+   * The room asked for if it is free; otherwise the appointment's current
+   * room if it is free; otherwise the first free room offering the service.
+   *
+   * @param \Drupal\appointments\Entity\AppointmentInterface $appointment
+   *   The appointment, its start already set.
+   * @param \Drupal\appointments\Entity\AppointmentServiceInterface $service
+   *   Its service.
+   * @param string|null $want
+   *   The room asked for, or NULL.
+   * @param int|null $ignore
+   *   The appointment's own id, so it does not block itself.
+   *
+   * @return bool
+   *   FALSE when no room is free.
+   */
+  private function assignRoom(AppointmentInterface $appointment, AppointmentServiceInterface $service, ?string $want, ?int $ignore): bool {
+    $start = $appointment->getStart();
+    $current = $appointment->getRoomId();
+    $room = NULL;
+    if ($want !== NULL) {
+      $room = $this->calendar->roomFor($service, $start, $ignore, $want);
+    }
+    elseif ($current !== '' && $this->calendar->roomFor($service, $start, $ignore, $current) !== NULL) {
+      $room = $current;
+    }
+    else {
+      $room = $this->calendar->roomFor($service, $start, $ignore);
+    }
+    if ($room === NULL) {
+      return FALSE;
+    }
+    if ($appointment->hasField('room')) {
+      $appointment->set('room', $room === '' ? NULL : $room);
+    }
+    return TRUE;
   }
 
   /**

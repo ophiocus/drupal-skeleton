@@ -561,6 +561,65 @@ msgctxt "appointments date"
 msgid "l j F"
 msgstr "l j \\d\\e F"
 
+msgid "Room"
+msgstr "Sala"
+
+msgid "Rooms"
+msgstr "Salas"
+
+msgid "room"
+msgstr "sala"
+
+msgid "rooms"
+msgstr "salas"
+
+msgid "Any room"
+msgstr "Cualquier sala"
+
+msgid "Room: @room"
+msgstr "Sala: @room"
+
+msgid "Add room"
+msgstr "Agregar sala"
+
+msgid "Services offered"
+msgstr "Servicios que ofrece"
+
+msgid "Leave all unchecked for a room that offers every service."
+msgstr "Deja todo sin marcar para una sala que ofrece todos los servicios."
+
+msgid "As clients see it, e.g. \"Consulting room 1\"."
+msgstr "Como la ven los clientes, p. ej. \"Consultorio 1\"."
+
+msgid "Lighter rooms are listed first and filled first."
+msgstr "Las salas de menor peso se listan y se ocupan primero."
+
+msgid "Saved the room %label."
+msgstr "Se guardó la sala %label."
+
+msgid "No rooms: the calendar is one room, and the Settings tab sets how many appointments it takes at once."
+msgstr "Sin salas: el calendario es una sola sala, y la pestaña Ajustes fija cuántas citas recibe a la vez."
+
+msgid "Used only while no rooms are defined; each room takes one appointment at a time."
+msgstr "Solo se usa mientras no haya salas; cada sala recibe una cita a la vez."
+
+msgid "With several rooms, the client"
+msgstr "Con varias salas, el cliente"
+
+msgid "sees the free times of every room, can narrow to one room, and gets a free room assigned"
+msgstr "ve las horas libres de todas las salas, puede limitarse a una, y se le asigna una sala libre"
+
+msgid "picks a room (the first is preselected) and sees its free times"
+msgstr "elige una sala (la primera viene seleccionada) y ve sus horas libres"
+
+msgid "The room list is hidden when only one room offers the chosen service."
+msgstr "La lista de salas se oculta cuando solo una sala ofrece el servicio elegido."
+
+msgid "@count room"
+msgid_plural "@count rooms"
+msgstr[0] "@count sala"
+msgstr[1] "@count salas"
+
 msgid "@count appointment"
 msgid_plural "@count appointments"
 msgstr[0] "@count cita"

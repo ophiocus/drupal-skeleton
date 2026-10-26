@@ -12,17 +12,17 @@ declare(strict_types=1);
  */
 function appointments_theme(): array {
   return [
-    'appointments_services' => [
-      'variables' => ['services' => []],
-    ],
-    'appointments_slots' => [
+    'appointments_picker' => [
       'variables' => [
+        'action' => '',
+        'services' => [],
         'service' => [],
+        'rooms' => [],
         'days' => [],
+        'any' => FALSE,
         'moving' => '',
         'prev' => '',
         'next' => '',
-        'back' => '',
         'timezone' => '',
       ],
     ],

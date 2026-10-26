@@ -1,3 +1,23 @@
+appointments.room.*:
+  type: config_entity
+  label: 'Appointment room'
+  mapping:
+    id:
+      type: machine_name
+      label: 'Machine name'
+    label:
+      type: required_label
+      label: 'Name'
+    weight:
+      type: weight
+      label: 'Weight'
+    services:
+      type: sequence
+      label: 'Keys of the services offered (empty: all)'
+      sequence:
+        type: string
+        label: 'Service key'
+
 appointments.settings:
   type: config_object
   label: 'Appointments settings'
@@ -19,7 +39,10 @@ appointments.settings:
       label: 'Days ahead that can be booked'
     capacity:
       type: integer
-      label: 'Appointments that can run at the same time'
+      label: 'Appointments that can run at the same time, when no rooms are defined'
+    room_choice:
+      type: string
+      label: 'With several rooms: any (free times of every room, a room assigned) or required (the client picks a room)'
     hold:
       type: integer
       label: 'Minutes an unpaid booking holds its slot'

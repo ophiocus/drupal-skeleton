@@ -153,6 +153,21 @@ final class Appointment extends ContentEntityBase implements AppointmentInterfac
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function getRoomId(): string {
+    return $this->hasField('room') ? (string) $this->get('room')->target_id : '';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getRoom(): ?AppointmentRoomInterface {
+    $room = $this->hasField('room') ? $this->get('room')->entity : NULL;
+    return $room instanceof AppointmentRoomInterface ? $room : NULL;
+  }
+
+  /**
    * The status options, for the status field and for listings.
    *
    * @return array<string, \Drupal\Core\StringTranslation\TranslatableMarkup>

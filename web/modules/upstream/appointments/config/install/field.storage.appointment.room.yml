@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - appointments
+id: appointment.room
+field_name: room
+entity_type: appointment
+type: entity_reference
+settings:
+  target_type: appointment_room
+module: core
+locked: true
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

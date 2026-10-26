@@ -124,6 +124,17 @@ final class SettingsForm extends ConfigFormBase {
         '#default_value' => (int) $config->get($key),
       ];
     }
+    $form['rules']['capacity']['#description'] = $this->t('Used only while no rooms are defined; each room takes one appointment at a time.');
+    $form['rules']['room_choice'] = [
+      '#type' => 'radios',
+      '#title' => $this->t('With several rooms, the client'),
+      '#options' => [
+        'any' => $this->t('sees the free times of every room, can narrow to one room, and gets a free room assigned'),
+        'required' => $this->t('picks a room (the first is preselected) and sees its free times'),
+      ],
+      '#default_value' => (string) ($config->get('room_choice') ?: 'any'),
+      '#description' => $this->t('The room list is hidden when only one room offers the chosen service.'),
+    ];
     $form['rules']['timezone'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Time zone'),
@@ -246,6 +257,7 @@ final class SettingsForm extends ConfigFormBase {
       ->set('lead_time', (int) $form_state->getValue('lead_time'))
       ->set('horizon', (int) $form_state->getValue('horizon'))
       ->set('capacity', (int) $form_state->getValue('capacity'))
+      ->set('room_choice', (string) $form_state->getValue('room_choice') === 'required' ? 'required' : 'any')
       ->set('cancel_cutoff', (int) $form_state->getValue('cancel_cutoff'))
       ->set('hold', (int) $form_state->getValue('hold'))
       ->set('timezone', trim((string) $form_state->getValue('timezone')))

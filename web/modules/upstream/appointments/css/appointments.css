@@ -10,52 +10,72 @@
   --appointments-radius: 0.5rem;
 }
 
-.appointments-services {
-  display: grid;
-  gap: 1rem;
-  padding: 0;
-  list-style: none;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-}
-
-.appointments-service {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 1.25rem;
-  border-radius: var(--appointments-radius);
-  background: var(--appointments-surface);
-}
-
-.appointments-service__title {
-  margin: 0;
-  font-size: 1.25rem;
-}
-
 .appointments-service__meta,
 .appointments-note {
   color: #4b5563;
   font-size: 0.9rem;
 }
 
-.appointments-button,
-.appointments-slot {
+/* The picker: service dropdown, rooms, then the days. */
+.appointments-picker__service {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--appointments-radius);
+  background: var(--appointments-surface);
+}
+
+.appointments-picker__service label {
+  font-weight: 600;
+}
+
+.appointments-picker__service select {
+  min-width: min(100%, 18rem);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--appointments-accent);
+  border-radius: var(--appointments-radius);
+  background: #fff;
+  font: inherit;
+}
+
+.appointments-picker__about {
+  margin: 1rem 0;
+}
+
+.appointments-rooms ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.appointments-room,
+.appointments-slot,
+.appointments-picker__go {
   display: inline-block;
   padding: 0.5rem 0.9rem;
   border: 1px solid var(--appointments-accent);
   border-radius: var(--appointments-radius);
+  background: #fff;
   color: var(--appointments-accent);
+  font: inherit;
   font-weight: 600;
   text-decoration: none;
+  cursor: pointer;
 }
 
-.appointments-button {
-  align-self: flex-start;
-  margin-top: auto;
-  background: var(--appointments-accent);
-  color: #fff;
+/* Hidden by the script, which submits the dropdown on change. */
+.appointments-picker__go[hidden] {
+  display: none;
 }
 
+.appointments-room.is-active,
+.appointments-room:hover,
+.appointments-room:focus,
 .appointments-slot:hover,
 .appointments-slot:focus {
   background: var(--appointments-accent);

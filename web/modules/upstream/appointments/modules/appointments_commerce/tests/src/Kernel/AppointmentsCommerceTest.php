@@ -24,6 +24,7 @@ final class AppointmentsCommerceTest extends CartKernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
+    'field',
     'appointments',
     'appointments_commerce',
   ];
@@ -40,7 +41,9 @@ final class AppointmentsCommerceTest extends CartKernelTestBase {
    * {@inheritdoc}
    */
   protected function setUp(): void {
-    FrozenTime::$now = time();
+    // The test's clock from before Drupal starts, never rewound past it (see
+    // AppointmentsKernelTestBase::setUp()).
+    FrozenTime::$now = $this->ts('2026-10-26 06:00');
     parent::setUp();
     $this->installEntitySchema('appointment_service');
     $this->installEntitySchema('appointment');
