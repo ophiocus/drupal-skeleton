@@ -12,6 +12,12 @@ menu:
     uri: 'internal:/tienda'
     title: 'Tienda'
     weight: 0
+    expanded: true
+  - menu: main
+    uri: 'internal:/tienda/pan'
+    title: 'Pan'
+    weight: 0
+    parent: 'internal:/tienda'
   - menu: main
     uri: 'internal:/contacto'
     title: 'Contacto'

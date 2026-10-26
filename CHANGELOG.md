@@ -5,6 +5,14 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-26 — site_seed: nested menu links
+
+- `menu:` rows take an optional `parent` (the URI of an earlier row's link in
+  the same menu) and `expanded` (bool). Parent, expanded, title and weight are
+  all converged; a link moved by hand returns. A check run resolves a parent
+  the same file creates. A parent no earlier row seeds is a SeedException.
+  Kernel tests `testMenuParent`, `testMenuUnknownParent`; README updated.
+
 ## 2026-10-26 — site_seed: a store's place on the map
 
 - `stores:` rows take an optional `location: {field, lat, lon}`: the store's

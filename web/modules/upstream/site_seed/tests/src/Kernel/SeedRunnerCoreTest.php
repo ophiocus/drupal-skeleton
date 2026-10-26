@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Drupal\Tests\site_seed\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\site_seed\Handler\MenuHandler;
+use Drupal\site_seed\SeedContext;
 use Drupal\site_seed\SeedException;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -70,7 +72,7 @@ final class SeedRunnerCoreTest extends KernelTestBase {
   public function testIdempotent(): void {
     $first = $this->seed();
     $this->assertSame(2, $first['tally']['terms']);
-    $this->assertSame(2, $first['tally']['menu_links']);
+    $this->assertSame(3, $first['tally']['menu_links']);
     $this->assertSame(1, $first['tally']['aliases']);
     $this->assertSame(['site_specific'], $first['unhandled']);
 
@@ -103,9 +105,38 @@ final class SeedRunnerCoreTest extends KernelTestBase {
   public function testCheckWritesNothing(): void {
     $tally = $this->seed(TRUE)['tally'];
     $this->assertSame(2, $tally['terms']);
+    $this->assertSame(3, $tally['menu_links'], 'A child finds its unsaved parent.');
     $this->assertSame(0, $this->entityCount('taxonomy_term'));
     $this->assertSame(0, $this->entityCount('menu_link_content'));
     $this->assertSame(0, $this->entityCount('path_alias'));
+  }
+
+  /**
+   * A link with a parent nests under it; a parent moved by hand returns.
+   */
+  public function testMenuParent(): void {
+    $this->seed();
+    $storage = $this->container->get('entity_type.manager')->getStorage('menu_link_content');
+    $tienda = current($storage->loadByProperties(['link__uri' => 'internal:/tienda']));
+    $pan = current($storage->loadByProperties(['link__uri' => 'internal:/tienda/pan']));
+    $this->assertTrue((bool) $tienda->get('expanded')->value);
+    $this->assertSame('menu_link_content:' . $tienda->uuid(), $pan->get('parent')->value);
+
+    $pan->set('parent', '')->save();
+    $this->assertSame(1, $this->seed()['tally']['updated']);
+    $storage->resetCache();
+    $this->assertSame('menu_link_content:' . $tienda->uuid(), $storage->load($pan->id())->get('parent')->value);
+  }
+
+  /**
+   * A parent no earlier row seeds fails loudly.
+   */
+  public function testMenuUnknownParent(): void {
+    $handler = new MenuHandler($this->container->get('entity_type.manager'));
+    $this->expectException(SeedException::class);
+    $handler->converge([
+      ['menu' => 'main', 'uri' => 'internal:/a', 'title' => 'A', 'parent' => 'internal:/missing'],
+    ], new SeedContext('/tmp'));
   }
 
   /**
