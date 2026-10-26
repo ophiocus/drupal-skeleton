@@ -17,11 +17,11 @@ the next project makes for itself.
 
 ```
 drupal-skeleton/
-├── .ddev/config.yaml                 ← PHP 8.3, MariaDB 11.4, apache-fpm (= prod image), mutagen, Composer 2, Node 22
+├── .ddev/config.yaml                 ← PHP 8.4, MariaDB 11.4, apache-fpm (= prod image), mutagen, Composer 2, Node 22
 ├── .github/workflows/
 │   ├── composer-audit.yml            ← inherited security gate: fails CI on a vulnerable composer.lock (push/PR + weekly)
 │   └── build-and-push.yml            ← the production pipeline: audit → image → GHCR → deploy → HTTP health gate
-├── Dockerfile / .dockerignore        ← multi-stage production image (drupal:11-php8.3-apache, composer --no-dev, drush on PATH)
+├── Dockerfile / .dockerignore        ← multi-stage production image (drupal:11-php8.4-apache, composer --no-dev, drush on PATH)
 ├── deploy/
 │   ├── docker-compose.yaml           ← host-side stack (drupal + mariadb, Traefik labels), fully .env-interpolated
 │   ├── .env.example                  ← every key the stack + image read; copy to .env on the host

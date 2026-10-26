@@ -1372,4 +1372,22 @@ invalidates only what the date changes, not `rendered`.
 their `Cache-Tag` headers (`drush edge-purge:hash <tag>` names one): any tag
 on both, other than `rendered`/`http_response`, purges both on a save.
 
+## §47 — A pinned base tag that its publisher stopped building (2026-10)
+
+**What bit.** The image pinned `drupal:11-php8.3-apache` on the promise that
+the tag "follows 8.3.x patch releases". The official Drupal image dropped its
+PHP 8.3 variants and last pushed that tag on 2026-01-09, with PHP 8.3.29.
+Nothing failed: every build pulled the tag, got the same January image, and
+passed. When PHP shipped fixes for two remote-code-execution flaws on
+2026-10-21 (8.3.36, rated 9.2, worst under mod_php, which this image runs),
+every site rebuilt that night still reported 8.3.29.
+
+**Fix.** Move to a tag the publisher still builds (`drupal:11-php8.4-apache`,
+D31). A rebuild alone could never have patched it.
+
+**Tell.** The tag's last push on Docker Hub
+(`hub.docker.com/v2/repositories/library/drupal/tags/<tag>`) is older than
+the latest PHP release of its branch, or `php -r 'echo PHP_VERSION;'` inside a
+freshly built container is behind php.net's current release for that branch.
+
 ---
