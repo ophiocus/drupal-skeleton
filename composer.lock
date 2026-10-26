@@ -2141,17 +2141,17 @@
         },
         {
             "name": "drupal/maper",
-            "version": "1.0.0-alpha2",
+            "version": "1.0.0-alpha3",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/maper.git",
-                "reference": "1.0.0-alpha2"
+                "reference": "1.0.0-alpha3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/maper-1.0.0-alpha2.zip",
-                "reference": "1.0.0-alpha2",
-                "shasum": "668489bd86b6aa6e5cd53f5f4dd46fb8e35a8506"
+                "url": "https://ftp.drupal.org/files/projects/maper-1.0.0-alpha3.zip",
+                "reference": "1.0.0-alpha3",
+                "shasum": "6f62345b3664a091e0cb9fb5f3c6747d33b0e74e"
             },
             "require": {
                 "drupal/core": "^11.2",
@@ -2164,8 +2164,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha2",
-                    "datestamp": "1792464799",
+                    "version": "1.0.0-alpha3",
+                    "datestamp": "1792956907",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -2191,17 +2191,17 @@
         },
         {
             "name": "drupal/metatag",
-            "version": "2.2.0",
+            "version": "2.2.1",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/metatag.git",
-                "reference": "2.2.0"
+                "reference": "2.2.1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/metatag-2.2.0.zip",
-                "reference": "2.2.0",
-                "shasum": "b6ae4b665a49771d5139644c71cb3d5a68cb4828"
+                "url": "https://ftp.drupal.org/files/projects/metatag-2.2.1.zip",
+                "reference": "2.2.1",
+                "shasum": "ee75572be28017b7b5a9c4ecf7b643e6ce806e16"
             },
             "require": {
                 "drupal/core": "^10.3 || ^11",
@@ -2209,7 +2209,9 @@
                 "php": ">=8.0"
             },
             "require-dev": {
-                "drupal/forum": "1.x-dev",
+                "drupal/diff": "*",
+                "drupal/forum": "^1.0",
+                "drupal/graphql": "^3",
                 "drupal/hal": "^1 || ^2 || ^9",
                 "drupal/metatag_dc": "*",
                 "drupal/metatag_open_graph": "*",
@@ -2221,8 +2223,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "2.2.0",
-                    "datestamp": "1758622371",
+                    "version": "2.2.1",
+                    "datestamp": "1792864792",
                     "security-coverage": {
                         "status": "covered",
                         "message": "Covered by Drupal's security advisory policy"
@@ -3243,16 +3245,16 @@
         },
         {
             "name": "guzzlehttp/guzzle",
-            "version": "7.16.0",
+            "version": "7.16.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "ffb62ec787050ae4fa9449cdd6b80335db69bda2"
+                "reference": "81755d989b3007ca7f88a069857553cd08e7dc2e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/ffb62ec787050ae4fa9449cdd6b80335db69bda2",
-                "reference": "ffb62ec787050ae4fa9449cdd6b80335db69bda2",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/81755d989b3007ca7f88a069857553cd08e7dc2e",
+                "reference": "81755d989b3007ca7f88a069857553cd08e7dc2e",
                 "shasum": ""
             },
             "require": {
@@ -3351,7 +3353,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/guzzle/issues",
-                "source": "https://github.com/guzzle/guzzle/tree/7.16.0"
+                "source": "https://github.com/guzzle/guzzle/tree/7.16.1"
             },
             "funding": [
                 {
@@ -3367,7 +3369,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-18T13:38:36+00:00"
+            "time": "2026-10-25T21:35:21+00:00"
         },
         {
             "name": "guzzlehttp/promises",
@@ -4520,7 +4522,7 @@
             "dist": {
                 "type": "path",
                 "url": "upstream-configuration",
-                "reference": "e719b326821fec26ac891f0480ac2822e6360862"
+                "reference": "a73c34f1c421d9f7534358956f6948b9c6bee3fd"
             },
             "require": {
                 "composer/installers": "^2.0",
@@ -4532,7 +4534,7 @@
                 "drupal/encrypt": "^3.2",
                 "drupal/google_tag": "^2.0",
                 "drupal/key": "^1.22",
-                "drupal/maper": "1.0.0-alpha2",
+                "drupal/maper": "1.0.0-alpha3",
                 "drupal/metatag": "^2.2",
                 "drupal/pathauto": "^1.15",
                 "drupal/real_aes": "^2.6",
