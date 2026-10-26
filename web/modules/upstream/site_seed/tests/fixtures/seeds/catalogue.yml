@@ -10,6 +10,7 @@ stores:
       country_code: CO
       locality: 'Bogotá'
     billing_countries: [CO]
+    location: {field: field_location, lat: 4.6097100, lon: -74.0817500}
 taxonomy:
   categoria:
     - name: 'Granos'

@@ -8,6 +8,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\site_seed\SeedContext;
+use Drupal\site_seed\SeedException;
 
 /**
  * Section `stores:`, Commerce stores matched by name (or a former name).
@@ -15,6 +16,16 @@ use Drupal\site_seed\SeedContext;
  * The default store is born under the uuid config/sync names in
  * commerce_store.settings, so a fresh build and its config agree and no
  * config import points the default at a store that does not exist.
+ *
+ * A row's optional `location:` puts the store on the map: the Maper point
+ * field that holds its place, and its latitude and longitude. A point already
+ * holding the same numbers (at the column's seven decimals) is left alone.
+ *
+ * @code
+ * stores:
+ *   - name: 'Example store'
+ *     location: {field: field_location, lat: 4.6097100, lon: -74.0817500}
+ * @endcode
  */
 final class StoreHandler implements SeedHandlerInterface {
 
@@ -76,6 +87,7 @@ final class StoreHandler implements SeedHandlerInterface {
         }
         $store = $storage->create($values);
         assert($store instanceof ContentEntityInterface);
+        self::locate($store, $row);
         $context->save($store);
         $by_name[$row['name']] = $store;
         $context->count('stores');
@@ -102,6 +114,9 @@ final class StoreHandler implements SeedHandlerInterface {
             $dirty = TRUE;
           }
         }
+        if (self::locate($store, $row)) {
+          $dirty = TRUE;
+        }
         if ($dirty) {
           $context->save($store);
           $context->count('updated');
@@ -116,6 +131,34 @@ final class StoreHandler implements SeedHandlerInterface {
       }
     }
     $context->stores = $by_name;
+  }
+
+  /**
+   * Puts a row's `location` into the store's Maper point field.
+   *
+   * @return bool
+   *   Whether the point changed.
+   *
+   * @throws \Drupal\site_seed\SeedException
+   *   When the store has no such field.
+   */
+  private static function locate(ContentEntityInterface $store, array $row): bool {
+    if (!isset($row['location'])) {
+      return FALSE;
+    }
+    $field = (string) ($row['location']['field'] ?? '');
+    if (!$store->hasField($field)) {
+      throw new SeedException(sprintf('stores: store "%s" has no field "%s" for its location.', $row['name'], $field));
+    }
+    $want = ['lat' => (float) $row['location']['lat'], 'lon' => (float) $row['location']['lon']];
+    $item = $store->get($field)->first();
+    if ($item && !$item->isEmpty()
+      && round((float) $item->get('lat')->getValue(), 7) === round($want['lat'], 7)
+      && round((float) $item->get('lon')->getValue(), 7) === round($want['lon'], 7)) {
+      return FALSE;
+    }
+    $store->set($field, $want);
+    return TRUE;
   }
 
 }
