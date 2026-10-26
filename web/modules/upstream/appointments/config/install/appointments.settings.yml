@@ -4,6 +4,7 @@ slot_step: 30
 lead_time: 120
 horizon: 30
 capacity: 1
+room_choice: any
 hold: 30
 cancel_cutoff: 120
 notify: ''

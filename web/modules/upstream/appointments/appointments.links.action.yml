@@ -3,6 +3,11 @@ entity.appointment_service.add_form:
   route_name: entity.appointment_service.add_form
   appears_on:
     - entity.appointment_service.collection
+entity.appointment_room.add_form:
+  title: 'Add room'
+  route_name: entity.appointment_room.add_form
+  appears_on:
+    - entity.appointment_room.collection
 appointments.book:
   title: 'Open the booking page'
   route_name: appointments.book

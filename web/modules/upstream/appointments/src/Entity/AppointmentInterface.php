@@ -85,4 +85,14 @@ interface AppointmentInterface extends ContentEntityInterface, EntityChangedInte
    */
   public function getEmail(): string;
 
+  /**
+   * The machine name of the appointment's room, or '' when it has none.
+   */
+  public function getRoomId(): string;
+
+  /**
+   * The appointment's room, or NULL when it has none.
+   */
+  public function getRoom(): ?AppointmentRoomInterface;
+
 }

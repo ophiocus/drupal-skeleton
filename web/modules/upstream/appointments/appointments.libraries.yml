@@ -2,3 +2,9 @@ booking:
   css:
     component:
       css/appointments.css: {}
+picker:
+  js:
+    js/picker.js: {}
+  dependencies:
+    - core/drupal
+    - core/once

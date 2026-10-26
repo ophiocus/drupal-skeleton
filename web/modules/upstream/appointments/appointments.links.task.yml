@@ -8,6 +8,11 @@ entity.appointment_service.collection:
   route_name: entity.appointment_service.collection
   base_route: entity.appointment.collection
   weight: 10
+entity.appointment_room.collection:
+  title: 'Rooms'
+  route_name: entity.appointment_room.collection
+  base_route: entity.appointment.collection
+  weight: 15
 appointments.settings:
   title: 'Settings'
   route_name: appointments.settings

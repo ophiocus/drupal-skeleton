@@ -44,6 +44,7 @@ final class BookingForm extends ContentEntityForm {
     'amount',
     'reference',
     'token',
+    'room',
   ];
 
   /**
@@ -102,6 +103,10 @@ final class BookingForm extends ContentEntityForm {
       '@service' => $service ? $service->label() : '',
       '@when' => $this->messages->when($appointment, $langcode),
     ]);
+    $room = $appointment->getRoom();
+    if ($room && count($this->calendar->rooms()) > 1) {
+      $what .= ' · ' . $room->label();
+    }
     $form['summary'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['appointments-summary']],
@@ -112,8 +117,12 @@ final class BookingForm extends ContentEntityForm {
       'change' => [
         '#type' => 'link',
         '#title' => $this->t('Choose another time'),
-        '#url' => Url::fromRoute('appointments.book_service', ['appointment_service' => $service?->id()], [
-          'query' => ['from' => $this->calendar->dateOf($appointment->getStart())],
+        '#url' => Url::fromRoute('appointments.book', [], [
+          'query' => array_filter([
+            'service' => $service?->getKey(),
+            'room' => $appointment->getRoomId(),
+            'from' => $this->calendar->dateOf($appointment->getStart()),
+          ]),
         ]),
       ],
     ];
@@ -166,7 +175,12 @@ final class BookingForm extends ContentEntityForm {
     }
     catch (SlotUnavailableException) {
       $this->messenger()->addError($this->t('Sorry, that time was just taken. Please choose another.'));
-      $form_state->setRedirect('appointments.book_service', ['appointment_service' => $appointment->get('service')->target_id]);
+      $form_state->setRedirect('appointments.book', [], [
+        'query' => array_filter([
+          'service' => $appointment->getService()?->getKey(),
+          'room' => $appointment->getRoomId(),
+        ]),
+      ]);
       return 0;
     }
     if ($pay) {

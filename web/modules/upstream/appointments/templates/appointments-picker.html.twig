@@ -1,0 +1,79 @@
+{#
+/**
+ * @file
+ * The booking picker: service, room and free time on one page.
+ *
+ * Available variables:
+ * - action: URL the service dropdown submits to (GET).
+ * - services: list of key, label, selected; empty when the service is fixed
+ *   (an appointment being moved).
+ * - service: label, description, duration, price, online.
+ * - rooms: list of label, url, active; empty when one room (or none) offers
+ *   the service.
+ * - days: list of label and slots (time, url).
+ * - any: TRUE when at least one day shown has a free time.
+ * - moving: when set, the current time of the appointment being moved.
+ * - prev, next: URLs of the previous and next days, or empty.
+ * - timezone: the calendar's time zone.
+ */
+#}
+<div class="appointments appointments-picker">
+  {% if services %}
+    <form class="appointments-picker__service" method="get" action="{{ action }}">
+      <label for="appointments-service">{{ 'Service'|t }}</label>
+      <select id="appointments-service" name="service" data-appointments-autosubmit>
+        {% for option in services %}
+          <option value="{{ option.key }}"{{ option.selected ? ' selected' }}>{{ option.label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="appointments-picker__go">{{ 'See free times'|t }}</button>
+    </form>
+  {% else %}
+    <h2 class="appointments-picker__fixed">{{ service.label }}</h2>
+  {% endif %}
+
+  <div class="appointments-picker__about">
+    {% if service.description %}<p>{{ service.description }}</p>{% endif %}
+    <p class="appointments-service__meta">
+      {{ service.duration }}{% if service.price %} · {{ service.price }}{% endif %}
+    </p>
+    {% if service.online %}<p class="appointments-note">{{ service.online }}</p>{% endif %}
+  </div>
+
+  {% if moving %}
+    <p class="appointments-note">{{ 'Your appointment is now on @when. Choose the new time.'|t({'@when': moving}) }}</p>
+  {% endif %}
+
+  {% if rooms %}
+    <nav class="appointments-rooms" aria-label="{{ 'Rooms'|t }}">
+      <ul>
+        {% for room in rooms %}
+          <li><a class="appointments-room{{ room.active ? ' is-active' }}" href="{{ room.url }}" rel="nofollow"{{ room.active ? ' aria-current="true"' }}>{{ room.label }}</a></li>
+        {% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+
+  <div class="appointments-days">
+    {% for day in days %}
+      {% if day.slots %}
+        <section class="appointments-day">
+          <h2 class="appointments-day__title">{{ day.label }}</h2>
+          <ul class="appointments-day__slots">
+            {% for slot in day.slots %}
+              <li><a class="appointments-slot" href="{{ slot.url }}" rel="nofollow">{{ slot.time }}</a></li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if not any %}
+    <p>{{ 'No free times on these days.'|t }}{% if next %} {{ 'Try the next days.'|t }}{% endif %}</p>
+  {% endif %}
+  <p class="appointments-note">{{ 'Times are in @tz.'|t({'@tz': timezone}) }}</p>
+  <nav class="appointments-pager" aria-label="{{ 'Days'|t }}">
+    <span>{% if prev %}<a href="{{ prev }}" rel="nofollow">{{ '‹ Earlier days'|t }}</a>{% endif %}</span>
+    <span>{% if next %}<a href="{{ next }}" rel="nofollow">{{ 'Later days ›'|t }}</a>{% endif %}</span>
+  </nav>
+</div>

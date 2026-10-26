@@ -5,6 +5,21 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-26 — appointments: rooms and a one-page picker
+
+- Rooms: a config entity `appointment_room` (the services each offers, the
+  calendar's hours), a `room` field on appointments, and the setting
+  `room_choice` (`any`: the client sees every room's times and gets a free one;
+  `required`: the client picks). Without rooms nothing changes.
+- `/book` is one picker page (service, rooms, a week of free times; never
+  cached). `/book/{service}` redirects to it. The `appointments_services` and
+  `appointments_slots` templates are gone; `appointments_picker` and
+  `js/picker.js` replace them.
+- New `RoomsTest`; kernel, functional and commerce tests updated; README now
+  covers install, configuration, extension and troubleshooting.
+- Built on a lab site and ported here. A site that already has the module
+  records the room entity type once at that deploy (README, "Rules it keeps").
+
 ## 2026-10-26 — the test gate runs shop_delivery and appointments_commerce on shops
 
 - `scripts/ci/unmet_upstream.php` counted a module only where its directory

@@ -86,6 +86,7 @@ final class AppointmentListBuilder extends EntityListBuilder {
     return [
       'when' => $this->t('When'),
       'service' => $this->t('Service'),
+      'room' => $this->t('Room'),
       'client' => $this->t('Client'),
       'contact' => $this->t('Contact'),
       'status' => $this->t('Status'),
@@ -112,6 +113,7 @@ final class AppointmentListBuilder extends EntityListBuilder {
     return [
       'when' => $this->dateFormatter->format($entity->getStart(), 'custom', 'D Y-m-d H:i', $this->calendar->timezone()),
       'service' => $service ? $service->label() : '—',
+      'room' => $entity->getRoom()?->label() ?? '—',
       'client' => $client,
       'contact' => $entity->getEmail() . ' · ' . (string) $entity->get('phone')->value,
       'status' => $status,

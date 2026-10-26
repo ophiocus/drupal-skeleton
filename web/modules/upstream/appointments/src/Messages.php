@@ -132,10 +132,15 @@ final class Messages {
       $lines = [
         (string) $message['subject'],
         '',
+      ];
+      if ($room = $this->roomLabel($appointment)) {
+        $lines[] = $this->t('Room: @room', ['@room' => $room], $options);
+      }
+      $lines = array_merge($lines, [
         $this->t('Client: @name', $vars, $options),
         $this->t('E-mail: @mail', ['@mail' => $appointment->getEmail()], $options),
         $this->t('Phone: @phone', ['@phone' => (string) $appointment->get('phone')->value], $options),
-      ];
+      ]);
       foreach ($this->extraFields($appointment) as $label => $value) {
         $lines[] = $label . ': ' . $value;
       }
@@ -166,6 +171,9 @@ final class Messages {
         default => $this->t('@service, @when.', $vars, $options),
       };
       if (in_array($event, ['confirmed', 'rescheduled'], TRUE)) {
+        if ($room = $this->roomLabel($appointment)) {
+          $lines[] = $this->t('Room: @room', ['@room' => $room], $options);
+        }
         $lines[] = '';
         $lines[] = $this->t('Add it to your calendar: @ics', ['@ics' => $ics], $options);
         $lines[] = $this->t('To cancel or change it: @url', ['@url' => $manage], $options);
@@ -178,6 +186,14 @@ final class Messages {
       $lines[] = $site;
     }
     $message['body'][] = implode("\n", array_map('strval', $lines));
+  }
+
+  /**
+   * The appointment's room name, when the calendar has more than one room.
+   */
+  public function roomLabel(AppointmentInterface $appointment): string {
+    $room = $appointment->getRoom();
+    return $room && count($this->calendar->rooms()) > 1 ? (string) $room->label() : '';
   }
 
   /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\appointments\Kernel;
 
 use Drupal\appointments\Entity\AppointmentInterface;
+use Drupal\appointments\Entity\AppointmentRoom;
 use Drupal\appointments\Entity\AppointmentServiceInterface;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\KernelTests\KernelTestBase;
@@ -20,7 +21,7 @@ abstract class AppointmentsKernelTestBase extends KernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'user', 'options', 'appointments'];
+  protected static $modules = ['system', 'user', 'field', 'options', 'appointments'];
 
   /**
    * {@inheritdoc}
@@ -34,6 +35,11 @@ abstract class AppointmentsKernelTestBase extends KernelTestBase {
    * {@inheritdoc}
    */
   protected function setUp(): void {
+    // The test's clock from before Drupal starts, never rewound past it: at
+    // zero, caches written during the install read as stale; rewound after
+    // the install, invalidated cache items read as valid again (the room
+    // field went missing from the field definitions both ways).
+    $this->at('2026-10-26 06:00');
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('appointment_service');
@@ -104,10 +110,27 @@ abstract class AppointmentsKernelTestBase extends KernelTestBase {
   }
 
   /**
+   * Creates a room offering some services (none listed: all of them).
+   *
+   * @param string $id
+   *   Machine name.
+   * @param list<string> $services
+   *   Service keys.
+   * @param int $weight
+   *   Order.
+   */
+  protected function room(string $id, array $services = [], int $weight = 0): void {
+    AppointmentRoom::create(['id' => $id, 'label' => ucfirst($id), 'services' => $services, 'weight' => $weight])->save();
+  }
+
+  /**
    * Saves an appointment directly, bypassing the booking rules.
    */
-  protected function existing(AppointmentServiceInterface $service, int $start, string $status = AppointmentInterface::CONFIRMED, ?int $hold_expires = NULL): AppointmentInterface {
+  protected function existing(AppointmentServiceInterface $service, int $start, string $status = AppointmentInterface::CONFIRMED, ?int $hold_expires = NULL, ?string $room = NULL): AppointmentInterface {
     $appointment = $this->draft($service, $start);
+    if ($room !== NULL) {
+      $appointment->set('room', $room);
+    }
     $end = $start + $service->getDuration() * 60;
     $appointment->set('end', $end);
     $appointment->set('busy_until', $end + $service->getBuffer() * 60);
@@ -123,11 +146,11 @@ abstract class AppointmentsKernelTestBase extends KernelTestBase {
    * @return list<string>
    *   Times.
    */
-  protected function times(AppointmentServiceInterface $service, string $date, ?int $ignore = NULL): array {
+  protected function times(AppointmentServiceInterface $service, string $date, ?int $ignore = NULL, ?string $room = NULL): array {
     $tz = new \DateTimeZone('America/Bogota');
     return array_map(
       static fn (int $t): string => (new \DateTimeImmutable('@' . $t))->setTimezone($tz)->format('H:i'),
-      $this->container->get('appointments.calendar')->slots($service, $date, $ignore),
+      $this->container->get('appointments.calendar')->slots($service, $date, $ignore, $room),
     );
   }
 
