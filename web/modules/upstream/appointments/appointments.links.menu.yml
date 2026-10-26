@@ -1,0 +1,11 @@
+entity.appointment.collection:
+  title: 'Appointments'
+  description: 'Booked appointments, services and the calendar settings.'
+  route_name: entity.appointment.collection
+  parent: system.admin_content
+  weight: 5
+appointments.settings:
+  title: 'Appointments'
+  description: 'Opening hours, closures, booking rules and payment.'
+  route_name: appointments.settings
+  parent: system.admin_config_system

@@ -1,0 +1,30 @@
+{#
+/**
+ * @file
+ * The client's page for one appointment.
+ *
+ * Available variables:
+ * - details: label => value pairs.
+ * - links: list of title and url.
+ * - locked: TRUE when the appointment is too close to be changed online.
+ */
+#}
+<div class="appointments">
+  <dl class="appointments-details">
+    {% for label, value in details %}
+      <dt>{{ label }}</dt>
+      <dd>{{ value }}</dd>
+    {% endfor %}
+  </dl>
+  {% if links %}
+    <ul class="appointments-actions">
+      {% for link in links %}
+        <li><a class="appointments-slot" href="{{ link.url }}" rel="nofollow">{{ link.title }}</a></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if locked %}
+    <p class="appointments-note">{{ 'It is too close to the appointment to change it online. Please call us.'|t }}</p>
+  {% endif %}
+  <p class="appointments-note">{{ 'Keep this page private: its address is what lets you change the appointment.'|t }}</p>
+</div>

@@ -116,4 +116,39 @@ final class SeedRunnerCoreTest extends KernelTestBase {
     $this->container->get('site_seed.runner')->run('/nonexistent/seed.yml');
   }
 
+  /**
+   * With no installed module carrying data/seeds/, the site seed fails loudly.
+   */
+  public function testRunSiteWithoutSeedFiles(): void {
+    $this->assertSame([], $this->container->get('site_seed.runner')->seedFiles());
+    $this->expectException(SeedException::class);
+    $this->container->get('site_seed.runner')->runSite();
+  }
+
+  /**
+   * The site seed runs data/seeds/*.yml of every installed site module.
+   */
+  public function testRunSiteFindsModuleSeeds(): void {
+    $this->enableModules(['site_seed_test']);
+    $runner = $this->container->get('site_seed.runner');
+
+    $files = $runner->seedFiles();
+    $this->assertCount(1, $files);
+    $this->assertStringEndsWith('/site_seed_test/data/seeds/site.yml', $files[0]);
+
+    $check = $runner->runSite(TRUE);
+    $this->assertSame(1, $check['tally']['terms']);
+    $this->assertSame(0, $this->entityCount('taxonomy_term'));
+
+    $first = $runner->runSite();
+    $this->assertSame(1, $first['tally']['terms']);
+    $this->assertSame(1, $first['tally']['menu_links']);
+    $this->assertSame([], $first['unhandled']);
+    $this->assertSame($files, $first['files']);
+
+    $second = $runner->runSite()['tally'];
+    $this->assertSame(0, $second['terms']);
+    $this->assertSame(0, $second['menu_links']);
+  }
+
 }

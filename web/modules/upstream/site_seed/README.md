@@ -8,19 +8,27 @@ to carry its own copy of (PROTOCOL D27).
 ## How a site uses it
 
 1. Enable `site_seed` (in `config/sync`, `core.extension`).
-2. Keep the site's own `property:seed` command (the alias every deploy runs)
-   and make it call the runner with the site's seed file:
+2. Put the seed data in the site's custom module, `data/seeds/*.yml`.
+3. Delete the site's own seed command. `property:seed`, the alias every deploy
+   runs, belongs to this module (`drush site-seed:site`): it runs
+   `data/seeds/*.yml` of every installed module that is not core or contrib, in
+   path order. A site that defines `property:seed` itself while `site_seed` is
+   enabled has two commands under one alias.
+4. If the site's install hook seeds, it calls the same thing:
 
    ```php
-   $result = \Drupal::service('site_seed.runner')->run($module_path . '/data/seeds/catalogue.yml');
+   $result = \Drupal::service('site_seed.runner')->runSite();
    // $result['tally']: what changed, by kind. $result['unhandled']: sections
-   // the site handles itself (e.g. its own appointment services).
+   // no handler took. $result['files']: the seed files run.
    ```
 
-3. Delete the site's own copy of the seeding code.
+By hand: `drush property:seed --check` for the whole site, or
+`drush site-seed:run <file> [--check]` for one file. `--check` compares and
+counts as a real run and writes nothing.
 
-By hand: `drush site-seed:run <file> [--check]`. `--check` runs the whole seed
-inside a transaction that is rolled back, and prints what it would change.
+Upstream modules never ship `data/seeds/`: seed data is the site's. A module
+with a section of its own ships a handler for it instead (below);
+`appointments` does this for `appointment_services`.
 
 ## Sections
 
@@ -34,9 +42,12 @@ inside a transaction that is rolled back, and prints what it would change.
 | `aliases` | system path | |
 | `translations` | .po strings | a string customised in the admin is never overwritten |
 
-A section no handler takes is returned in `unhandled`; a site adds its own
-handler by tagging a service `site_seed.handler` (see
-`Handler\SeedHandlerInterface`).
+A section no handler takes is returned in `unhandled`, and `property:seed`
+warns about it. A module adds a handler for its own section by tagging a
+service `site_seed.handler` (see `Handler\SeedHandlerInterface`). A module that
+must also work without `site_seed` registers that service from its service
+provider only when `site_seed` is installed (see
+`appointments\AppointmentsServiceProvider`).
 
 **Variation titles.** A variation saved without a title breaks add-to-cart
 (the cart message prints its label; a NULL label is a TypeError, a 500). Where

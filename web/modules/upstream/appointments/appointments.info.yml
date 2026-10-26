@@ -1,0 +1,11 @@
+name: 'Appointments'
+type: module
+description: 'Calendly-style booking on one calendar: services with a duration, opening hours and closures, a public slot picker, confirmation mail with a calendar invite, and cancel or reschedule by private link.'
+core_version_requirement: ^11
+package: Appointments
+configure: appointments.settings
+dependencies:
+  - drupal:options
+  - drupal:user
+'interface translation project': appointments
+'interface translation server pattern': modules/upstream/appointments/translations/%language.po

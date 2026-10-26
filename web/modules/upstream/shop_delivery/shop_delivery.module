@@ -1,0 +1,33 @@
+<?php
+
+/**
+ * @file
+ * Hooks for shop_delivery.
+ */
+
+declare(strict_types=1);
+
+use Drupal\commerce_order\Entity\OrderInterface;
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+
+/**
+ * Implements hook_ENTITY_TYPE_view() for commerce_order.
+ *
+ * A customer looking at their order in their account gets the same link
+ * the checkout gave them, to the page that follows its delivery.
+ */
+function shop_delivery_commerce_order_view(array &$build, OrderInterface $order, EntityViewDisplayInterface $display, string $view_mode): void {
+  if ($view_mode !== 'user' || $order->getState()->getId() === 'draft') {
+    return;
+  }
+  if (\Drupal::service('shop_delivery.deliveries')->ofOrder($order) === []) {
+    return;
+  }
+  $build['shop_delivery_tracking'] = [
+    '#type' => 'link',
+    '#title' => 'Seguir mi domicilio',
+    '#url' => \Drupal::service('shop_delivery.tracking_token')->url($order),
+    '#attributes' => ['class' => ['button', 'button--primary']],
+    '#weight' => -10,
+  ];
+}

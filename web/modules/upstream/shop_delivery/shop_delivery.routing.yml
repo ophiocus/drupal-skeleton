@@ -1,0 +1,69 @@
+shop_delivery.board:
+  path: '/admin/commerce/domicilios'
+  defaults:
+    _form: '\Drupal\shop_delivery\Form\DispatchBoardForm'
+    _title: 'Domicilios'
+  requirements:
+    _permission: 'dispatch shop deliveries'
+
+shop_delivery.settlement:
+  path: '/admin/commerce/domicilios/liquidacion'
+  defaults:
+    _form: '\Drupal\shop_delivery\Form\SettlementForm'
+    _title: 'Liquidación de repartidores'
+  requirements:
+    _permission: 'settle shop deliveries'
+
+shop_delivery.courier:
+  path: '/repartidor'
+  defaults:
+    _controller: '\Drupal\shop_delivery\Controller\CourierController::list'
+    _title: 'Mis entregas'
+  requirements:
+    _permission: 'deliver shop shipments'
+
+shop_delivery.courier_shipment:
+  path: '/repartidor/entrega/{commerce_shipment}'
+  defaults:
+    _form: '\Drupal\shop_delivery\Form\CourierShipmentForm'
+    _title_callback: '\Drupal\shop_delivery\Form\CourierShipmentForm::title'
+  requirements:
+    _custom_access: '\Drupal\shop_delivery\Form\CourierShipmentForm::access'
+    commerce_shipment: \d+
+  options:
+    parameters:
+      commerce_shipment:
+        type: entity:commerce_shipment
+
+# The customer's own page for one order, reached by the link the checkout
+# shows. Anonymous on purpose (guest checkout), so the HMAC in the path is
+# the access, and no_cache keeps it out of the page cache and, through its
+# "private" Cache-Control, out of the edge.
+shop_delivery.tracking:
+  path: '/pedido/{commerce_order}/{token}'
+  defaults:
+    _controller: '\Drupal\shop_delivery\Controller\TrackingController::view'
+    _title: 'Tu pedido'
+  requirements:
+    _custom_access: '\Drupal\shop_delivery\Controller\TrackingController::access'
+    commerce_order: \d+
+  options:
+    no_cache: TRUE
+    parameters:
+      commerce_order:
+        type: entity:commerce_order
+
+# Address search for the delivery pin (maper_nominatim, experimental). POST
+# so the customer's address never travels in a URL, with the session's CSRF
+# token so only the site's own form can ask.
+shop_delivery.locate:
+  path: '/domicilios/ubicar'
+  defaults:
+    _controller: '\Drupal\shop_delivery\Controller\LocateController::locate'
+  methods: [POST]
+  requirements:
+    # Open on purpose: guests check out too. Flood-limited in the controller.
+    _access: 'TRUE'
+    _csrf_request_header_token: 'TRUE'
+  options:
+    no_cache: TRUE

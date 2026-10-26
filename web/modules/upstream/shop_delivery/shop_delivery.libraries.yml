@@ -1,0 +1,25 @@
+pin:
+  js:
+    js/pin.js: {}
+  css:
+    component:
+      css/delivery.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/once
+
+delivery:
+  css:
+    component:
+      css/delivery.css: {}
+
+tracking:
+  js:
+    js/tracking.js: {}
+  css:
+    component:
+      css/delivery.css: {}
+  dependencies:
+    - core/drupal
+    - core/once

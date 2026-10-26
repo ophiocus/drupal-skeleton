@@ -5,6 +5,29 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-26 — property:seed is site_seed's; appointments and shop_delivery are upstream (D30)
+
+- `site_seed`: `drush site-seed:site` (alias `property:seed`, `--check`) runs
+  `data/seeds/*.yml` of every installed module that is not core or contrib.
+  `SeedRunner::runSite()` and `seedFiles()` do the same from PHP, for a site's
+  install hook. A site enabling `site_seed` deletes its own seed command. The
+  README no longer claims `--check` is a rolled-back transaction. Kernel
+  tests `testRunSiteFindsModuleSeeds` and `testRunSiteWithoutSeedFiles`.
+- New upstream module `appointments` (+ `appointments_commerce`): booking on
+  one calendar. It ships a `site_seed` handler for `appointment_services`,
+  registered only where `site_seed` is installed. `ServiceSeeder::converge()`
+  takes `$write` for check runs.
+- New upstream module `shop_delivery`: home delivery on Commerce (Domicilio
+  shipping method, door pin on a maper map, dispatch board, courier page,
+  settlement, tracking link). Permissions `dispatch shop deliveries`,
+  `settle shop deliveries`, `deliver shop shipments`.
+- Test gate: `scripts/ci/unmet_upstream.php` lists upstream extensions whose
+  dependencies the codebase lacks. `tests.sh` leaves them out of phpstan and
+  PHPUnit, and now also runs upstream submodules' suites.
+- **For a site that carries its own copy** of `appointments` (or the delivery
+  module under its old name), the pull request that syncs these in also
+  deletes the copy (D26: two copies of one module name break discovery).
+
 ## 2026-10-26 — managing_admins: the fleet's managing admins on every site
 
 - New upstream module `web/modules/upstream/managing_admins` (PROTOCOL D29).

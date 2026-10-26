@@ -1,0 +1,50 @@
+field.widget.settings.shop_delivery_pin:
+  type: mapping
+  label: 'Delivery pin widget settings'
+  mapping:
+    require_pin:
+      type: boolean
+      label: 'Require the pin in this form'
+
+commerce_shipping.commerce_shipping_method.plugin.shop_domicilio:
+  type: commerce_shipping_method_configuration
+  mapping:
+    rate_label:
+      type: label
+      label: 'Rate label'
+    fee_mode:
+      type: string
+      label: 'Fee mode: flat, distance or zones'
+    flat_amount:
+      type: field.value.commerce_price
+      label: 'Flat fee'
+    distance_base:
+      type: field.value.commerce_price
+      label: 'Distance: base fee'
+    distance_per_km:
+      type: field.value.commerce_price
+      label: 'Distance: fee per kilometre'
+    distance_max_km:
+      type: float
+      label: 'Distance: maximum, in kilometres (0: none)'
+    round_to:
+      type: integer
+      label: 'Round up to a multiple of'
+    zones:
+      type: sequence
+      label: 'Zones'
+      sequence:
+        type: mapping
+        mapping:
+          name:
+            type: label
+            label: 'Name'
+          amount:
+            type: field.value.commerce_price
+            label: 'Fee'
+          geojson:
+            type: string
+            label: 'Polygon, as GeoJSON'
+    cod_settlement:
+      type: boolean
+      label: 'Couriers collect cash on delivery and settle it'

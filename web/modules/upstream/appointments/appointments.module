@@ -1,0 +1,52 @@
+<?php
+
+/**
+ * @file
+ * Hooks for the appointments module.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_theme().
+ */
+function appointments_theme(): array {
+  return [
+    'appointments_services' => [
+      'variables' => ['services' => []],
+    ],
+    'appointments_slots' => [
+      'variables' => [
+        'service' => [],
+        'days' => [],
+        'moving' => '',
+        'prev' => '',
+        'next' => '',
+        'back' => '',
+        'timezone' => '',
+      ],
+    ],
+    'appointments_manage' => [
+      'variables' => ['details' => [], 'links' => [], 'locked' => FALSE],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_mail().
+ */
+function appointments_mail(string $key, array &$message, array $params): void {
+  \Drupal::service('appointments.messages')->build($key, $message, $params);
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * Releases the slots of bookings whose online payment never came.
+ */
+function appointments_cron(): void {
+  $expired = \Drupal::service('appointments.booking')->expireHolds();
+  if ($expired) {
+    \Drupal::logger('appointments')->info('Released @n unpaid bookings.', ['@n' => $expired]);
+  }
+}
