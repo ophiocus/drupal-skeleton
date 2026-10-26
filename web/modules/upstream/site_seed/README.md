@@ -37,7 +37,7 @@ with a section of its own ships a handler for it instead (below);
 | `stores` | name, or a name under `formerly:` | the default store is born under the uuid `commerce_store.settings` names; address keys the row leaves out are kept; an optional `location: {field, lat, lon}` puts the store on the map through its Maper point field (compared at seven decimals) |
 | `taxonomy` | vocabulary + name, or `formerly:` | keyed by vocabulary id |
 | `products` | the variations' SKUs, never the title | price, status, body, stores, category, image; variations titled (see below) |
-| `menu` | menu + link URI | |
+| `menu` | menu + link URI | optional `parent`: the URI of another link in the same menu, whose row comes earlier in the file (a dropdown); optional `expanded: true` shows a parent's children open. A link's URI must be unique in its menu |
 | `shipping_methods` | name | created once, never converged: fees and zones are the shop's |
 | `aliases` | system path | |
 | `translations` | .po strings | a string customised in the admin is never overwritten |
