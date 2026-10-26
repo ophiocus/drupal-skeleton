@@ -15,7 +15,7 @@
         "drupal/encrypt": "^3.2",
         "drupal/google_tag": "^2.0",
         "drupal/key": "^1.22",
-        "drupal/maper": "1.0.0-alpha2",
+        "drupal/maper": "1.0.0-alpha3",
         "drupal/metatag": "^2.2",
         "drupal/pathauto": "^1.15",
         "drupal/real_aes": "^2.6",

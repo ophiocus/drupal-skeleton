@@ -5,6 +5,21 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-26 — maper 1.0.0-alpha3: one location field
+
+- `upstream-configuration`: `drupal/maper` 1.0.0-alpha2 → **1.0.0-alpha3**.
+  The lock also takes `drupal/metatag` 2.2.1 and `guzzlehttp/guzzle` 7.16.1.
+- alpha3 places every node by a Maper point field. Gone: the site-wide
+  coordinate fields (`maper.settings` `coordinates`), the block's "site's
+  coordinate fields" option, the Views style's `latitude_field` /
+  `longitude_field` (now `point_field`), and Maper: Nominatim's
+  `town_lat_field` / `town_lon_field` (now `point_field` and
+  `town_point_field`). Nothing changes in the database.
+- **A site syncing to this brings its config to the new shape in the same
+  pull request:** `maper.settings` without `coordinates`, and every Views
+  style, block and Nominatim setting on a point field. Maper's release
+  notes: drupal.org/project/maper, 1.0.0-alpha3.
+
 ## 2026-10-24 — ga4_report: the edge hit rate is readers', the cache warmer counted apart
 
 - `CloudflareSource`: the minute series (the 24 h hit-rate tile, the minute
