@@ -37,7 +37,9 @@ function modules_under(string $root, string $dir): array {
     }
     $path = substr($file->getPath(), strlen($root) + 1);
     $module = substr($name, 0, -9);
-    if (basename($path) !== $module || preg_match('#/(tests|node_modules)/#', "/$path/")) {
+    // The directory need not carry the module's name: Commerce keeps
+    // commerce_checkout under modules/checkout/.
+    if (preg_match('#/(tests|node_modules)/#', "/$path/")) {
       continue;
     }
     $found[$module] = $path;
