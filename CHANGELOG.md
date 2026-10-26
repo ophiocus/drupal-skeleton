@@ -5,6 +5,15 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-26 — the test gate runs shop_delivery and appointments_commerce on shops
+
+- `scripts/ci/unmet_upstream.php` counted a module only where its directory
+  carried its name, so it missed Commerce's submodules (`commerce_checkout`
+  lives under `modules/checkout/`) and left `shop_delivery` and
+  `appointments_commerce` untested on every Commerce site. It now takes every
+  `*.info.yml` outside `tests/` and `node_modules/`. Sites without Commerce
+  still skip both. Found by the Panapolis lab (21 tests, 390 assertions pass).
+
 ## 2026-10-26 — site_seed: nested menu links
 
 - `menu:` rows take an optional `parent` (the URI of an earlier row's link in
