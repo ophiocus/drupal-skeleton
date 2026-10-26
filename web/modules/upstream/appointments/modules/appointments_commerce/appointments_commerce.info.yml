@@ -1,0 +1,13 @@
+name: 'Appointments: Commerce'
+type: module
+description: 'Online payment for appointments through the Drupal Commerce checkout: a deposit or the full price, chosen in the appointment settings.'
+core_version_requirement: ^11
+package: Appointments
+dependencies:
+  - appointments:appointments
+  - commerce:commerce_cart
+  - commerce:commerce_checkout
+  - commerce:commerce_order
+  - commerce:commerce_store
+'interface translation project': appointments_commerce
+'interface translation server pattern': modules/upstream/appointments/modules/appointments_commerce/translations/%language.po

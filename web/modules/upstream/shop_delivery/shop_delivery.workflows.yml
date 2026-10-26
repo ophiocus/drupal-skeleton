@@ -1,0 +1,50 @@
+# One delivery from the shop's door to the customer's.
+#
+# draft, ready and canceled, and the finalize and cancel transitions, keep the
+# ids commerce_shipping's OrderSubscriber applies: placing an order on the
+# fulfillment workflow finalizes its shipments, canceling it cancels them.
+# There is no "ship" transition on purpose: commerce_shipping applies "ship"
+# when an order is fulfilled, and a delivery is done when its courier says
+# so, not when someone completes the order in the admin.
+shipment_domicilio:
+  id: shipment_domicilio
+  group: commerce_shipment
+  label: 'Domicilio'
+  states:
+    draft:
+      label: 'Borrador'
+    ready:
+      label: 'Por despachar'
+    asignado:
+      label: 'Asignado'
+    en_camino:
+      label: 'En camino'
+    entregado:
+      label: 'Entregado'
+    canceled:
+      label: 'Cancelado'
+  transitions:
+    finalize:
+      label: 'Confirmar domicilio'
+      from: [draft]
+      to: ready
+    asignar:
+      label: 'Asignar repartidor'
+      from: [ready]
+      to: asignado
+    recoger:
+      label: 'Recogido en la tienda'
+      from: [asignado]
+      to: en_camino
+    entregar:
+      label: 'Entregado'
+      from: [en_camino]
+      to: entregado
+    liberar:
+      label: 'Devolver a por despachar'
+      from: [asignado, en_camino]
+      to: ready
+    cancel:
+      label: 'Cancelar domicilio'
+      from: [draft, ready, asignado, en_camino]
+      to: canceled

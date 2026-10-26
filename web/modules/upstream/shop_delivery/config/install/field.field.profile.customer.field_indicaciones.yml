@@ -1,0 +1,18 @@
+langcode: es
+status: true
+dependencies:
+  config:
+    - field.storage.profile.field_indicaciones
+    - profile.type.customer
+id: profile.customer.field_indicaciones
+field_name: field_indicaciones
+entity_type: profile
+bundle: customer
+label: 'Indicaciones para el repartidor'
+description: 'Torre, apartamento, portería, una referencia: lo que ayude a encontrar la puerta.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

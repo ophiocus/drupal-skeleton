@@ -12,7 +12,9 @@
 #               install from config/install, so a broken config/sync file
 #               would otherwise pass them all and fail only at `drush cim`
 #   phpcs       Drupal + DrupalPractice over custom and upstream code (phpcs.xml.dist)
-#   phpstan     static analysis over custom code (phpstan.neon)
+#   phpstan     static analysis over custom code (phpstan.neon); an upstream
+#               module whose dependencies this codebase lacks is left out of
+#               phpstan and PHPUnit (scripts/ci/unmet_upstream.php)
 #   unit        PHPUnit Unit suites of every custom module, submodule, theme
 #   kernel      PHPUnit Kernel suites (needs SIMPLETEST_DB)
 #   functional  PHPUnit Functional suites (needs SIMPLETEST_DB and a web
@@ -42,17 +44,53 @@ WANT=("$@")
 open_group() { [ -n "${GITHUB_ACTIONS:-}" ] && echo "::group::$1" || echo "== $1"; }
 close_group() { [ -n "${GITHUB_ACTIONS:-}" ] && echo "::endgroup::"; return 0; }
 
+# Upstream extensions whose dependencies this codebase does not carry (a site
+# without Commerce carries shop_delivery). They are left out of phpstan and of
+# the PHPUnit suites; scripts/ci/unmet_upstream.php says why on stderr.
+UNMET=()
+while IFS= read -r line; do [ -n "$line" ] && UNMET+=("$line"); done \
+  < <(php scripts/ci/unmet_upstream.php)
+
+unmet_path() {
+  local u
+  for u in "${UNMET[@]}"; do
+    case "$1" in "$u"/*) return 0 ;; esac
+  done
+  return 1
+}
+
+phpstan_gate() {
+  local args=(analyse --no-progress --memory-limit=1G) conf u
+  if [ ${#UNMET[@]} -gt 0 ]; then
+    conf="$(mktemp --suffix=.neon)"
+    {
+      echo "includes:"
+      echo "  - $PWD/phpstan.neon"
+      echo "parameters:"
+      echo "  excludePaths:"
+      for u in "${UNMET[@]}"; do echo "    - $PWD/$u"; done
+    } > "$conf"
+    args+=(-c "$conf")
+  fi
+  vendor/bin/phpstan "${args[@]}"
+}
+
 phpunit_suite() {
-  local type="$1"
+  local type="$1" d
   # The suite's directories across custom code. An array, not printf: with
   # no match, printf would still print one empty line and PHPUnit would be
   # handed "" as a directory.
-  local dirs=(
+  local found=(
     web/modules/custom/*/tests/src/"$type"
     web/modules/custom/*/modules/*/tests/src/"$type"
     web/modules/upstream/*/tests/src/"$type"
+    web/modules/upstream/*/modules/*/tests/src/"$type"
     web/themes/custom/*/tests/src/"$type"
   )
+  local dirs=()
+  for d in "${found[@]}"; do
+    unmet_path "$d" || dirs+=("$d")
+  done
   if [ ${#dirs[@]} -eq 0 ]; then
     echo "no $type tests in custom code"
     return 0
@@ -127,7 +165,7 @@ run_gate() {
   case "$1" in
     integrity)  integrity ;;
     phpcs)     vendor/bin/phpcs ;;
-    phpstan)    vendor/bin/phpstan analyse --no-progress --memory-limit=1G ;;
+    phpstan)    phpstan_gate ;;
     unit)       phpunit_suite Unit ;;
     kernel)     phpunit_suite Kernel ;;
     functional) phpunit_suite Functional ;;

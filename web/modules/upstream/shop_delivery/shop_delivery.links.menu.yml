@@ -1,0 +1,11 @@
+shop_delivery.board:
+  title: 'Domicilios'
+  description: 'Assign couriers to the orders waiting for delivery.'
+  route_name: shop_delivery.board
+  parent: commerce.admin_commerce
+  weight: -5
+shop_delivery.settlement:
+  title: 'Liquidación de repartidores'
+  description: 'Settle the cash collected on delivery.'
+  route_name: shop_delivery.settlement
+  parent: shop_delivery.board

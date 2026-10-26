@@ -1,0 +1,114 @@
+/**
+ * @file
+ * Booking pages. Neutral on purpose: a theme brands them through the custom
+ * properties below.
+ */
+
+.appointments {
+  --appointments-accent: var(--color--primary-50, #1d6f72);
+  --appointments-surface: #f6f7f7;
+  --appointments-radius: 0.5rem;
+}
+
+.appointments-services {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.appointments-service {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  border-radius: var(--appointments-radius);
+  background: var(--appointments-surface);
+}
+
+.appointments-service__title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.appointments-service__meta,
+.appointments-note {
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.appointments-button,
+.appointments-slot {
+  display: inline-block;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--appointments-accent);
+  border-radius: var(--appointments-radius);
+  color: var(--appointments-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.appointments-button {
+  align-self: flex-start;
+  margin-top: auto;
+  background: var(--appointments-accent);
+  color: #fff;
+}
+
+.appointments-slot:hover,
+.appointments-slot:focus {
+  background: var(--appointments-accent);
+  color: #fff;
+}
+
+.appointments-days {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.appointments-day__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+/* Only the first letter: "Jueves 22 de octubre", not "De Octubre". */
+.appointments-day__title::first-letter {
+  text-transform: uppercase;
+}
+
+.appointments-day__slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.appointments-pager {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+
+.appointments-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.25rem;
+}
+
+.appointments-details dt {
+  font-weight: 600;
+}
+
+.appointments-details dd {
+  margin: 0;
+}
+
+.appointments-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}

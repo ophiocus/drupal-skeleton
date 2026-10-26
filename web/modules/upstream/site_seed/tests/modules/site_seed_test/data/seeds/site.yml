@@ -1,0 +1,10 @@
+# The seed file runSite() finds in an installed module: a term and a menu link.
+taxonomy:
+  tags:
+    - name: 'Granos'
+      weight: 0
+menu:
+  - menu: main
+    uri: 'internal:/tienda'
+    title: 'Tienda'
+    weight: 0

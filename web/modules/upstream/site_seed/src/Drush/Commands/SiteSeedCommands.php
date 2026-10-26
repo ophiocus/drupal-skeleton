@@ -12,11 +12,10 @@ use Drush\Commands\AutowireTrait;
 use Drush\Commands\DrushCommands;
 
 /**
- * Runs a seed file from the shell.
+ * The seed step, and a seed file run by hand.
  *
- * A site's own `property:seed` (the alias every deploy runs) calls the runner
- * with its seed file; this command is for running or checking any seed file
- * by hand.
+ * `property:seed` is the alias the platform's deploy runs on every release, so
+ * a site that enables site_seed must not define it again in its own code.
  */
 final class SiteSeedCommands extends DrushCommands {
   use AutowireTrait;
@@ -25,6 +24,19 @@ final class SiteSeedCommands extends DrushCommands {
     private readonly SeedRunner $runner,
   ) {
     parent::__construct();
+  }
+
+  /**
+   * Converges every seed file of the site (data/seeds/*.yml of its modules).
+   */
+  #[Command(name: 'site-seed:site', aliases: ['property:seed'])]
+  #[Option(name: 'check', description: 'Report what would change; change nothing.')]
+  public function site(array $options = ['check' => FALSE]): void {
+    $result = $this->runner->runSite((bool) $options['check']);
+    $this->output()->writeln(($options['check'] ? 'seed (check, nothing written): ' : 'seed: ') . self::format($result['tally']));
+    if ($result['unhandled']) {
+      $this->logger()->warning('not handled by any seed handler: @s', ['@s' => implode(', ', $result['unhandled'])]);
+    }
   }
 
   /**

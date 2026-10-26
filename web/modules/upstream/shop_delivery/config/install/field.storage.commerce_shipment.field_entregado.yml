@@ -1,0 +1,17 @@
+langcode: es
+status: true
+dependencies:
+  module:
+    - commerce_shipping
+id: commerce_shipment.field_entregado
+field_name: field_entregado
+entity_type: commerce_shipment
+type: timestamp
+settings: {  }
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

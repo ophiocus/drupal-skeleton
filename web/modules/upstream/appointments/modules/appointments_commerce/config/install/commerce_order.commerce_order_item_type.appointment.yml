@@ -1,0 +1,12 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - appointments_commerce
+id: appointment
+label: Appointment
+traits: {  }
+locked: true
+purchasableEntityType: ''
+orderType: default

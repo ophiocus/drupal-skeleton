@@ -1,0 +1,572 @@
+# Spanish translation of Appointments.
+msgid ""
+msgstr ""
+"Project-Id-Version: appointments\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+"Language: es\n"
+
+msgid "Appointments"
+msgstr "Citas"
+
+msgid "Calendly-style booking on one calendar: services with a duration, opening hours and closures, a public slot picker, confirmation mail with a calendar invite, and cancel or reschedule by private link."
+msgstr "Agenda al estilo Calendly sobre un calendario: servicios con duración, horario de atención y cierres, selector público de horas, correo de confirmación con invitación de calendario, y cancelación o cambio por enlace privado."
+
+msgid "Add service"
+msgstr "Agregar servicio"
+
+msgid "Open the booking page"
+msgstr "Abrir la página de agendamiento"
+
+msgid "Booked appointments, services and the calendar settings."
+msgstr "Citas agendadas, servicios y ajustes del calendario."
+
+msgid "Opening hours, closures, booking rules and payment."
+msgstr "Horario de atención, cierres, reglas de agendamiento y pago."
+
+msgid "Services"
+msgstr "Servicios"
+
+msgid "Administer appointments"
+msgstr "Administrar citas"
+
+msgid "Change the opening hours, closures, payment mode and services, and edit or delete any appointment."
+msgstr "Cambiar el horario, los cierres, el modo de pago y los servicios, y editar o eliminar cualquier cita."
+
+msgid "View and manage appointments"
+msgstr "Ver y gestionar citas"
+
+msgid "See the appointment list and confirm, complete or cancel appointments. For clinic staff."
+msgstr "Ver la lista de citas y confirmarlas, cerrarlas o cancelarlas. Para el personal."
+
+msgid "Book appointments"
+msgstr "Agendar citas"
+
+msgid "Use the public booking pages. Give it to anonymous users for a public calendar."
+msgstr "Usar las páginas públicas de agendamiento. Dáselo a los usuarios anónimos para un calendario público."
+
+msgid "Book an appointment"
+msgstr "Agenda una cita"
+
+msgid "Your appointment"
+msgstr "Tu cita"
+
+msgid "Cancel your appointment"
+msgstr "Cancelar tu cita"
+
+msgid "Move your appointment"
+msgstr "Cambiar la hora de tu cita"
+
+msgid "Appointment settings"
+msgstr "Ajustes de citas"
+
+msgid "When"
+msgstr "Cuándo"
+
+msgid "Service"
+msgstr "Servicio"
+
+msgid "Client"
+msgstr "Cliente"
+
+msgid "Contact"
+msgstr "Contacto"
+
+msgid "Status"
+msgstr "Estado"
+
+msgctxt "appointment status"
+msgid "expired"
+msgstr "vencida"
+
+msgid "Confirm (paid)"
+msgstr "Confirmar (pagada)"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "appointment status"
+msgid "Completed"
+msgstr "Atendida"
+
+msgctxt "appointment status"
+msgid "No-show"
+msgstr "No asistió"
+
+msgid "Show upcoming appointments"
+msgstr "Ver las próximas citas"
+
+msgid "Show past appointments"
+msgstr "Ver citas pasadas"
+
+msgid "No past appointments."
+msgstr "No hay citas pasadas."
+
+msgid "No upcoming appointments."
+msgstr "No hay próximas citas."
+
+msgid "Name"
+msgstr "Nombre"
+
+msgid "Key"
+msgstr "Clave"
+
+msgid "Duration"
+msgstr "Duración"
+
+msgid "Price"
+msgstr "Precio"
+
+msgid "Bookable"
+msgstr "Se puede agendar"
+
+msgid "@min min + @buffer min"
+msgstr "@min min + @buffer min"
+
+msgid "Yes"
+msgstr "Sí"
+
+msgid "No"
+msgstr "No"
+
+msgid "Book: @service"
+msgstr "Agendar: @service"
+
+msgid "@min min"
+msgstr "@min min"
+
+msgid "That time is no longer free. Please choose another."
+msgstr "Esa hora ya no está libre. Por favor elige otra."
+
+msgid "Paid online"
+msgstr "Pagado en línea"
+
+msgid "Add to my calendar"
+msgstr "Agregar a mi calendario"
+
+msgid "Choose another time"
+msgstr "Elegir otra hora"
+
+msgid "Cancel the appointment"
+msgstr "Cancelar la cita"
+
+msgid "Deposit of @amount online to hold the time; the rest at the appointment."
+msgstr "Abono de @amount en línea para reservar la hora; el resto en la cita."
+
+msgid "Paid online when booking: @amount."
+msgstr "Se paga en línea al agendar: @amount."
+
+msgid "Confirmed: %a."
+msgstr "Confirmada: %a."
+
+msgid "%a could not be confirmed: its time has been taken."
+msgstr "No se pudo confirmar %a: su hora ya fue tomada."
+
+msgid "Cancelled: %a. The client has been told."
+msgstr "Cancelada: %a. Se le avisó al cliente."
+
+msgid "Saved: %a."
+msgstr "Guardado: %a."
+
+msgid "Appointment"
+msgstr "Cita"
+
+msgid "appointment"
+msgstr "cita"
+
+msgid "appointments"
+msgstr "citas"
+
+msgctxt "appointment status"
+msgid "Awaiting payment"
+msgstr "Esperando pago"
+
+msgctxt "appointment status"
+msgid "Confirmed"
+msgstr "Confirmada"
+
+msgctxt "appointment status"
+msgid "Cancelled"
+msgstr "Cancelada"
+
+msgid "Start"
+msgstr "Inicio"
+
+msgid "End"
+msgstr "Fin"
+
+msgid "Busy until"
+msgstr "Ocupado hasta"
+
+msgid "End plus the service buffer."
+msgstr "El fin más el margen del servicio."
+
+msgid "Hold expires"
+msgstr "La reserva vence"
+
+msgid "When an unpaid booking releases its slot."
+msgstr "Cuándo una reserva sin pagar libera su hora."
+
+msgid "E-mail"
+msgstr "Correo electrónico"
+
+msgid "Phone"
+msgstr "Teléfono"
+
+msgid "Notes"
+msgstr "Notas"
+
+msgid "Anything we should know before the appointment."
+msgstr "Algo que debamos saber antes de la cita."
+
+msgid "Payment mode at booking"
+msgstr "Modo de pago al agendar"
+
+msgid "none, deposit or full."
+msgstr "ninguno, abono o completo."
+
+msgid "Amount charged online"
+msgstr "Valor cobrado en línea"
+
+msgid "Payment reference"
+msgstr "Referencia de pago"
+
+msgid "Set by the payment integration, e.g. an order number."
+msgstr "La pone la integración de pago, por ejemplo un número de pedido."
+
+msgid "Manage token"
+msgstr "Clave de gestión"
+
+msgctxt "appointment status"
+msgid "Booked"
+msgstr "Agendada"
+
+msgid "service"
+msgstr "servicio"
+
+msgid "services"
+msgstr "servicios"
+
+msgid "A stable machine key, for seed data. Letters, digits, hyphens."
+msgstr "Una clave fija, para los datos semilla. Letras, números y guiones."
+
+msgid "Description"
+msgstr "Descripción"
+
+msgid "Duration (minutes)"
+msgstr "Duración (minutos)"
+
+msgid "Buffer after (minutes)"
+msgstr "Margen después (minutos)"
+
+msgid "Time kept free after each appointment of this service."
+msgstr "Tiempo que queda libre después de cada cita de este servicio."
+
+msgid "In the currency of the appointment settings. 0 for a free service. Charged online only when the payment mode asks for it."
+msgstr "En la moneda de los ajustes de citas. 0 para un servicio gratuito. Se cobra en línea solo cuando el modo de pago lo pide."
+
+msgid "Weight"
+msgstr "Peso"
+
+msgid "Saved: %label."
+msgstr "Guardado: %label."
+
+msgid "Saved the service %label."
+msgstr "Se guardó el servicio %label."
+
+msgid "@service, @when"
+msgstr "@service, @when"
+
+msgid "To hold this time you pay @amount online on the next step."
+msgstr "Para reservar esta hora pagas @amount en línea en el siguiente paso."
+
+msgid "Continue to payment"
+msgstr "Continuar al pago"
+
+msgid "Confirm the appointment"
+msgstr "Confirmar la cita"
+
+msgid "Too many bookings from your connection. Please call us, or try again in an hour."
+msgstr "Demasiadas citas desde tu conexión. Llámanos, o vuelve a intentarlo en una hora."
+
+msgid "Sorry, that time was just taken. Please choose another."
+msgstr "Lo sentimos, alguien acaba de tomar esa hora. Por favor elige otra."
+
+msgid "Your appointment is booked. We sent the details to %mail."
+msgstr "Tu cita quedó agendada. Enviamos los detalles a %mail."
+
+msgid "Cancel your appointment of @when?"
+msgstr "¿Cancelar tu cita del @when?"
+
+msgid "The time will be freed for someone else. About the amount you paid online, we will contact you."
+msgstr "La hora quedará libre para otra persona. Sobre lo que pagaste en línea, te contactaremos."
+
+msgid "The time will be freed for someone else."
+msgstr "La hora quedará libre para otra persona."
+
+msgid "Your appointment is cancelled."
+msgstr "Tu cita quedó cancelada."
+
+msgid "Move your appointment to @new?"
+msgstr "¿Pasar tu cita al @new?"
+
+msgid "It is now on @when."
+msgstr "Ahora está el @when."
+
+msgid "Move it"
+msgstr "Cambiarla"
+
+msgid "Your appointment has moved. We sent you the new details."
+msgstr "Tu cita cambió de hora. Te enviamos los nuevos detalles."
+
+msgid "Sorry, that time is no longer free. Please choose another."
+msgstr "Lo sentimos, esa hora ya no está libre. Por favor elige otra."
+
+msgid "Monday"
+msgstr "Lunes"
+
+msgid "Tuesday"
+msgstr "Martes"
+
+msgid "Wednesday"
+msgstr "Miércoles"
+
+msgid "Thursday"
+msgstr "Jueves"
+
+msgid "Friday"
+msgstr "Viernes"
+
+msgid "Saturday"
+msgstr "Sábado"
+
+msgid "Sunday"
+msgstr "Domingo"
+
+msgid "Opening hours"
+msgstr "Horario de atención"
+
+msgid "Ranges per day as HH:MM-HH:MM, comma-separated (e.g. 08:00-12:00, 14:00-18:00). Leave a day empty when closed."
+msgstr "Franjas por día como HH:MM-HH:MM, separadas por comas (p. ej. 08:00-12:00, 14:00-18:00). Deja vacío el día que no se atiende."
+
+msgid "Closed dates"
+msgstr "Fechas cerradas"
+
+msgid "One date per line, YYYY-MM-DD (holidays, vacations)."
+msgstr "Una fecha por línea, AAAA-MM-DD (festivos, vacaciones)."
+
+msgid "Booking rules"
+msgstr "Reglas de agendamiento"
+
+msgid "Minutes between offered start times"
+msgstr "Minutos entre las horas de inicio ofrecidas"
+
+msgid "Minimum notice (minutes)"
+msgstr "Anticipación mínima (minutos)"
+
+msgid "Days ahead that can be booked"
+msgstr "Días hacia adelante que se pueden agendar"
+
+msgid "Appointments at the same time"
+msgstr "Citas a la misma hora"
+
+msgid "Clients can cancel or move until this many minutes before"
+msgstr "Los clientes pueden cancelar o cambiar hasta estos minutos antes"
+
+msgid "Minutes an unpaid booking holds its time"
+msgstr "Minutos que una reserva sin pagar retiene su hora"
+
+msgid "Time zone"
+msgstr "Zona horaria"
+
+msgid "An IANA name such as America/Bogota. Empty: the site default."
+msgstr "Un nombre IANA como America/Bogota. Vacío: la del sitio."
+
+msgid "Staff e-mail"
+msgstr "Correo del personal"
+
+msgid "Who is told about new, moved and cancelled appointments. Comma-separated. Empty: the site e-mail."
+msgstr "Quién recibe aviso de citas nuevas, cambiadas y canceladas. Separados por comas. Vacío: el correo del sitio."
+
+msgid "Payment"
+msgstr "Pago"
+
+msgid "When booking, the client pays"
+msgstr "Al agendar, el cliente paga"
+
+msgid "Nothing online (pays at the appointment)"
+msgstr "Nada en línea (paga en la cita)"
+
+msgid "A deposit online"
+msgstr "Un abono en línea"
+
+msgid "The full price online"
+msgstr "El precio completo en línea"
+
+msgid "Online payment goes through the shop checkout. Services priced 0 are always booked without payment."
+msgstr "El pago en línea pasa por el checkout de la tienda. Los servicios con precio 0 siempre se agendan sin pago."
+
+msgid "Online payment needs the Appointments: Commerce module. Until it is enabled, every booking is free."
+msgstr "El pago en línea necesita el módulo Appointments: Commerce. Mientras no esté activo, toda cita es sin pago."
+
+msgctxt "appointment payment"
+msgid "Deposit"
+msgstr "Abono"
+
+msgid "A percentage of the price"
+msgstr "Un porcentaje del precio"
+
+msgid "A fixed amount"
+msgstr "Un valor fijo"
+
+msgid "Deposit value"
+msgstr "Valor del abono"
+
+msgid "Currency"
+msgstr "Moneda"
+
+msgid "ISO 4217 code of the service prices, e.g. COP."
+msgstr "Código ISO 4217 de los precios de los servicios, p. ej. COP."
+
+msgid "%range is not a range like 08:00-12:00."
+msgstr "%range no es una franja como 08:00-12:00."
+
+msgid "%date is not a date like 2026-12-25."
+msgstr "%date no es una fecha como 2026-12-25."
+
+msgid "%tz is not a time zone name."
+msgstr "%tz no es un nombre de zona horaria."
+
+msgid "Use a three-letter currency code."
+msgstr "Usa un código de moneda de tres letras."
+
+msgid "A percentage cannot exceed 100."
+msgstr "Un porcentaje no puede pasar de 100."
+
+msgid "New appointment: @service, @when"
+msgstr "Nueva cita: @service, @when"
+
+msgid "Appointment moved: @service, @when"
+msgstr "Cita cambiada: @service, @when"
+
+msgid "Appointment cancelled: @service, @when"
+msgstr "Cita cancelada: @service, @when"
+
+msgid "Paid appointment needs attention: @service, @when"
+msgstr "Cita pagada que requiere atención: @service, @when"
+
+msgid "Appointment: @service, @when"
+msgstr "Cita: @service, @when"
+
+msgid "Client: @name"
+msgstr "Cliente: @name"
+
+msgid "E-mail: @mail"
+msgstr "Correo: @mail"
+
+msgid "Phone: @phone"
+msgstr "Teléfono: @phone"
+
+msgid "Notes: @notes"
+msgstr "Notas: @notes"
+
+msgid "The payment arrived after the hold ran out and the slot had been taken. Contact the client to agree a new time or a refund (payment reference: @ref)."
+msgstr "El pago llegó cuando la reserva ya había vencido y la hora estaba tomada. Contacta al cliente para acordar otra hora o una devolución (referencia de pago: @ref)."
+
+msgid "Your appointment at @site: @when"
+msgstr "Tu cita en @site: @when"
+
+msgid "Your appointment at @site has moved: @when"
+msgstr "Tu cita en @site cambió: @when"
+
+msgid "Your appointment at @site is cancelled"
+msgstr "Tu cita en @site quedó cancelada"
+
+msgid "Your booking at @site was not completed"
+msgstr "Tu reserva en @site no se completó"
+
+msgid "Your appointment at @site"
+msgstr "Tu cita en @site"
+
+msgid "Hello @name,"
+msgstr "Hola @name:"
+
+msgid "Your appointment is confirmed: @service, @when."
+msgstr "Tu cita está confirmada: @service, @when."
+
+msgid "Your appointment has moved to @when (@service)."
+msgstr "Tu cita pasó al @when (@service)."
+
+msgid "Your appointment of @when (@service) is cancelled."
+msgstr "Tu cita del @when (@service) quedó cancelada."
+
+msgid "The payment for @service on @when was not completed in time, so the slot was released. You are welcome to book again."
+msgstr "El pago de @service del @when no se completó a tiempo, así que la hora quedó libre. Puedes volver a agendar cuando quieras."
+
+msgid "@service, @when."
+msgstr "@service, @when."
+
+msgid "Add it to your calendar: @ics"
+msgstr "Agrégala a tu calendario: @ics"
+
+msgid "To cancel or change it: @url"
+msgstr "Para cancelarla o cambiarla: @url"
+
+msgid "It is too close to the appointment to change it online. Please call us."
+msgstr "Ya falta muy poco para la cita para cambiarla en línea. Por favor llámanos."
+
+msgid "Keep this page private: its address is what lets you change the appointment."
+msgstr "No compartas esta página: su dirección es lo que te permite cambiar la cita."
+
+msgid "Choose what you would like to book."
+msgstr "Elige lo que quieres agendar."
+
+msgid "See free times"
+msgstr "Ver horas libres"
+
+msgid "There is nothing to book at the moment."
+msgstr "Por ahora no hay nada para agendar."
+
+msgid "Your appointment is now on @when. Choose the new time."
+msgstr "Tu cita está ahora el @when. Elige la nueva hora."
+
+msgid "No free times on these days."
+msgstr "No hay horas libres en estos días."
+
+msgid "Try the next days."
+msgstr "Prueba los días siguientes."
+
+msgid "Times are in @tz."
+msgstr "Las horas están en @tz."
+
+msgid "Days"
+msgstr "Días"
+
+msgid "‹ Earlier days"
+msgstr "‹ Días anteriores"
+
+msgid "Other services"
+msgstr "Otros servicios"
+
+msgid "Later days ›"
+msgstr "Días siguientes ›"
+
+msgctxt "appointments date"
+msgid "l j F Y, H:i"
+msgstr "l j \\d\\e F \\d\\e Y, H:i"
+
+msgctxt "appointments date"
+msgid "l j F"
+msgstr "l j \\d\\e F"
+
+msgid "@count appointment"
+msgid_plural "@count appointments"
+msgstr[0] "@count cita"
+msgstr[1] "@count citas"
+
+msgid "@count service"
+msgid_plural "@count services"
+msgstr[0] "@count servicio"
+msgstr[1] "@count servicios"

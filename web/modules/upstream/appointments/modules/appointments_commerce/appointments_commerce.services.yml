@@ -1,0 +1,23 @@
+services:
+  appointments.checkout:
+    class: Drupal\appointments_commerce\CommerceCheckout
+    arguments:
+      - '@commerce_cart.cart_provider'
+      - '@commerce_cart.cart_manager'
+      - '@commerce_store.current_store'
+      - '@appointments.messages'
+      - '@appointments.calendar'
+      - '@entity_type.manager'
+
+  appointments_commerce.order_subscriber:
+    class: Drupal\appointments_commerce\EventSubscriber\OrderSubscriber
+    arguments: ['@appointments.booking', '@entity_type.manager']
+    tags:
+      - { name: event_subscriber }
+
+  appointments_commerce.order_processor:
+    class: Drupal\appointments_commerce\AppointmentOrderProcessor
+    arguments: ['@appointments.booking', '@entity_type.manager', '@messenger', '@string_translation']
+    tags:
+      # After availability (300), before promotions and taxes.
+      - { name: commerce_order.order_processor, priority: 290 }

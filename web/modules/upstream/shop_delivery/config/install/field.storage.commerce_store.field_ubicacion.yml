@@ -1,0 +1,18 @@
+langcode: es
+status: true
+dependencies:
+  module:
+    - commerce_store
+    - maper
+id: commerce_store.field_ubicacion
+field_name: field_ubicacion
+entity_type: commerce_store
+type: maper_point
+settings: {  }
+module: maper
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

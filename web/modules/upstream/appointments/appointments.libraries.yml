@@ -1,0 +1,4 @@
+booking:
+  css:
+    component:
+      css/appointments.css: {}

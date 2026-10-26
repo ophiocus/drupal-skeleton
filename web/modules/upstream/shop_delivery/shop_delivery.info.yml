@@ -1,0 +1,13 @@
+name: 'Shop delivery'
+type: module
+description: 'Home delivery run by the shop: a Domicilio shipping method (flat, distance or zone fee), a pin for the customer''s door on a maper map, a dispatch board, a courier page and cash-on-delivery settlement. No live position tracking.'
+package: Commerce
+core_version_requirement: ^11
+dependencies:
+  - commerce:commerce_checkout
+  - commerce:commerce_order
+  - commerce:commerce_payment
+  - commerce_shipping:commerce_shipping
+  - drupal:telephone
+  - maper:maper
+  - state_machine:state_machine

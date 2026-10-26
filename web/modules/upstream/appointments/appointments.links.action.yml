@@ -1,0 +1,10 @@
+entity.appointment_service.add_form:
+  title: 'Add service'
+  route_name: entity.appointment_service.add_form
+  appears_on:
+    - entity.appointment_service.collection
+appointments.book:
+  title: 'Open the booking page'
+  route_name: appointments.book
+  appears_on:
+    - entity.appointment.collection

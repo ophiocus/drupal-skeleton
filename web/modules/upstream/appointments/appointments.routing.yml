@@ -1,0 +1,107 @@
+appointments.book:
+  path: '/book'
+  defaults:
+    _controller: '\Drupal\appointments\Controller\BookingController::services'
+    _title: 'Book an appointment'
+  requirements:
+    _permission: 'book appointments'
+
+appointments.book_service:
+  path: '/book/{appointment_service}'
+  defaults:
+    _controller: '\Drupal\appointments\Controller\BookingController::slots'
+    _title_callback: '\Drupal\appointments\Controller\BookingController::serviceTitle'
+  requirements:
+    _permission: 'book appointments'
+    appointment_service: '\d+'
+  options:
+    # Free times move with the clock (notice, today) as well as with bookings,
+    # so this page is never cached, by Drupal or by the edge.
+    no_cache: TRUE
+    parameters:
+      appointment_service:
+        type: 'entity:appointment_service'
+
+appointments.book_slot:
+  path: '/book/{appointment_service}/{start}'
+  defaults:
+    _controller: '\Drupal\appointments\Controller\BookingController::form'
+    _title_callback: '\Drupal\appointments\Controller\BookingController::serviceTitle'
+  requirements:
+    _permission: 'book appointments'
+    appointment_service: '\d+'
+    start: '\d+'
+  options:
+    no_cache: TRUE
+    parameters:
+      appointment_service:
+        type: 'entity:appointment_service'
+
+appointments.manage:
+  path: '/appointment/{token}'
+  defaults:
+    _controller: '\Drupal\appointments\Controller\BookingController::manage'
+    _title: 'Your appointment'
+  requirements:
+    _permission: 'book appointments'
+    token: '[0-9a-f]{48}'
+  options:
+    no_cache: TRUE
+
+appointments.ics:
+  path: '/appointment/{token}/ics'
+  defaults:
+    _controller: '\Drupal\appointments\Controller\BookingController::ics'
+  requirements:
+    _permission: 'book appointments'
+    token: '[0-9a-f]{48}'
+  options:
+    no_cache: TRUE
+
+appointments.cancel:
+  path: '/appointment/{token}/cancel'
+  defaults:
+    _form: '\Drupal\appointments\Form\CancelForm'
+    _title: 'Cancel your appointment'
+  requirements:
+    _permission: 'book appointments'
+    token: '[0-9a-f]{48}'
+  options:
+    no_cache: TRUE
+
+appointments.move:
+  path: '/appointment/{token}/move/{start}'
+  defaults:
+    _form: '\Drupal\appointments\Form\MoveForm'
+    _title: 'Move your appointment'
+  requirements:
+    _permission: 'book appointments'
+    token: '[0-9a-f]{48}'
+    start: '\d+'
+  options:
+    no_cache: TRUE
+
+appointments.status:
+  path: '/admin/appointments/{appointment}/status/{status}'
+  defaults:
+    _controller: '\Drupal\appointments\Controller\StaffController::status'
+  requirements:
+    _permission: 'view appointments'
+    _csrf_token: 'TRUE'
+    appointment: '\d+'
+    status: 'confirmed|completed|no_show|cancelled'
+  options:
+    _admin_route: TRUE
+    parameters:
+      appointment:
+        type: 'entity:appointment'
+
+appointments.settings:
+  path: '/admin/appointments/settings'
+  defaults:
+    _form: '\Drupal\appointments\Form\SettingsForm'
+    _title: 'Appointment settings'
+  requirements:
+    _permission: 'administer appointments'
+  options:
+    _admin_route: TRUE
