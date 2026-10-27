@@ -14,12 +14,25 @@ name: Composer audit
 #     a failed scheduled workflow notifies the repo owner (somewhere a human
 #     actually looks) without anyone having to run composer by chance.
 
+#
+# The gate runs only when the dependencies change (composer.json or
+# composer.lock): an unchanged lock audits the same packages again, and each
+# run costs Actions minutes (docs/DEPLOY.md, "Actions minutes"). Advisories
+# published against an unchanged lock are what the weekly run is for, and
+# build-and-push.yml audits the lock again before every image.
+
 on:
   push:
     branches:
       - master
       - 'dev/**'
+    paths:
+      - composer.json
+      - composer.lock
   pull_request:
+    paths:
+      - composer.json
+      - composer.lock
   schedule:
     # Weekly, Monday 06:17 UTC. Off the hour to avoid the cron thundering herd.
     - cron: '17 6 * * 1'

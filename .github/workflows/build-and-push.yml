@@ -64,15 +64,70 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ─── Was this exact code already tested? ───────────────────────────
+  # A change normally reaches master as a PR, and test-gate.yml already ran
+  # on the PR's head. When the pushed commit is that PR's merge and its tree
+  # is byte-identical to the PR head the gate passed on, running the gate
+  # again tests the same files twice: 2-6 minutes of Actions per deploy for
+  # nothing (docs/DEPLOY.md, "Actions minutes"). Anything else — a direct
+  # push, a PR whose branch was behind master, a gate that did not pass, a
+  # manual run — gets the full gate below.
+  reuse:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+    outputs:
+      tested: ${{ steps.reuse.outputs.tested }}
+    steps:
+      - name: Same tree as a PR head that passed the test gate?
+        id: reuse
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -uo pipefail
+          tested=false
+          if [ "$EVENT" = push ]; then
+            # $ENV.SHA is jq's, read from the environment: single quotes on purpose.
+            # shellcheck disable=SC2016
+            head=$(gh api "repos/$REPO/commits/$SHA/pulls" \
+              --jq '[.[] | select(.merged_at != null and .merge_commit_sha == $ENV.SHA)][0].head.sha // empty' || true)
+            if [ -n "$head" ]; then
+              pushed=$(gh api "repos/$REPO/git/commits/$SHA" --jq .tree.sha || true)
+              proposed=$(gh api "repos/$REPO/git/commits/$head" --jq .tree.sha || true)
+              passed=$(gh api "repos/$REPO/commits/$head/check-runs?check_name=test" \
+                --jq '[.check_runs[] | select(.conclusion == "success")] | length' || echo 0)
+              echo "PR head ${head:0:7}: tree $([ -n "$pushed" ] && [ "$pushed" = "$proposed" ] && echo identical || echo differs); passing test gate runs: ${passed:-0}"
+              if [ -n "$pushed" ] && [ "$pushed" = "$proposed" ] && [ "${passed:-0}" -ge 1 ]; then
+                tested=true
+              fi
+            fi
+          fi
+          echo "tested=$tested" >> "$GITHUB_OUTPUT"
+          if [ "$tested" = true ]; then
+            echo "::notice::The test gate already passed on this exact tree (its PR); not run again."
+          fi
+
   # ─── Test gate ─────────────────────────────────────────────────────
   # scripts/ci/tests.sh in CI, defined once in test-gate.yml so the upstream
   # sync runs the identical gate. `build` needs it: no image is built, and so
   # nothing is deployed, from a push whose tests fail (BATTLE_SCARS §36).
+  # Skipped only when `reuse` proved the same tree passed it on its PR.
   test:
+    needs: reuse
+    if: needs.reuse.outputs.tested != 'true'
     uses: ./.github/workflows/test-gate.yml
 
   build:
-    needs: test
+    needs: [reuse, test]
+    # Build when the gate passed here, or was skipped because it passed on
+    # the PR. A failed or cancelled gate still stops the build.
+    if: ${{ !cancelled() && needs.reuse.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     runs-on: ubuntu-24.04
     # A hung SSH or a wedged buildx would otherwise burn the full 6-hour
     # default before anyone notices.
