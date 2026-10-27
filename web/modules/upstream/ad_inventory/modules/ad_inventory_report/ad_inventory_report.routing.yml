@@ -1,0 +1,90 @@
+ad_inventory_report.overview:
+  path: '/admin/reports/ad-inventory'
+  defaults:
+    _controller: '\Drupal\ad_inventory_report\Controller\DashboardController::page'
+    _title: 'Ad inventory'
+    tab: overview
+  requirements:
+    _permission: 'view ad inventory report'
+
+ad_inventory_report.inventory:
+  path: '/admin/reports/ad-inventory/inventory'
+  defaults:
+    _controller: '\Drupal\ad_inventory_report\Controller\DashboardController::page'
+    _title: 'Ad inventory: inventory'
+    tab: inventory
+  requirements:
+    _permission: 'view ad inventory report'
+
+ad_inventory_report.performance:
+  path: '/admin/reports/ad-inventory/performance'
+  defaults:
+    _controller: '\Drupal\ad_inventory_report\Controller\DashboardController::page'
+    _title: 'Ad inventory: performance'
+    tab: performance
+  requirements:
+    _permission: 'view ad inventory report'
+
+ad_inventory_report.fill:
+  path: '/admin/reports/ad-inventory/fill'
+  defaults:
+    _controller: '\Drupal\ad_inventory_report\Controller\DashboardController::page'
+    _title: 'Ad inventory: fill'
+    tab: fill
+  requirements:
+    _permission: 'view ad inventory report'
+
+ad_inventory_report.calendar:
+  path: '/admin/reports/ad-inventory/calendar'
+  defaults:
+    _controller: '\Drupal\ad_inventory_report\Controller\DashboardController::page'
+    _title: 'Ad inventory: calendar'
+    tab: calendar
+  requirements:
+    _permission: 'view ad inventory report'
+
+ad_inventory_report.providers:
+  path: '/admin/reports/ad-inventory/providers'
+  defaults:
+    _controller: '\Drupal\ad_inventory_report\Controller\DashboardController::page'
+    _title: 'Ad inventory: providers'
+    tab: providers
+  requirements:
+    _permission: 'view ad inventory report'
+
+ad_inventory_report.email:
+  path: '/admin/reports/ad-inventory/email'
+  defaults:
+    _controller: '\Drupal\ad_inventory_report\Controller\DashboardController::page'
+    _title: 'Ad inventory: email'
+    tab: email
+  requirements:
+    _permission: 'view ad inventory report'
+
+ad_inventory_report.health:
+  path: '/admin/reports/ad-inventory/health'
+  defaults:
+    _controller: '\Drupal\ad_inventory_report\Controller\DashboardController::page'
+    _title: 'Ad inventory: health'
+    tab: health
+  requirements:
+    _permission: 'view ad inventory report'
+
+ad_inventory_report.csv:
+  path: '/admin/reports/ad-inventory/{tab}/csv/{table}'
+  defaults:
+    _controller: '\Drupal\ad_inventory_report\Controller\DashboardController::csv'
+  requirements:
+    _permission: 'view ad inventory report+export ad inventory report'
+    tab: '[a-z_]+'
+    table: '[a-z_]+'
+  options:
+    no_cache: 'TRUE'
+
+ad_inventory_report.settings:
+  path: '/admin/config/services/ad-inventory/report'
+  defaults:
+    _form: '\Drupal\ad_inventory_report\Form\SettingsForm'
+    _title: 'Ad inventory report'
+  requirements:
+    _permission: 'administer ad inventory'

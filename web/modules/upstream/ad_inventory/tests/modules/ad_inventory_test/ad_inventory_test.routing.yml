@@ -1,0 +1,8 @@
+ad_inventory_test.page:
+  path: '/ad-inventory-test/page'
+  defaults:
+    _controller: '\Drupal\ad_inventory_test\Controller\TestPageController::page'
+    _title: 'Slots'
+  requirements:
+    # A public fixture page, as a site's listing would be.
+    _access: 'TRUE'

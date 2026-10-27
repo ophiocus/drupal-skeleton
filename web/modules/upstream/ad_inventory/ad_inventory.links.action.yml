@@ -1,0 +1,29 @@
+entity.ad_format.add_form:
+  route_name: entity.ad_format.add_form
+  title: 'Add format'
+  appears_on:
+    - entity.ad_format.collection
+
+entity.ad_slot.add_form:
+  route_name: entity.ad_slot.add_form
+  title: 'Add slot'
+  appears_on:
+    - entity.ad_slot.collection
+
+entity.ad_provider.add_form:
+  route_name: entity.ad_provider.add_form
+  title: 'Add provider'
+  appears_on:
+    - entity.ad_provider.collection
+
+entity.ad_creative.add_form:
+  route_name: entity.ad_creative.add_form
+  title: 'Add creative'
+  appears_on:
+    - entity.ad_creative.collection
+
+entity.ad_booking.add_form:
+  route_name: entity.ad_booking.add_form
+  title: 'Add booking'
+  appears_on:
+    - entity.ad_booking.collection

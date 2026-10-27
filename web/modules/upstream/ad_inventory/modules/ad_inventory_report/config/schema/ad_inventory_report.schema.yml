@@ -1,0 +1,10 @@
+ad_inventory_report.settings:
+  type: config_object
+  label: 'Ad inventory report settings'
+  mapping:
+    amount_field:
+      type: string
+      label: 'Field on bookings holding their amount (empty: no booked value)'
+    rollup_days:
+      type: integer
+      label: 'Days each rollup recomputes'

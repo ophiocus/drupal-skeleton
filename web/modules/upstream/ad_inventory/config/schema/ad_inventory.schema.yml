@@ -1,0 +1,229 @@
+ad_inventory.settings:
+  type: config_object
+  label: 'Ad inventory settings'
+  mapping:
+    label:
+      type: label
+      label: 'Label above every slot'
+    breakpoint:
+      type: integer
+      label: 'Viewport width from which the desktop format applies'
+    timezone:
+      type: string
+      label: 'Time zone of booking days (empty: the site default)'
+    consent:
+      type: mapping
+      label: 'Consent bridge'
+      mapping:
+        global:
+          type: string
+          label: 'Object on window'
+        property:
+          type: string
+          label: 'Property holding the advertising grant'
+        event:
+          type: string
+          label: 'Event on document when the reader chooses'
+    blocked:
+      type: mapping
+      label: 'Blocked banner'
+      mapping:
+        text:
+          type: label
+          label: 'Text'
+        link_text:
+          type: label
+          label: 'Link text'
+        link_url:
+          type: string
+          label: 'Link address'
+    kinds:
+      type: sequence
+      label: 'Creative kinds besides plain'
+      sequence:
+        type: mapping
+        mapping:
+          id:
+            type: string
+            label: 'Kind id'
+          label:
+            type: label
+            label: 'Kind label'
+    email_alt:
+      type: label
+      label: 'Alternative text of email images'
+
+ad_inventory.format.*:
+  type: config_entity
+  label: 'Ad format'
+  mapping:
+    id:
+      type: machine_name
+      label: 'Machine name'
+    label:
+      type: required_label
+      label: 'Name'
+    width:
+      type: integer
+      label: 'Width'
+    height:
+      type: integer
+      label: 'Height'
+    network_sizes:
+      type: sequence
+      label: 'Network unit size per viewport width'
+      sequence:
+        type: mapping
+        mapping:
+          min_width:
+            type: integer
+            label: 'Applies from this viewport width'
+          width:
+            type: integer
+            label: 'Width'
+          height:
+            type: integer
+            label: 'Height'
+
+ad_inventory.slot.*:
+  type: config_entity
+  label: 'Ad slot'
+  mapping:
+    id:
+      type: machine_name
+      label: 'Machine name'
+    label:
+      type: required_label
+      label: 'Name'
+    channel:
+      type: string
+      label: 'Channel: web or email'
+    desktop_format:
+      type: string
+      label: 'Desktop format'
+    phone_format:
+      type: string
+      label: 'Phone format'
+    alternative_formats:
+      type: sequence
+      label: 'Formats per-page controls may pick'
+      sequence:
+        type: string
+        label: 'Format'
+    sources:
+      type: sequence
+      label: 'Fill sources'
+      sequence:
+        type: string
+        label: 'Source'
+    booking_kinds:
+      type: sequence
+      label: 'Creative kinds a booking may carry'
+      sequence:
+        type: string
+        label: 'Kind'
+    group:
+      type: string
+      label: 'Slot group'
+    repeatable:
+      type: boolean
+      label: 'Repeatable'
+    units:
+      type: sequence
+      label: 'Network unit per provider'
+      sequence:
+        type: sequence
+        label: 'Unit fields'
+        sequence:
+          type: string
+          label: 'Value'
+
+ad_inventory.provider.*:
+  type: config_entity
+  label: 'Ad network provider'
+  mapping:
+    id:
+      type: machine_name
+      label: 'Machine name'
+    label:
+      type: required_label
+      label: 'Name'
+    plugin:
+      type: string
+      label: 'Plugin'
+    weight:
+      type: integer
+      label: 'Fill order'
+    settings:
+      type: ad_inventory.provider_settings.[%parent.plugin]
+
+ad_inventory.provider_settings.*:
+  type: mapping
+  label: 'Provider settings'
+
+ad_inventory.provider_settings.adsense:
+  type: mapping
+  label: 'AdSense settings'
+  mapping:
+    verification:
+      type: boolean
+      label: 'Print the site verification tag'
+
+ad_inventory.provider_settings.snippet:
+  type: mapping
+  label: 'Pasted snippet settings'
+  mapping:
+    loader:
+      type: string
+      label: 'Loader script'
+    kinds:
+      type: sequence
+      label: 'Formats it serves'
+      sequence:
+        type: string
+        label: 'Kind'
+    house_behind:
+      type: boolean
+      label: 'House creative may sit behind an unfilled unit'
+    max_units:
+      type: integer
+      label: 'Units per page at most'
+    labels:
+      type: sequence
+      label: 'Labels it allows'
+      sequence:
+        type: string
+        label: 'Label'
+    ads_txt:
+      type: sequence
+      label: 'ads.txt lines'
+      sequence:
+        type: string
+        label: 'Line'
+    consent:
+      type: string
+      label: 'Consent it needs'
+
+block.settings.ad_inventory_slot:*:
+  type: block_settings
+  label: 'Ad slot block'
+
+field.storage_settings.ad_inventory_overrides:
+  type: mapping
+  label: 'Ad slot controls storage settings'
+
+field.field_settings.ad_inventory_overrides:
+  type: mapping
+  label: 'Ad slot controls field settings'
+
+field.value.ad_inventory_overrides:
+  type: mapping
+  label: 'Default value'
+  mapping:
+    value:
+      type: string
+      label: 'Overrides (JSON)'
+
+field.widget.settings.ad_inventory_overrides_default:
+  type: mapping
+  label: 'Ad slot controls widget settings'

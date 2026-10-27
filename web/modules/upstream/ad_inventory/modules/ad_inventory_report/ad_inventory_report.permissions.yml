@@ -1,0 +1,6 @@
+view ad inventory report:
+  title: 'View the ad inventory report'
+  description: 'See every tab of the ad inventory dashboard. Read-only.'
+export ad inventory report:
+  title: 'Export the ad inventory report'
+  description: 'Download any dashboard table as CSV.'

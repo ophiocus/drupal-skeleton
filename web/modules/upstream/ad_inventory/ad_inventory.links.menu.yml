@@ -1,0 +1,44 @@
+ad_inventory.structure:
+  title: 'Ad inventory'
+  description: 'Formats, slots and network providers.'
+  route_name: ad_inventory.structure
+  parent: system.admin_structure
+
+entity.ad_format.collection:
+  title: 'Ad formats'
+  description: 'Sizes a slot reserves, and the network size per breakpoint.'
+  route_name: entity.ad_format.collection
+  parent: ad_inventory.structure
+  weight: 0
+
+entity.ad_slot.collection:
+  title: 'Ad slots'
+  description: 'The reserved, labelled boxes pages and emails carry.'
+  route_name: entity.ad_slot.collection
+  parent: ad_inventory.structure
+  weight: 1
+
+entity.ad_provider.collection:
+  title: 'Ad network providers'
+  description: 'Networks in fill order, after bookings and before house creatives.'
+  route_name: entity.ad_provider.collection
+  parent: ad_inventory.structure
+  weight: 2
+
+ad_inventory.settings:
+  title: 'Ad inventory'
+  description: 'Label, breakpoint, consent bridge and the blocked banner.'
+  route_name: ad_inventory.settings
+  parent: system.admin_config_services
+
+entity.ad_creative.collection:
+  title: 'Ad creatives'
+  description: 'Banners: one rendition per format, a target and a caption.'
+  route_name: entity.ad_creative.collection
+  parent: system.admin_content
+
+entity.ad_booking.collection:
+  title: 'Ad bookings'
+  description: 'Dated bookings of a creative in slots.'
+  route_name: entity.ad_booking.collection
+  parent: system.admin_content

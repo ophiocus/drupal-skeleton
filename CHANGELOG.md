@@ -5,6 +5,47 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-27 — ad_inventory and ad_inventory_report (PROTOCOL D32)
+
+- New upstream module `ad_inventory`: labelled banner slots that keep the
+  anonymous page cache. Config entities `ad_format` (six default formats, each
+  owning a 1x and a 2x image style), `ad_slot` (web or email; desktop and
+  phone formats; fill sources; group; repeatable; a network unit per
+  provider) and `ad_provider` (an ordered list of `AdProvider` plugin
+  instances: `adsense`, and `snippet` behind the restricted permission
+  "Administer pasted ad snippets"); content entities `ad_creative`
+  (renditions per format as media, ratio within 1%) and `ad_booking` (days,
+  slots or a slot group, page scope, exclusive, draft/approved/stopped).
+- Every slot prints the site's blocked banner; creatives and network units
+  wait in an inert `<template>` and `js/ad-inventory.js` fills the box only
+  after `window.<object>.<property> === true` (the site's consent bridge):
+  booking in force → providers in order → house. Viewability beacon
+  (`POST /ad/v`, `{slot, creative}` with `provider:<id>` for network fills),
+  counted click redirect (`/ad/c/{creative}`), email slots
+  (`/ad/e/<slot>.png`, `/ad/e/<slot>/go`), mail provider plugins (generic
+  HTML first), per-page controls (field type `ad_inventory_overrides` and
+  form element), `AdCreativeValidateEvent`, a daily cron run that invalidates
+  slots whose bookings start or end, `ads.txt` lines through `hook_adstxt()`,
+  a status page and `drush ad-inventory:status`. The `ad_slot` element
+  records slot id and route name on a render-cache miss (pruned after 90
+  days).
+- Network serving is off unless `AD_INVENTORY_NETWORK=1` (or
+  `$settings['ad_inventory_network']`); accounts from the environment or
+  `$settings['ad_inventory_accounts']`. `deploy/.env.example` documents it.
+- New submodule `ad_inventory_report`: a read-only dashboard
+  (`/admin/reports/ad-inventory`: Overview, Inventory, Performance, Fill,
+  Calendar, Providers, Email, Health; every table as CSV) over cron rollups
+  in `ad_inventory_report_daily`, with the role "Marketeer overwatch"
+  (`ad_inventory_overwatch`) in `config/install`, removed on uninstall.
+  Network earnings from `ga4_report`'s AdSense snapshot when present (soft
+  dependency); booked value only from an amount field a site names.
+- Baseline: `drupal/adstxt ^1.5` in `upstream-configuration/composer.json`
+  (lock updated).
+- The slot script is outside the gate (no browser driver there); run once in
+  headless Chrome on a fixture from a real test response, desktop and phone:
+  nothing requested before the grant, the right fill after it, one beacon,
+  CLS 0 before and after (README, "Tests").
+
 ## 2026-10-26 — PHP 8.4 (security: CVE-2026-109618, CVE-2026-109619)
 
 - `Dockerfile`: both stages `FROM drupal:11-php8.4-apache` (PHP 8.4.27). The

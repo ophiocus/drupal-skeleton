@@ -1,0 +1,11 @@
+langcode: en
+status: true
+dependencies: {}
+id: mobile_banner
+label: 'Mobile banner'
+width: 320
+height: 100
+network_sizes:
+  - min_width: 0
+    width: 320
+    height: 100

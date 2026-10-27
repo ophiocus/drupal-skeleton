@@ -1,0 +1,106 @@
+services:
+  logger.channel.ad_inventory:
+    parent: logger.channel_base
+    arguments: ['ad_inventory']
+
+  plugin.manager.ad_provider:
+    class: Drupal\ad_inventory\AdProviderManager
+    parent: default_plugin_manager
+  Drupal\ad_inventory\AdProviderManager: '@plugin.manager.ad_provider'
+
+  plugin.manager.ad_mail_provider:
+    class: Drupal\ad_inventory\AdMailProviderManager
+    parent: default_plugin_manager
+  Drupal\ad_inventory\AdMailProviderManager: '@plugin.manager.ad_mail_provider'
+
+  ad_inventory.no_store:
+    class: Drupal\ad_inventory\EventSubscriber\NoStore
+    tags:
+      - { name: event_subscriber }
+
+  ad_inventory.calendar:
+    class: Drupal\ad_inventory\Calendar
+    arguments: ['@config.factory', '@datetime.time']
+  Drupal\ad_inventory\Calendar: '@ad_inventory.calendar'
+
+  ad_inventory.network_gate:
+    class: Drupal\ad_inventory\NetworkGate
+  Drupal\ad_inventory\NetworkGate: '@ad_inventory.network_gate'
+
+  ad_inventory.inventory:
+    class: Drupal\ad_inventory\Inventory
+    arguments: ['@entity_type.manager']
+  Drupal\ad_inventory\Inventory: '@ad_inventory.inventory'
+
+  ad_inventory.overrides:
+    class: Drupal\ad_inventory\Overrides
+    arguments: ['@entity_field.manager', '@current_route_match']
+  Drupal\ad_inventory\Overrides: '@ad_inventory.overrides'
+
+  ad_inventory.placements:
+    class: Drupal\ad_inventory\Placements
+    arguments: ['@keyvalue', '@datetime.time']
+  Drupal\ad_inventory\Placements: '@ad_inventory.placements'
+
+  ad_inventory.approval:
+    class: Drupal\ad_inventory\Approval
+    arguments: ['@ad_inventory.inventory', '@event_dispatcher']
+  Drupal\ad_inventory\Approval: '@ad_inventory.approval'
+
+  ad_inventory.counter:
+    class: Drupal\ad_inventory\Counter
+    arguments: ['@database', '@ad_inventory.calendar', '@entity_type.manager']
+  Drupal\ad_inventory\Counter: '@ad_inventory.counter'
+
+  ad_inventory.scheduler:
+    class: Drupal\ad_inventory\Scheduler
+    arguments:
+      - '@entity_type.manager'
+      - '@ad_inventory.inventory'
+      - '@ad_inventory.approval'
+      - '@ad_inventory.calendar'
+      - '@state'
+      - '@cache_tags.invalidator'
+      - '@ad_inventory.placements'
+      - '@logger.channel.ad_inventory'
+  Drupal\ad_inventory\Scheduler: '@ad_inventory.scheduler'
+
+  ad_inventory.slot_renderer:
+    class: Drupal\ad_inventory\SlotRenderer
+    arguments:
+      - '@ad_inventory.inventory'
+      - '@ad_inventory.overrides'
+      - '@ad_inventory.placements'
+      - '@ad_inventory.network_gate'
+      - '@ad_inventory.calendar'
+      - '@config.factory'
+      - '@entity_type.manager'
+      - '@current_user'
+      - '@current_route_match'
+      - '@router.admin_context'
+      - '@state'
+      - '@module_handler'
+      - '@file_url_generator'
+  Drupal\ad_inventory\SlotRenderer: '@ad_inventory.slot_renderer'
+
+  ad_inventory.email:
+    class: Drupal\ad_inventory\EmailServer
+    arguments:
+      - '@ad_inventory.inventory'
+      - '@ad_inventory.calendar'
+      - '@ad_inventory.counter'
+      - '@entity_type.manager'
+      - '@file.mime_type.guesser'
+  Drupal\ad_inventory\EmailServer: '@ad_inventory.email'
+
+  ad_inventory.status:
+    class: Drupal\ad_inventory\StatusChecker
+    arguments:
+      - '@ad_inventory.inventory'
+      - '@ad_inventory.network_gate'
+      - '@config.factory'
+      - '@module_handler'
+      - '@entity_type.manager'
+      - '@ad_inventory.calendar'
+      - '@ad_inventory.placements'
+  Drupal\ad_inventory\StatusChecker: '@ad_inventory.status'

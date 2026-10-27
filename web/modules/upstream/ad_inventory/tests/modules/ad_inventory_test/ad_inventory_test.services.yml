@@ -1,0 +1,6 @@
+services:
+  ad_inventory_test.validator:
+    class: Drupal\ad_inventory_test\EventSubscriber\TestValidator
+    arguments: ['@state']
+    tags:
+      - { name: event_subscriber }

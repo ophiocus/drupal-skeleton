@@ -1,0 +1,102 @@
+/**
+ * @file
+ * Ad slots: a labelled box whose space is known before anything loads.
+ *
+ * Each format's max-width and aspect-ratio come from the style block the
+ * module prints in the page head (FormatStyles), per desktop and phone
+ * format. The blocked banner, a creative and a network unit fill the same
+ * box, so the swap moves nothing. Nothing is sticky, fixed or overlaid.
+ */
+.ad-slot {
+  box-sizing: border-box;
+  width: 100%;
+  margin-block: 1.5rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.ad-slot__label {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  opacity: 0.75;
+}
+
+.ad-slot__box {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  margin-inline: auto;
+  overflow: hidden;
+}
+
+.ad-slot__blocked {
+  display: flex;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  border: 1px dashed currentColor;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  opacity: 0.6;
+}
+
+.ad-slot__blocked-text {
+  margin: 0;
+}
+
+.ad-slot__entry,
+.ad-slot__entry .ad-creative,
+.ad-slot__entry picture,
+.ad-slot__entry .ad-creative__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ad-slot__entry .ad-creative__image {
+  object-fit: cover;
+}
+
+.ad-slot__box > .ad-slot__entry {
+  position: absolute;
+  inset: 0;
+}
+
+.ad-slot__unit {
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.ad-slot__unit > ins {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* A network unit that came back unfilled keeps its box; the house creative
+   behind it shows where the provider allows one. */
+.ad-slot__box > .ad-slot__behind {
+  z-index: 0;
+}
+
+.ad-slot__box > .ad-slot__entry[data-ad-kind="network"] {
+  z-index: 1;
+}
+
+.ad-slot__unit ins[data-ad-status="unfilled"] {
+  visibility: hidden;
+}
+
+.ad-slot__caption {
+  min-height: 1.4em;
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}

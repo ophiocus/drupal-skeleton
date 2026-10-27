@@ -1,0 +1,11 @@
+langcode: en
+status: true
+dependencies: {}
+id: rectangle
+label: 'Medium rectangle'
+width: 300
+height: 250
+network_sizes:
+  - min_width: 0
+    width: 300
+    height: 250

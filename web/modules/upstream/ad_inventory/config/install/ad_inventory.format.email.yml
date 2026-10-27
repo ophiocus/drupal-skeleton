@@ -1,0 +1,8 @@
+langcode: en
+status: true
+dependencies: {}
+id: email
+label: 'Email banner'
+width: 600
+height: 200
+network_sizes: []

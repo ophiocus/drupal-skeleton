@@ -1,0 +1,11 @@
+langcode: en
+status: true
+dependencies: {}
+id: skyscraper
+label: 'Wide skyscraper'
+width: 160
+height: 600
+network_sizes:
+  - min_width: 0
+    width: 160
+    height: 600

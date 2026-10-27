@@ -1,0 +1,7 @@
+name: 'Ad inventory test'
+type: module
+description: 'A page with three slots, a validation subscriber and a scope hook driven by state.'
+package: Testing
+hidden: true
+dependencies:
+  - ad_inventory:ad_inventory

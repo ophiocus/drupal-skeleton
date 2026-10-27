@@ -1,0 +1,22 @@
+# The same ECharts file ga4_report draws with (root composer.json:
+# "npm-asset/echarts", pinned, into web/libraries/echarts); declared here too so
+# the dashboard works without ga4_report. No second chart library.
+echarts:
+  version: 6.1.0
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+    gpl-compatible: true
+  js:
+    /libraries/echarts/dist/echarts.min.js: { minified: true }
+
+dashboard:
+  version: VERSION
+  css:
+    component:
+      css/ad-inventory-report.css: {}
+  js:
+    js/ad-inventory-report.js: {}
+  dependencies:
+    - core/drupal
+    - core/once

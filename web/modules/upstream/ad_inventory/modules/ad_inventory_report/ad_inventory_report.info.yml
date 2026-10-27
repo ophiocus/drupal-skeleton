@@ -1,0 +1,8 @@
+name: 'Ad inventory report'
+type: module
+description: 'A read-only dashboard over the ad inventory (configuration, views, clicks, fill, calendar, providers, email, health) with a "Marketeer overwatch" role that watches and changes nothing.'
+core_version_requirement: ^11.1
+package: Advertising
+configure: ad_inventory_report.settings
+dependencies:
+  - ad_inventory:ad_inventory

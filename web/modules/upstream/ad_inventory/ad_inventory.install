@@ -1,0 +1,62 @@
+<?php
+
+/**
+ * @file
+ * Install file for ad_inventory: the counts table.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_schema().
+ */
+function ad_inventory_schema(): array {
+  return [
+    'ad_inventory_count' => [
+      'description' => 'Viewed impressions, clicks and unfilled network units per day, slot and creative. Nothing about readers.',
+      'fields' => [
+        'day' => [
+          'description' => 'The day, Y-m-d, in the site time zone.',
+          'type' => 'varchar_ascii',
+          'length' => 10,
+          'not null' => TRUE,
+        ],
+        'slot' => [
+          'description' => 'The ad_slot id, or empty for a click whose slot was not given.',
+          'type' => 'varchar_ascii',
+          'length' => 64,
+          'not null' => TRUE,
+          'default' => '',
+        ],
+        'creative' => [
+          'description' => 'The ad_creative id, or provider:<id> for a network fill.',
+          'type' => 'varchar_ascii',
+          'length' => 128,
+          'not null' => TRUE,
+        ],
+        'views' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'clicks' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'unfilled' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+      ],
+      'primary key' => ['day', 'slot', 'creative'],
+      'indexes' => [
+        'creative' => ['creative', 'day'],
+      ],
+    ],
+  ];
+}

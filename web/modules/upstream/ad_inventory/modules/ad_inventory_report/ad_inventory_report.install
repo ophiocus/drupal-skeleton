@@ -1,0 +1,87 @@
+<?php
+
+/**
+ * @file
+ * Install file for ad_inventory_report: the rollup table and the role.
+ */
+
+declare(strict_types=1);
+
+use Drupal\ad_inventory_report\Hook\AdInventoryReportHooks;
+
+/**
+ * Implements hook_schema().
+ */
+function ad_inventory_report_schema(): array {
+  return [
+    'ad_inventory_report_daily' => [
+      'description' => 'The ad inventory counts per day, slot, source, creative and booking. Aggregates only.',
+      'fields' => [
+        'day' => [
+          'type' => 'varchar_ascii',
+          'length' => 10,
+          'not null' => TRUE,
+        ],
+        'slot' => [
+          'type' => 'varchar_ascii',
+          'length' => 64,
+          'not null' => TRUE,
+          'default' => '',
+        ],
+        'source' => [
+          'description' => 'booking, network, house or unknown.',
+          'type' => 'varchar_ascii',
+          'length' => 16,
+          'not null' => TRUE,
+        ],
+        'creative' => [
+          'type' => 'varchar_ascii',
+          'length' => 128,
+          'not null' => TRUE,
+        ],
+        'booking' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'views' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'clicks' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'unfilled' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+      ],
+      'primary key' => ['day', 'slot', 'source', 'creative', 'booking'],
+      'indexes' => [
+        'creative' => ['creative', 'day'],
+        'booking' => ['booking', 'day'],
+      ],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_install().
+ *
+ * The role ships in config/install. "access toolbar" belongs to the toolbar
+ * module, which a site may not run, so it is granted here when toolbar is on
+ * (and by hook_modules_installed() when toolbar comes later).
+ */
+function ad_inventory_report_install(bool $is_syncing): void {
+  if (!$is_syncing && \Drupal::moduleHandler()->moduleExists('toolbar')) {
+    AdInventoryReportHooks::grantToolbar();
+  }
+}
