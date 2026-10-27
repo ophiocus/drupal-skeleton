@@ -217,9 +217,12 @@ final class DashboardController extends ControllerBase {
       $cells = [];
       foreach (array_values($row) as $j => $value) {
         $url = $table['links'][$i][$j] ?? NULL;
-        $cells[] = $url instanceof Url
-          ? ['data' => ['#type' => 'link', '#title' => (string) $value, '#url' => $url]]
-          : (string) $value;
+        $cells[] = match (TRUE) {
+          $url instanceof Url => ['data' => ['#type' => 'link', '#title' => (string) $value, '#url' => $url]],
+          // Markup drawn beside the value on the page; CSV gets the value.
+          isset($table['markup'][$i][$j]) => ['data' => ['#markup' => Markup::create($table['markup'][$i][$j] . Html::escape((string) $value))]],
+          default => (string) $value,
+        };
       }
       if (isset($table['spark'])) {
         $cells[] = ['data' => ['#markup' => Markup::create(self::sparkline($table['spark'][$i] ?? []))]];
@@ -609,6 +612,101 @@ final class DashboardController extends ControllerBase {
   }
 
   /**
+   * A box drawn to a format's ratio, 40px on its longer side.
+   */
+  private function ratioBox(string $id): string {
+    $format = $this->inventory->format($id);
+    if ($format === NULL || $format->width() < 1 || $format->height() < 1) {
+      return '';
+    }
+    $scale = 40 / max($format->width(), $format->height());
+    $w = max(2, (int) round($format->width() * $scale));
+    $h = max(2, (int) round($format->height() * $scale));
+    return sprintf(
+      '<svg class="air-ratio" viewBox="0 0 %1$d %2$d" width="%1$d" height="%2$d" aria-hidden="true"><rect x="0.5" y="0.5" width="%3$d" height="%4$d" fill="none" stroke="currentColor"/></svg> ',
+      $w,
+      $h,
+      $w - 1,
+      $h - 1,
+    );
+  }
+
+  /**
+   * Where a block placement shows, for people.
+   */
+  private static function blockReach(array $visibility): string {
+    $pages = trim((string) ($visibility['request_path']['pages'] ?? ''));
+    if ($pages !== '') {
+      $list = implode(', ', preg_split('/\R+/', $pages));
+      return empty($visibility['request_path']['negate']) ? $list : 'every page except ' . $list;
+    }
+    foreach ($visibility as $condition => $settings) {
+      if (str_starts_with((string) $condition, 'entity_bundle:') && !empty($settings['bundles'])) {
+        return substr((string) $condition, 14) . ' pages: ' . implode(', ', array_keys($settings['bundles']));
+      }
+    }
+    return $visibility ? 'pages matching ' . implode(', ', array_keys($visibility)) : 'every page';
+  }
+
+  /**
+   * The space grid: every slot, its desktop and phone format, where it shows.
+   */
+  private function spaces(array $routes): array {
+    $reach = [];
+    $regions = [];
+    foreach ($this->entityTypeManager()->getStorage('block')->loadMultiple() as $block) {
+      $plugin = (string) $block->get('plugin');
+      if (!str_starts_with($plugin, 'ad_inventory_slot:') || !$block->status()) {
+        continue;
+      }
+      $slot = substr($plugin, 18);
+      $reach[$slot][] = self::blockReach((array) $block->get('visibility'));
+      $regions[$slot][] = (string) $block->get('region');
+    }
+    $grouped = [];
+    foreach ($this->inventory->slots() as $id => $slot) {
+      $group = $slot->group() ?: (isset($regions[$id]) ? implode(', ', array_unique($regions[$id])) : (string) $this->t('(no group)'));
+      $grouped[$group][$id] = $slot;
+    }
+    ksort($grouped);
+    $rows = $markup = [];
+    foreach ($grouped as $group => $slots) {
+      foreach ($slots as $id => $slot) {
+        $i = count($rows);
+        $formats = [2 => $slot->desktopFormat(), 3 => $slot->channel() === 'web' ? $slot->phoneFormat() : ''];
+        $text = [];
+        // The desktop and phone columns: the format with its box, or "none".
+        foreach ($formats as $column => $format) {
+          $text[$column] = $format === '' ? 'none' : $this->formatText($format);
+          if ($format !== '') {
+            $markup[$i][$column] = $this->ratioBox($format);
+          }
+        }
+        $pages = array_merge($reach[$id] ?? [], array_map(static fn(string $r): string => 'route ' . $r, array_unique($routes[$id] ?? [])));
+        if ($slot->channel() === 'email') {
+          $pages = ['email'];
+        }
+        $rows[] = [
+          $group,
+          $slot->label(),
+          $text[2],
+          $text[3],
+          $pages ? implode('; ', array_unique($pages)) : (string) $this->t('not placed'),
+          implode(', ', $slot->sources()),
+        ];
+      }
+    }
+    return [
+      'title' => (string) $this->t('Spaces'),
+      'help' => (string) $this->t('Every slot by page group, with the format it shows on desktop and on a phone, drawn to its ratio.'),
+      'header' => ['page group', 'slot', 'desktop', 'phone', 'pages', 'filled by'],
+      'rows' => $rows,
+      'markup' => $markup,
+      'empty' => (string) $this->t('No slot is defined. An administrator adds slots under Structure › Ad inventory.'),
+    ];
+  }
+
+  /**
    * The Inventory tab.
    */
   private function inventory(): array {
@@ -662,6 +760,7 @@ final class DashboardController extends ControllerBase {
     }
     return [
       'tables' => [
+        'spaces' => $this->spaces($routes),
         'slots' => [
           'title' => (string) $this->t('Slots'),
           'help' => (string) $this->t('Template use is recorded when a template prints a slot (route names only) and kept 90 days.'),

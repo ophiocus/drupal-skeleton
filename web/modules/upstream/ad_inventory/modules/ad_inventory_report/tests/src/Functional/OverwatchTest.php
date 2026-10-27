@@ -115,6 +115,15 @@ final class OverwatchTest extends BrowserTestBase {
     $this->assertSession()->pageTextContains('Viewed impressions');
     $this->assertSession()->pageTextContains('Spring sale');
     $this->assertSession()->pageTextContains('no consent rate can be measured');
+    // The Inventory tab opens on the space grid: desktop and phone per slot,
+    // each format boxed to its ratio, "none" where a device has no format.
+    $this->drupalGet('/admin/reports/ad-inventory/inventory');
+    $first = '(//div[contains(concat(" ", @class, " "), " air-table ")])[1]';
+    $this->assertSession()->elementTextEquals('xpath', $first . '/h2', 'Spaces');
+    $this->assertSession()->elementTextContains('xpath', $first . '//tbody', 'none');
+    $this->assertSame(3, substr_count($this->getSession()->getPage()->getContent(), 'class="air-ratio"'));
+    $this->drupalGet('/admin/reports/ad-inventory/inventory/csv/spaces');
+    $this->assertSession()->responseContains('"page group",slot,desktop,phone,pages,"filled by"');
     $this->drupalGet('/admin/reports/ad-inventory/calendar');
     $this->assertSession()->pageTextContains('booked: A shop – Spring sale');
     $this->assertSession()->pageTextContains('Waiting');

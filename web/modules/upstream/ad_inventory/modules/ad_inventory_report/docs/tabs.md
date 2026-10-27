@@ -29,7 +29,16 @@ page as alerts.
 
 ## Inventory
 
-Every slot: channel, desktop and phone format with size and ratio, fill
+It opens on the **space grid**: one row per slot, grouped by page group (the
+slot's group, else its block regions), with a desktop column and a phone
+column. Each cell names the format with its size and ratio beside a box drawn
+to that ratio, or says "none" where the slot shows nothing on that device (an
+email slot has no phone format). Each row also lists the pages the slot
+reaches: every page, the paths or content types its enabled blocks are limited
+to, and the routes where a template printed it. It also lists the slot's fill
+sources. The CSV export carries the same columns without the boxes.
+
+Below the grid, every slot in detail: channel, desktop and phone format with size and ratio, fill
 sources, booking kinds, group, network unit per provider (pasted code is shown
 as "(code)"), **where it is placed**: block placements per theme and region
 with their visibility conditions, and the routes on which a template printed
