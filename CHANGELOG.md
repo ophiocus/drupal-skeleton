@@ -5,6 +5,18 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-27 — CI spends fewer Actions minutes
+
+- `build-and-push.yml`: a new `reuse` job skips the test gate when the pushed
+  commit is a PR's merge whose tree is identical to the PR head the gate
+  passed on. Any other push still runs the full gate. The build still needs a
+  passed or a proven-reused gate.
+- `composer-audit.yml`: runs on push and PR only when `composer.json` or
+  `composer.lock` changes, plus the weekly schedule. The build's own audit
+  step is unchanged.
+- `docs/DEPLOY.md` §4 "Actions minutes". Measured on a fleet of private sites:
+  the gate ran twice per change, and the audit ran on every push.
+
 ## 2026-10-26 — PHP 8.4 (security: CVE-2026-109618, CVE-2026-109619)
 
 - `Dockerfile`: both stages `FROM drupal:11-php8.4-apache` (PHP 8.4.27). The
