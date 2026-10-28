@@ -183,6 +183,14 @@ final class EntitySchemaTest extends KernelTestBase {
     $this->assertTrue($metadata('en')->isPublished());
     $this->assertTrue($metadata('es')->isPublished());
 
+    // And a visitor's page in that language shows it: content_translation's
+    // language fallback drops a translation that reads as unpublished, which
+    // is how the bug looked on a deployed site.
+    $this->container->get('language.default')->set(ConfigurableLanguage::load('es'));
+    $this->container->get('language_manager')->reset();
+    $services = $this->container->get('appointments.calendar')->services();
+    $this->assertSame('Consulta (es)', $services['consulta']->label());
+
     // A row left without a status (a repair made by hand) is published too.
     $database = $this->container->get('database');
     $database->update('appointment_service_field_data')->fields(['content_translation_status' => NULL])->condition('id', 2)->execute();

@@ -5,6 +5,30 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-28 — appointments: the one-time step repairs content_translation's fields
+
+- **The bug:** on a deployed bilingual site, `/en` kept showing services in the
+  default language after the 2026-10-28 upgrade. `drush deploy` imports config
+  before `appointments:entity-updates` can run. Its import of "translate
+  services" made content_translation install its own fields for the old,
+  untranslatable shape: its own changed time, and no translation status,
+  because `status` used to be translatable. Every translation then read as
+  unpublished, and the language fallback dropped it. Found on a production copy
+  of a bilingual site.
+- **The fix:** `drush appointments:entity-updates` (and `--check`) now also:
+  - installs content_translation's field storage definitions that are missing
+    from the installed ones (`content_translation_status`);
+  - removes the ones the definitions no longer have
+    (`content_translation_changed`);
+  - publishes any translation left without a status.
+
+  It is idempotent, so the deploy order `drush deploy` → entity-updates →
+  `property:seed` heals a site with no step by hand.
+- `EntitySchemaTest::testTranslationEnabledBeforeTheStep` reproduces that
+  order: translation enabled on the old shape, then the step, then a
+  translation shown by the picker's listing in its language. README (the
+  adoption step had said the import was enough) and PROTOCOL D34 are corrected.
+
 ## 2026-10-28 — The fleet install profile, and recipes as the feature switch
 
 - `web/profiles/upstream/skeleton_site`: the install profile every site names in
@@ -25,6 +49,7 @@ you whether the foundation you cloned is recent enough.
   deployed site, the rollout order and the recipes evaluation.
 - A site that piloted its own `web/profiles/custom/skeleton_site` deletes it in
   the sync pull request that brings this one.
+
 ## 2026-10-28 — appointments: a cacheable picker, translatable services
 
 - **The booking page is cacheable**, by Drupal and at the edge, for as long as
@@ -66,15 +91,6 @@ you whether the foundation you cloned is recent enough.
   missing, replacing that release's php:eval line. There is no update hook
   (D25). The step is rehearsed by `EntitySchemaTest`, starting from the old
   one-table schema.
-- The step also aligns content_translation's own fields on services:
-  `content_translation_status` is installed, `content_translation_changed` is
-  removed, and any translation left without a status is published.
-  - These fields go wrong when `drush deploy` imports "translate services"
-    before the step has run. content_translation then picks its fields from
-    the old shape, every translation reads as unpublished, and `/en` shows the
-    default language.
-  - Found on a production copy of a bilingual site. `EntitySchemaTest` covers
-    that order.
 - Tests: `PickerCacheTest`, `TranslatedServicesTest`, `EntitySchemaTest`
   (kernel), `FreshnessTest` (unit), `PickerEdgeCacheTest` and
   `BilingualPickerTest` (functional), plus a new `CacheTagHeaderTest` case.
