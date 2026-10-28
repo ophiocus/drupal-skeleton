@@ -1,0 +1,17 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - ad_inventory
+name: ad_inventory_rectangle
+label: 'Banner rectangle (1x)'
+effects:
+  c18da66a-c1ae-57e2-8701-04d586670e41:
+    uuid: c18da66a-c1ae-57e2-8701-04d586670e41
+    id: image_scale
+    weight: 1
+    data:
+      width: 300
+      height: null
+      upscale: false

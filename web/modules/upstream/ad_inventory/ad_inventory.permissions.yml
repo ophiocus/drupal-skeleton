@@ -1,0 +1,17 @@
+administer ad inventory:
+  title: 'Administer ad inventory'
+  description: 'Manage formats, spaces, providers and settings.'
+  restrict access: true
+manage ad bookings:
+  title: 'Manage creatives and bookings'
+  description: 'Upload creatives, book spaces, approve or stop bookings, and read the reports.'
+preview ad drafts:
+  title: 'Preview draft creatives and providers'
+  description: 'See draft house banners, draft bookings and draft providers on the public pages. Readers without this permission see a space only when something approved is in force.'
+bypass advertising:
+  title: 'Bypass advertising'
+  description: 'Never receive network ad units (self-clicks are invalid traffic). Booked and house banners still show, so staff can check them.'
+use ad snippet provider:
+  title: 'Use the pasted-snippet provider'
+  description: 'Paste markup and scripts from an ad network into a provider. Anyone with this permission can put arbitrary code on public pages.'
+  restrict access: true

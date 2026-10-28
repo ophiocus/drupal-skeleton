@@ -1,0 +1,8 @@
+ad_inventory_test.page:
+  path: '/ad-inventory-test'
+  defaults:
+    _controller: '\Drupal\ad_inventory_test\Controller\TestPage::page'
+    _title: 'Banner test page'
+  requirements:
+    # A public test page, like the site's own pages.
+    _access: 'TRUE'

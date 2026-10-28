@@ -1,0 +1,143 @@
+ad_inventory.settings:
+  type: config_object
+  label: 'Ad inventory settings'
+  mapping:
+    label:
+      type: label
+      label: 'The label above every space'
+    breakpoint:
+      type: integer
+      label: 'Width in CSS pixels at and below which the phone formats apply'
+    consent:
+      type: mapping
+      label: 'How the browser learns the reader''s advertising consent'
+      mapping:
+        global:
+          type: string
+          label: 'Global object the site sets (window.<name>)'
+        category:
+          type: string
+          label: 'Its true/false property for advertising'
+        event:
+          type: string
+          label: 'DOM event dispatched on document when the reader answers'
+        open_attribute:
+          type: string
+          label: 'Attribute that makes a link reopen the site''s cookie settings'
+
+ad_inventory.format.*:
+  type: config_entity
+  label: 'Banner format'
+  mapping:
+    id:
+      type: machine_name
+      label: 'Machine name'
+    label:
+      type: label
+      label: 'Name'
+    width:
+      type: integer
+      label: 'Width'
+    height:
+      type: integer
+      label: 'Height'
+    weight:
+      type: integer
+      label: 'Weight'
+
+ad_inventory.slot.*:
+  type: config_entity
+  label: 'Banner space'
+  mapping:
+    id:
+      type: machine_name
+      label: 'Machine name'
+    label:
+      type: label
+      label: 'Name'
+    description:
+      type: text
+      label: 'Where it sits'
+    channel:
+      type: string
+      label: 'web or email'
+    desktop_format:
+      type: string
+      label: 'Desktop format'
+    phone_format:
+      type: string
+      label: 'Phone format'
+    alternatives:
+      type: sequence
+      label: 'Alternative formats'
+      sequence:
+        type: string
+    fill:
+      type: sequence
+      label: 'Fill sources'
+      sequence:
+        type: string
+    kinds:
+      type: sequence
+      label: 'Creative kinds'
+      sequence:
+        type: string
+    weight:
+      type: integer
+      label: 'Weight'
+
+ad_inventory.provider.*:
+  type: config_entity
+  label: 'Ad provider'
+  mapping:
+    id:
+      type: machine_name
+      label: 'Machine name'
+    label:
+      type: label
+      label: 'Name'
+    plugin:
+      type: string
+      label: 'Plugin'
+    settings:
+      type: ad_inventory.provider.settings.[%parent.plugin]
+      label: 'Settings'
+    slots:
+      type: sequence
+      label: 'Spaces'
+      sequence:
+        type: string
+    state:
+      type: string
+      label: 'draft or approved'
+    weight:
+      type: integer
+      label: 'Weight'
+
+ad_inventory.provider.settings.*:
+  type: mapping
+  label: 'Provider settings'
+
+block.settings.ad_inventory_slot:*:
+  type: block_settings
+  label: 'Banner space block'
+  mapping:
+    devices:
+      type: string
+      label: 'Show on'
+
+condition.plugin.ad_inventory_route:
+  type: condition.plugin
+  mapping:
+    routes:
+      type: sequence
+      label: 'Route names'
+      sequence:
+        type: string
+
+condition.plugin.ad_inventory_pager_page:
+  type: condition.plugin
+  mapping:
+    which:
+      type: string
+      label: 'Pages'

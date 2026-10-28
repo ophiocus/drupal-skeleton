@@ -1,0 +1,17 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - ad_inventory
+name: ad_inventory_leaderboard
+label: 'Banner leaderboard (1x)'
+effects:
+  c35fb067-e544-5a16-8c32-b7837273dcd7:
+    uuid: c35fb067-e544-5a16-8c32-b7837273dcd7
+    id: image_scale
+    weight: 1
+    data:
+      width: 728
+      height: null
+      upscale: false

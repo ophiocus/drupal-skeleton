@@ -1,0 +1,8 @@
+langcode: en
+status: true
+dependencies: {}
+id: rectangle
+label: 'Rectangle'
+width: 300
+height: 250
+weight: 2

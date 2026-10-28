@@ -1,0 +1,83 @@
+ad_inventory.settings:
+  path: '/admin/structure/ad-inventory'
+  defaults:
+    _form: '\Drupal\ad_inventory\Form\SettingsForm'
+    _title: 'Ad inventory'
+  requirements:
+    _permission: 'administer ad inventory'
+
+ad_inventory.report:
+  path: '/admin/content/ad-inventory/report'
+  defaults:
+    _controller: '\Drupal\ad_inventory\Controller\ReportController::page'
+    _title: 'Banner report'
+  requirements:
+    _permission: 'manage ad bookings'
+
+ad_inventory.report_csv:
+  path: '/admin/content/ad-inventory/report.csv'
+  defaults:
+    _controller: '\Drupal\ad_inventory\Controller\ReportController::csv'
+  requirements:
+    _permission: 'manage ad bookings'
+
+ad_inventory.email_snippet:
+  path: '/admin/structure/ad-inventory/spaces/{ad_slot}/email-snippet'
+  defaults:
+    _controller: '\Drupal\ad_inventory\Controller\ReportController::emailSnippet'
+    _title: 'Mail template snippet'
+  requirements:
+    _permission: 'manage ad bookings'
+
+# Public, uncached, sessionless: the viewability beacon.
+ad_inventory.beacon:
+  path: '/ad/v'
+  methods: [POST]
+  defaults:
+    _controller: '\Drupal\ad_inventory\Controller\CountController::beacon'
+  requirements:
+    # Every reader's browser posts here; ids are checked, nothing personal is kept.
+    _access: 'TRUE'
+  options:
+    no_cache: TRUE
+
+# Public, uncached: a counted click, then a 302 to the creative's link.
+ad_inventory.click:
+  path: '/ad/c/{ad_creative}'
+  defaults:
+    _controller: '\Drupal\ad_inventory\Controller\CountController::click'
+  requirements:
+    # Every reader clicks banners; it only counts and redirects.
+    _access: 'TRUE'
+    ad_creative: '\d+'
+  options:
+    no_cache: TRUE
+    parameters:
+      ad_creative:
+        type: entity:ad_creative
+
+# Public: a mail template's image (cached at the edge) and its counted link.
+ad_inventory.email_image:
+  path: '/ad/e/{ad_slot}/banner.png'
+  defaults:
+    _controller: '\Drupal\ad_inventory\Controller\EmailSlotController::image'
+  requirements:
+    # Mail clients fetch it with no login; it is the public banner.
+    _access: 'TRUE'
+  options:
+    parameters:
+      ad_slot:
+        type: entity:ad_slot
+
+ad_inventory.email_go:
+  path: '/ad/e/{ad_slot}/go'
+  defaults:
+    _controller: '\Drupal\ad_inventory\Controller\EmailSlotController::go'
+  requirements:
+    # Mail readers click with no login; it only counts and redirects.
+    _access: 'TRUE'
+  options:
+    no_cache: TRUE
+    parameters:
+      ad_slot:
+        type: entity:ad_slot
