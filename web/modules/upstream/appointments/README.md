@@ -211,7 +211,10 @@ A site with one language needs nothing. On a site with a second language
   the page's max-age when the purge works; check the edge purge queue drains
   (`drush edge-purge:status`). The details page refuses the time anyway.
 - *Service names in the default language under `/en`:* the service has no
-  translation in that language (seed `translations:` or *Translate*).
+  translation in that language (seed `translations:` or *Translate*). If it
+  has one, `drush appointments:entity-updates --check` names any
+  content_translation field out of line (the translation reads as
+  unpublished); run the step.
 - *Kernel tests and a stub clock:* set the stub's time before
   `parent::setUp()` and never move it before the install time; a clock at
   zero, or rewound past the install, leaves stale field definitions.
@@ -241,6 +244,13 @@ on a fresh install. The steps it knows (`EntitySchema`):
    language, with its id, key and values, so appointments keep pointing at
    it. Until the step runs, every page that lists services fails (the code
    reads a table that does not exist yet), so run it in the same deploy.
+3. **content_translation's fields on services (2026-10-28):** where services
+   are translated, installs and removes content_translation's own fields as
+   the translatable shape needs (`content_translation_status` in,
+   `content_translation_changed` out), and publishes any translation left
+   without a status. This repairs a site where the deploy imported "translate
+   services" before step 2 ran: there `/en` showed the default language,
+   because every translation read as unpublished.
 
 Rehearse it on a copy of the site's production database first (`--check`,
 then the step, then `config:status` and the booking page).
@@ -266,8 +276,15 @@ then the step, then `config:status` and the booking page).
 
 4. Enable translation for *Services* (`content_translation`) and export
    `language.content_settings.appointment_service.appointment_service`.
-   Importing it on the deployed site adds content_translation's own columns
-   by itself.
+   Deploy it, then run `drush appointments:entity-updates` again.
+   - Importing the setting makes content_translation install its own columns,
+     and it picks them from the services' last installed shape.
+   - `drush deploy` imports config before the step can run. On a site still
+     on the old shape, the import therefore installs the wrong ones: its own
+     changed time, and no translation status, so every translation reads as
+     unpublished and `/en` falls back to the default language.
+   - The step brings those columns in line with the translatable shape, and
+     does so whatever order the import and the conversion came in.
 5. Add `translations: { en: { label, description } }` to each service row of
    the seed, then `property:seed`: each service counts one update, and a
    second run says `unchanged`.

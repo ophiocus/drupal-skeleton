@@ -66,6 +66,15 @@ you whether the foundation you cloned is recent enough.
   missing, replacing that release's php:eval line. There is no update hook
   (D25). The step is rehearsed by `EntitySchemaTest`, starting from the old
   one-table schema.
+- The step also aligns content_translation's own fields on services:
+  `content_translation_status` is installed, `content_translation_changed` is
+  removed, and any translation left without a status is published.
+  - These fields go wrong when `drush deploy` imports "translate services"
+    before the step has run. content_translation then picks its fields from
+    the old shape, every translation reads as unpublished, and `/en` shows the
+    default language.
+  - Found on a production copy of a bilingual site. `EntitySchemaTest` covers
+    that order.
 - Tests: `PickerCacheTest`, `TranslatedServicesTest`, `EntitySchemaTest`
   (kernel), `FreshnessTest` (unit), `PickerEdgeCacheTest` and
   `BilingualPickerTest` (functional), plus a new `CacheTagHeaderTest` case.
