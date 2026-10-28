@@ -11,7 +11,8 @@
 #               file in config/sync and custom code parses. The suites below
 #               install from config/install, so a broken config/sync file
 #               would otherwise pass them all and fail only at `drush cim`
-#   phpcs       Drupal + DrupalPractice over custom and upstream code (phpcs.xml.dist)
+#   phpcs       Drupal + DrupalPractice over custom and upstream code, the
+#               upstream install profile included (phpcs.xml.dist)
 #   phpstan     static analysis over custom code (phpstan.neon); an upstream
 #               module whose dependencies this codebase lacks is left out of
 #               phpstan and PHPUnit (scripts/ci/unmet_upstream.php)
@@ -85,6 +86,7 @@ phpunit_suite() {
     web/modules/custom/*/modules/*/tests/src/"$type"
     web/modules/upstream/*/tests/src/"$type"
     web/modules/upstream/*/modules/*/tests/src/"$type"
+    web/profiles/upstream/*/tests/src/"$type"
     web/themes/custom/*/tests/src/"$type"
   )
   local dirs=()
@@ -124,6 +126,7 @@ integrity() {
         web/modules/custom/*/config/*/*.yml web/modules/custom/*/modules/*/*.yml
         web/modules/custom/*/modules/*/config/*/*.yml
         web/modules/upstream/*/*.yml web/modules/upstream/*/config/*/*.yml
+        web/profiles/upstream/*/*.yml
         web/themes/custom/*/*.yml web/themes/custom/*/config/*/*.yml)
   php scripts/ci/yaml_lint.php "${yaml[@]}" || ok=1
 
@@ -132,9 +135,9 @@ integrity() {
   # rule was written down and broken more than once, so it is enforced here.
   local hooks
   hooks="$(grep -r -n -E 'function [a-z0-9_]+_(update_[0-9]+|post_update_[a-z0-9_]+|deploy_[a-z0-9_]+)[[:space:]]*\(' \
-    --include='*.install' --include='*.module' --include='*.php' \
-    web/modules/custom web/modules/upstream web/themes/custom 2>/dev/null)"
-  hooks+="$(find web/modules/custom web/modules/upstream web/themes/custom \( -name '*.post_update.php' -o -name '*.deploy.php' \) 2>/dev/null)"
+    --include='*.install' --include='*.module' --include='*.profile' --include='*.php' \
+    web/modules/custom web/modules/upstream web/profiles/upstream web/themes/custom 2>/dev/null)"
+  hooks+="$(find web/modules/custom web/modules/upstream web/profiles/upstream web/themes/custom \( -name '*.post_update.php' -o -name '*.deploy.php' \) 2>/dev/null)"
   if [ -n "$hooks" ]; then
     echo "update/post-update/deploy hooks are not allowed (PROTOCOL D25; use a seeder):"
     echo "$hooks"

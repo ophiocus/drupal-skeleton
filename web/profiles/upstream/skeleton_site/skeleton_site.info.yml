@@ -1,0 +1,15 @@
+name: 'Skeleton site'
+type: profile
+description: 'The install profile of a site built from config/sync. Install with drush site:install --existing-config; the profile installs nothing itself, the site is its config.'
+core_version_requirement: ^11
+# LOAD-BEARING on a site whose default language is not English. Core deletes
+# English while installing in another language unless the profile keeps it
+# (core/includes/install.core.inc, install_download_additional_translations_operations()),
+# and on an install from config its own safeguard sets the flag only when it
+# found something to revert (install_config_revert_install_changes()). Without
+# this key, site:install --existing-config drops the `en` language and every
+# English config translation. https://www.drupal.org/project/drupal/issues/3545306
+keep_english: true
+# Never offered in the interactive installer: a site is installed from its
+# config, not from this profile's defaults.
+hidden: true

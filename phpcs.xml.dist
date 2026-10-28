@@ -10,6 +10,8 @@
   <!-- Lint only our own code: the site's (custom) and the upstream's. -->
   <file>web/modules/custom</file>
   <file>web/modules/upstream</file>
+  <file>web/profiles/upstream</file>
+  <file>scripts/upstream</file>
   <file>web/themes/custom</file>
 
   <rule ref="Drupal"/>
@@ -26,4 +28,7 @@
   <exclude-pattern>*/vendor/*</exclude-pattern>
   <exclude-pattern>*/js/vendor/*</exclude-pattern>
   <exclude-pattern>*/dist/*</exclude-pattern>
+  <!-- Exported config a test installs from, as Drupal writes it (phpstan.neon
+       excludes the same). -->
+  <exclude-pattern>*/tests/fixtures/*</exclude-pattern>
 </ruleset>

@@ -703,6 +703,35 @@ has chosen, not inserting units from site JavaScript with one `push()` each:
 the AdSense plugin is proven only on a live, approved account. Nothing else in
 the module depends on it.
 
+### D33 — Sites install on the fleet profile `skeleton_site`; recipes switch features on
+
+**Decision (Carlos, 2026-10-28: "start using install profiles", "evaluate drupal
+recipe workflows as the differentiated site install").** Every site's
+`core.extension` names `skeleton_site`, the upstream's install profile
+(`web/profiles/upstream/skeleton_site`, upstream-owned), never core's
+`standard`. Contract and migration: [INSTALL_PROFILES.md](INSTALL_PROFILES.md).
+
+- **The profile is empty on purpose:** `keep_english: true`, `hidden: true`, no
+  modules, no config, no install hook. `config/sync` is the site.
+- **Why:** on a non-English site, `site:install --existing-config` deletes
+  English and every English config translation unless the profile keeps it
+  (core #3545306, postponed). On `standard` English survives only by accident,
+  when some `hook_install()` happened to change config during the install.
+  `KeepEnglishInstallTest` installs a Spanish site with English from config and
+  fails without the key.
+- **A deployed site moves without an update hook (D25):** config import refuses
+  a profile change, so `scripts/upstream/profile-converge.php` uninstalls
+  `standard`, names and installs `skeleton_site`, and the import that follows
+  has nothing to change. The host runs it before every config import; it is a
+  no-op where the profile already matches and refuses anything that would lose
+  config. Rehearsed on production copies; `ProfileConvergeTest` covers it.
+- **Recipes are the feature switch, not the install.** One upstream-owned
+  recipe per upstream feature (`recipes/appointments`, `recipes/maper-map`),
+  applied on a local copy and exported, at mint time or when a site adds the
+  feature. Never a whole site from a recipe (no profile, so English is lost),
+  never in a deploy, never to change or remove a feature: recipes cannot
+  uninstall, are not recorded, refuse config a site changed, and create content
+  once. Content stays with `site_seed` (D27).
 ### D34 — Pages the clock changes are cached until a deadline; listings follow the content language; entity changes ship as a one-time step
 
 **Decision (Carlos, 2026-10-28, on the booking page: "go, build it
