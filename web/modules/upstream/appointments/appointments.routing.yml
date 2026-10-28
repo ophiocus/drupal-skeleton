@@ -5,10 +5,9 @@ appointments.book:
     _title: 'Book an appointment'
   requirements:
     _permission: 'book appointments'
-  options:
-    # Free times move with the clock (notice, today) as well as with bookings,
-    # so this page is never cached, by Drupal or by the edge.
-    no_cache: TRUE
+  # Cacheable, by Drupal and at the edge: tagged by what it shows, and kept
+  # only until the clock moves past it (Freshness). The pages after it, which
+  # hold one client's details, stay no_cache.
 
 # The per-service address of earlier versions: redirects to the picker.
 appointments.book_service:

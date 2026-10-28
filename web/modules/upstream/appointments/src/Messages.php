@@ -112,6 +112,10 @@ final class Messages {
     [$event, $audience] = explode('.', $key, 2) + [1 => 'client'];
     $site = (string) $this->configFactory->get('system.site')->get('name');
     $service = $appointment->getService();
+    // In the mail's language, which can differ from the page's (cron).
+    if ($service && $langcode !== NULL && $service->hasTranslation($langcode)) {
+      $service = $service->getTranslation($langcode);
+    }
     $vars = [
       '@site' => $site,
       '@service' => $service ? $service->label() : '',

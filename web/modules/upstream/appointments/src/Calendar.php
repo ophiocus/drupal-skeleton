@@ -10,6 +10,7 @@ use Drupal\appointments\Entity\AppointmentServiceInterface;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\ImmutableConfig;
+use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 
 /**
@@ -27,7 +28,75 @@ final class Calendar {
     private readonly ConfigFactoryInterface $configFactory,
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly TimeInterface $time,
+    private readonly EntityRepositoryInterface $entityRepository,
   ) {}
+
+  /**
+   * The services, in the content language, lightest first.
+   *
+   * One row per service whatever its translations: the query reads the
+   * default-language rows only, and each service is then shown in the
+   * content language when it has a translation in it (its default language
+   * otherwise). Ties in weight are ordered by the translated name, then id,
+   * so the list is the same on every render.
+   *
+   * @param bool $bookable
+   *   Only the bookable ones.
+   *
+   * @return array<string, \Drupal\appointments\Entity\AppointmentServiceInterface>
+   *   Services keyed by service key.
+   */
+  public function services(bool $bookable = TRUE): array {
+    $storage = $this->entityTypeManager->getStorage('appointment_service');
+    $query = $storage->getQuery()
+      ->accessCheck(TRUE)
+      ->condition('default_langcode', 1);
+    if ($bookable) {
+      $query->condition('status', 1);
+    }
+    $services = [];
+    foreach ($storage->loadMultiple($query->execute()) as $service) {
+      $service = $this->entityRepository->getTranslationFromContext($service);
+      assert($service instanceof AppointmentServiceInterface);
+      $services[] = $service;
+    }
+    usort(
+      $services,
+      static fn (AppointmentServiceInterface $a, AppointmentServiceInterface $b): int
+        => [(int) $a->get('weight')->value, (string) $a->label(), (int) $a->id()]
+        <=> [(int) $b->get('weight')->value, (string) $b->label(), (int) $b->id()],
+    );
+    $keyed = [];
+    foreach ($services as $service) {
+      $keyed[$service->getKey()] = $service;
+    }
+    return $keyed;
+  }
+
+  /**
+   * How long a page of free times stays true, in seconds, from now.
+   *
+   * Bookings, services, rooms and settings change it through cache tags;
+   * this covers what changes with the clock alone: the earliest start shown
+   * drops out once it is closer than the minimum notice, and at midnight
+   * (calendar time) the days shown move on. Never longer than one step
+   * between start times.
+   *
+   * @param int|null $earliest
+   *   The earliest start the page shows, or NULL when it shows none.
+   */
+  public function freshFor(?int $earliest): int {
+    $settings = $this->settings();
+    $now = $this->time->getCurrentTime();
+    $midnight = (new \DateTimeImmutable($this->today() . ' 00:00', new \DateTimeZone($this->timezone())))
+      ->modify('+1 day')
+      ->getTimestamp();
+    $ages = [max(5, (int) $settings->get('slot_step')) * 60, $midnight - $now];
+    if ($earliest !== NULL) {
+      $ages[] = $earliest - max(0, (int) $settings->get('lead_time')) * 60 - $now;
+    }
+    return max(0, min($ages));
+  }
 
   /**
    * The settings object.
