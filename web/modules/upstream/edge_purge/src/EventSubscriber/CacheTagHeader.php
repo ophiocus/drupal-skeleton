@@ -58,9 +58,11 @@ final class CacheTagHeader implements EventSubscriberInterface {
       // How long the CDN keeps it: a page purged by tag the moment it
       // changes needs no daily expiry at the edge, which only sent it back
       // to the origin to be rendered unchanged. Browsers keep the site's own
-      // Cache-Control. Only for what is already public.
+      // Cache-Control. Only for what is already public, and never over a
+      // lifetime the page set itself (a page of free times is true only
+      // until the clock moves past it).
       $cdn = EdgeTags::cdnMaxAge();
-      if ($cdn > 0 && $response->headers->hasCacheControlDirective('public') && (int) $response->getMaxAge() > 0) {
+      if ($cdn > 0 && !$response->headers->has(EdgeTags::CDN_HEADER) && $response->headers->hasCacheControlDirective('public') && (int) $response->getMaxAge() > 0) {
         $response->headers->set(EdgeTags::CDN_HEADER, 'max-age=' . $cdn);
       }
     }

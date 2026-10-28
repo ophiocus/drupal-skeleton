@@ -4,15 +4,31 @@ declare(strict_types=1);
 
 namespace Drupal\appointments\Form;
 
+use Drupal\appointments\Calendar;
 use Drupal\appointments\Entity\AppointmentRoom;
 use Drupal\appointments\Entity\AppointmentRoomInterface;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Adds or edits a room.
  */
 final class AppointmentRoomForm extends EntityForm {
+
+  /**
+   * The calendar, for the services a room may offer.
+   */
+  protected Calendar $calendar;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    $form = parent::create($container);
+    $form->calendar = $container->get('appointments.calendar');
+    return $form;
+  }
 
   /**
    * {@inheritdoc}
@@ -38,11 +54,8 @@ final class AppointmentRoomForm extends EntityForm {
     ];
 
     $options = [];
-    $storage = $this->entityTypeManager->getStorage('appointment_service');
-    $ids = $storage->getQuery()->accessCheck(FALSE)->sort('weight')->sort('label')->execute();
-    /** @var \Drupal\appointments\Entity\AppointmentServiceInterface $service */
-    foreach ($storage->loadMultiple($ids) as $service) {
-      $options[$service->getKey()] = $service->label();
+    foreach ($this->calendar->services(FALSE) as $key => $service) {
+      $options[$key] = $service->label();
     }
     $form['services'] = [
       '#type' => 'checkboxes',

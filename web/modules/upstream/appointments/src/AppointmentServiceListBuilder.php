@@ -6,21 +6,41 @@ namespace Drupal\appointments;
 
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityListBuilder;
+use Drupal\Core\Entity\EntityStorageInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * The list of bookable services.
+ *
+ * One row per service, in the content language (Calendar::services()).
  */
 final class AppointmentServiceListBuilder extends EntityListBuilder {
+
+  public function __construct(
+    EntityTypeInterface $entity_type,
+    EntityStorageInterface $storage,
+    protected readonly Calendar $calendar,
+  ) {
+    parent::__construct($entity_type, $storage);
+  }
 
   /**
    * {@inheritdoc}
    */
-  protected function getEntityIds(): array {
-    return $this->getStorage()->getQuery()
-      ->accessCheck(TRUE)
-      ->sort('weight')
-      ->sort('label')
-      ->execute();
+  public static function createInstance(ContainerInterface $container, EntityTypeInterface $entity_type): static {
+    return new static(
+      $entity_type,
+      $container->get('entity_type.manager')->getStorage($entity_type->id()),
+      $container->get('appointments.calendar'),
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function load(): array {
+    return array_values($this->calendar->services(FALSE));
   }
 
   /**
