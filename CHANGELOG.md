@@ -26,6 +26,31 @@ you whether the foundation you cloned is recent enough.
 - A site that piloted its own `web/profiles/custom/skeleton_site` deletes it in
   the sync pull request that brings this one.
 
+## 2026-10-27 — ad_inventory (PROTOCOL D32)
+
+- New upstream module `ad_inventory`: banner spaces for a site whose public
+  pages are cached. Booked banners, network units and house banners; every
+  reader gets the same HTML, and nothing is shown or counted before the
+  reader's advertising consent. Built first in a site (site-first, then
+  upstream) and moved here unchanged, so a site that carried it keeps its
+  config names (`ad_inventory.slot.*`, `ad_inventory.format.*`,
+  `ad_inventory.provider.*`) and needs no rename or data move.
+- Config entities `ad_format` (six default formats with their image styles),
+  `ad_slot` and `ad_provider`; content entities `ad_creative`, `ad_booking`
+  and `ad_override` (per-page settings). Fill order: a booking in force, then
+  the first approved provider, then approved house banners picked at random
+  in the browser; nothing approved prints nothing.
+- No space is declared in code: spaces and their placements are
+  configuration. A template prints a theme region with the `ad_inventory_region`
+  element, never a space.
+- Submodule `ad_inventory_snippet`: the pasted-snippet provider, behind its
+  own restricted permission.
+- Counting without sessions, cookies or reader records; mail spaces; a
+  report page with CSV at `/admin/content/ad-inventory/report`. The module's
+  README covers installing, configuring, consent, counting, mail, extending
+  and troubleshooting.
+- Baseline: `drupal/adstxt ^1.5` in `upstream-configuration/composer.json`
+  (lock updated).
 ## 2026-10-27 — CI spends fewer Actions minutes
 
 - `build-and-push.yml`: a new `reuse` job skips the test gate when the pushed

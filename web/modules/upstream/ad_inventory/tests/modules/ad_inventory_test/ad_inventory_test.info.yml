@@ -1,0 +1,6 @@
+name: 'Banner spaces test page'
+type: module
+description: 'A public page for ad_inventory functional tests.'
+package: Testing
+core_version_requirement: ^11
+hidden: true

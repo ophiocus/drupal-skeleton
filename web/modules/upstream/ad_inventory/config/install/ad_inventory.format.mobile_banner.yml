@@ -1,0 +1,8 @@
+langcode: en
+status: true
+dependencies: {}
+id: mobile_banner
+label: 'Mobile banner'
+width: 320
+height: 100
+weight: 1

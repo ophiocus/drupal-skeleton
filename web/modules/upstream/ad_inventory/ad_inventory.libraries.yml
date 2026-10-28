@@ -1,0 +1,17 @@
+slot:
+  version: 1.0
+  css:
+    component:
+      css/ad-inventory.css: {}
+  js:
+    js/ad-inventory.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/once
+
+admin:
+  version: 1.0
+  css:
+    theme:
+      css/ad-inventory-admin.css: {}

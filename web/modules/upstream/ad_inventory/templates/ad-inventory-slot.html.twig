@@ -1,0 +1,40 @@
+{#
+/**
+ * @file
+ * One banner space.
+ *
+ * The same markup reaches every reader of the page. The box keeps the
+ * format's proportion (desktop, then phone below the breakpoint) and first
+ * shows the "turned off" notice. The creative or unit waits inert inside
+ * <template>; ad-inventory.js swaps it in once the reader's advertising
+ * consent is granted, and never before.
+ *
+ * Available variables:
+ * - slot_id, source, creative_id: what fills it, for counting.
+ * - devices: 'both', 'desktop' or 'phone' (where this placement shows).
+ * - draft: TRUE when only staff previewing drafts see it.
+ * - desktop, phone: {width, height} in CSS pixels.
+ * - label: the label above every space.
+ * - blocked_reason, blocked_link, consent_attribute: the notice and the link
+ *   that reopens the site's cookie settings.
+ * - candidates: what may fill the space, each {id, content, caption}: the
+ *   creative's <picture> (or the provider's unit, id 0) and a line printed
+ *   under it. With several (house banners), the browser shows one at
+ *   random.
+ */
+#}
+<aside class="ad-inventory ad-inventory--{{ devices }}{{ draft ? ' ad-inventory--draft' }}"
+  data-ad-slot="{{ slot_id }}" data-ad-source="{{ source }}" data-ad-creative="{{ creative_id }}"
+  style="--ad-dw: {{ desktop.width }}; --ad-dh: {{ desktop.height }}; --ad-pw: {{ phone.width }}; --ad-ph: {{ phone.height }};"
+  aria-label="{{ label }}">
+  <p class="ad-inventory__label">{{ label }}{% if draft %} <span class="ad-inventory__draft">{{ 'draft'|t }}</span>{% endif %}</p>
+  <div class="ad-inventory__box">
+    <p class="ad-inventory__blocked">
+      <span>{{ blocked_reason }}</span>
+      <a href="#" {{ consent_attribute }}>{{ blocked_link }}</a>
+    </p>
+  </div>
+  {% for candidate in candidates %}
+  <template class="ad-inventory__fill" data-ad-creative="{{ candidate.id }}">{{ candidate.content }}{% if candidate.caption %}<p class="ad-inventory__caption">{{ candidate.caption }}</p>{% endif %}</template>
+  {% endfor %}
+</aside>

@@ -1,0 +1,84 @@
+<?php
+
+/**
+ * @file
+ * Install and schema for ad_inventory.
+ *
+ * Counts are aggregates per day, space, creative and source. Nothing about
+ * the reader is stored: no address, no browser, no identifier.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_schema().
+ */
+function ad_inventory_schema(): array {
+  $schema['ad_inventory_count'] = [
+    'description' => 'Views and clicks of banner spaces, per day, space, creative and source.',
+    'fields' => [
+      'day' => [
+        'type' => 'varchar_ascii',
+        'length' => 10,
+        'not null' => TRUE,
+        'description' => 'YYYY-MM-DD in the site time zone.',
+      ],
+      'slot' => [
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => TRUE,
+      ],
+      'creative' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => '0 for a provider unit.',
+      ],
+      'source' => [
+        'type' => 'varchar_ascii',
+        'length' => 96,
+        'not null' => TRUE,
+        'description' => 'booking, house, email or provider:<id>.',
+      ],
+      'views' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'clicks' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+    ],
+    'primary key' => ['day', 'slot', 'creative', 'source'],
+    'indexes' => [
+      'creative' => ['creative'],
+    ],
+  ];
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ *
+ * The adstxt module's own install copies its sample file (made-up exchanges
+ * and seller ids) into /ads.txt when no site file exists. Served, those lines
+ * would authorise sellers nobody signed with. Seller lines come only from
+ * approved providers here, so the sample is cleared; a site's own text is
+ * kept.
+ */
+function ad_inventory_install(bool $is_syncing): void {
+  $config = \Drupal::configFactory()->getEditable('adstxt.settings');
+  $path = \Drupal::service('extension.list.module')->getPath('adstxt');
+  foreach (['content' => 'ads.txt', 'app_content' => 'app-ads.txt'] as $key => $file) {
+    $sample = is_readable($path . '/' . $file) ? trim((string) file_get_contents($path . '/' . $file)) : NULL;
+    if ($sample !== NULL && trim((string) $config->get($key)) === $sample) {
+      $config->set($key, '');
+    }
+  }
+  $config->save();
+}

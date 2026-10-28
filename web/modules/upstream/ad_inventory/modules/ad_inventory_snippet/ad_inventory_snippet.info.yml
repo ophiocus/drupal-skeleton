@@ -1,0 +1,7 @@
+name: 'Ad inventory: pasted snippet'
+type: module
+description: 'An ad provider made of markup pasted from a network, one unit per format. Restricted: whoever may configure it can put any code on public pages.'
+core_version_requirement: ^11.1
+package: Advertising
+dependencies:
+  - ad_inventory:ad_inventory

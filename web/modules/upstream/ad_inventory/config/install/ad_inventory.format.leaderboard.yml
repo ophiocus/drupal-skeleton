@@ -1,0 +1,8 @@
+langcode: en
+status: true
+dependencies: {}
+id: leaderboard
+label: 'Leaderboard'
+width: 728
+height: 90
+weight: 0

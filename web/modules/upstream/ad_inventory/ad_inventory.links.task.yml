@@ -1,0 +1,28 @@
+ad_inventory.bookings_tab:
+  route_name: entity.ad_booking.collection
+  base_route: entity.ad_booking.collection
+  title: 'Bookings'
+ad_inventory.creatives_tab:
+  route_name: entity.ad_creative.collection
+  base_route: entity.ad_booking.collection
+  title: 'Creatives'
+ad_inventory.report_tab:
+  route_name: ad_inventory.report
+  base_route: entity.ad_booking.collection
+  title: 'Report'
+ad_inventory.settings_tab:
+  route_name: ad_inventory.settings
+  base_route: ad_inventory.settings
+  title: 'Settings'
+ad_inventory.slots_tab:
+  route_name: entity.ad_slot.collection
+  base_route: ad_inventory.settings
+  title: 'Spaces'
+ad_inventory.formats_tab:
+  route_name: entity.ad_format.collection
+  base_route: ad_inventory.settings
+  title: 'Formats'
+ad_inventory.providers_tab:
+  route_name: entity.ad_provider.collection
+  base_route: ad_inventory.settings
+  title: 'Providers'
