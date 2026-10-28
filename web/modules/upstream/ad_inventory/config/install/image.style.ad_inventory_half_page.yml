@@ -1,0 +1,17 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - ad_inventory
+name: ad_inventory_half_page
+label: 'Banner half page (1x)'
+effects:
+  06c8fe61-5477-536d-a48e-0e976699a6ce:
+    uuid: 06c8fe61-5477-536d-a48e-0e976699a6ce
+    id: image_scale
+    weight: 1
+    data:
+      width: 300
+      height: null
+      upscale: false

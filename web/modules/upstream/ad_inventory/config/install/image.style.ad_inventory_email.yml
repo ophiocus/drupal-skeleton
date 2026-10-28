@@ -1,0 +1,17 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - ad_inventory
+name: ad_inventory_email
+label: 'Banner email banner (1x)'
+effects:
+  d147cee7-84b1-50a4-b452-756567746e51:
+    uuid: d147cee7-84b1-50a4-b452-756567746e51
+    id: image_scale
+    weight: 1
+    data:
+      width: 600
+      height: null
+      upscale: false

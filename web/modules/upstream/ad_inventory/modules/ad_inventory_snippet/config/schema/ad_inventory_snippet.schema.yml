@@ -1,0 +1,25 @@
+ad_inventory.provider.settings.snippet:
+  type: mapping
+  label: 'Pasted snippet provider'
+  mapping:
+    units:
+      type: sequence
+      label: 'Unit markup per format id'
+      sequence:
+        type: string
+    loaders:
+      type: sequence
+      label: 'Script URLs loaded once per page after consent'
+      sequence:
+        type: string
+    ads_txt:
+      type: sequence
+      label: 'ads.txt lines'
+      sequence:
+        type: string
+    verification:
+      type: string
+      label: 'Verification meta tag'
+    provider_id:
+      type: string
+      label: 'Provider id (set at run time)'

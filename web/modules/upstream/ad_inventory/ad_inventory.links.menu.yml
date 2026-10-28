@@ -1,0 +1,30 @@
+ad_inventory.settings:
+  title: 'Ad inventory'
+  description: 'Banner formats, spaces, providers and the consent bridge.'
+  route_name: ad_inventory.settings
+  parent: system.admin_structure
+entity.ad_slot.collection:
+  title: 'Banner spaces'
+  route_name: entity.ad_slot.collection
+  parent: ad_inventory.settings
+entity.ad_format.collection:
+  title: 'Banner formats'
+  route_name: entity.ad_format.collection
+  parent: ad_inventory.settings
+entity.ad_provider.collection:
+  title: 'Ad providers'
+  route_name: entity.ad_provider.collection
+  parent: ad_inventory.settings
+entity.ad_booking.collection:
+  title: 'Banner bookings'
+  description: 'Who holds which space, and when.'
+  route_name: entity.ad_booking.collection
+  parent: system.admin_content
+entity.ad_creative.collection:
+  title: 'Banner creatives'
+  route_name: entity.ad_creative.collection
+  parent: entity.ad_booking.collection
+ad_inventory.report:
+  title: 'Banner report'
+  route_name: ad_inventory.report
+  parent: entity.ad_booking.collection

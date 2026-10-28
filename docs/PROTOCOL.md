@@ -662,3 +662,43 @@ rebuilt with 8.4.27 the day after the release. Moving to a plain `php:8.3`
 base would have kept 8.3 at the cost of rebuilding the Drupal image's
 extensions by hand. A minor-pinned tag is only as good as its publisher:
 check its last push date when a PHP security release lands (BATTLE_SCARS §47).
+
+### D32 — Advertising: one inventory module, filled in the browser after consent
+
+**Decision (Carlos, 2026-10-24 and 2026-10-26; build approved 2026-10-27).** A
+site that sells or carries advertising uses `web/modules/upstream/ad_inventory`.
+Our own module, built in a site first and moved upstream unchanged, with contrib
+`drupal/adstxt` (in the baseline) serving `/ads.txt`. The pieces:
+
+- **Fill order:** a booking sold directly, then the network providers (an
+  ordered list of configurable plugin instances), then the site's house
+  creatives.
+- **Consent first, for every banner:** every slot's HTML carries the site's
+  blocked banner; creatives and network units wait in an inert `<template>`
+  and the browser fills the box only after the site's own consent signal
+  grants advertising. A reader who declines sees the blocked banner,
+  everywhere.
+- **The page cache is never traded:** one HTML for every reader; no cookie,
+  session or per-reader context; scoped bookings follow the page, never the
+  reader; counting is a first-party beacon and a redirect that store no
+  reader data.
+- **Fail closed:** nothing approved means nothing printed: a space with no
+  booking, no approved house banner and no approved provider leaves no
+  markup. `bypass advertising` keeps network units from staff.
+- **Configuration, never code:** spaces and placements are config; a
+  template prints a theme region, never a space, so a site's banner setup
+  travels as config and seeds.
+- **Email slots** are one image and one click address per slot, the same
+  answer for everyone, purged at the edge by tag.
+
+**Why our own module.** Read on git.drupalcode.org (2026-10-23): `drupal/ad`
+chooses the ad on the server, sends an uncached request per page view, counts
+at render and stores IP, user agent, URL and session per event; `simpleads`,
+`ad_entity`, `adsense`, `dfp` and `revive_adserver` have no dated sold
+bookings with first-party, cookie-free counting. The name `ad_space` is taken
+on drupal.org.
+
+**Known risk.** Google documents deferring `adsbygoogle.js` until the reader
+has chosen, not inserting units from site JavaScript with one `push()` each:
+the AdSense plugin is proven only on a live, approved account. Nothing else in
+the module depends on it.

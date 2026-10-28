@@ -1,0 +1,8 @@
+langcode: en
+status: true
+dependencies: {}
+id: skyscraper
+label: 'Skyscraper'
+width: 160
+height: 600
+weight: 3

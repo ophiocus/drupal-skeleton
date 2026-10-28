@@ -1,0 +1,7 @@
+label: 'Sponsored Links'
+breakpoint: 900
+consent:
+  global: adConsent
+  category: ads
+  event: 'ad:consent'
+  open_attribute: data-ad-consent-open

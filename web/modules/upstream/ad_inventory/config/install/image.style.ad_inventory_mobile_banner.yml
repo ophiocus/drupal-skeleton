@@ -1,0 +1,17 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - ad_inventory
+name: ad_inventory_mobile_banner
+label: 'Banner mobile banner (1x)'
+effects:
+  5fffbcbb-7ee8-5733-9d8e-bd412fd8ca35:
+    uuid: 5fffbcbb-7ee8-5733-9d8e-bd412fd8ca35
+    id: image_scale
+    weight: 1
+    data:
+      width: 320
+      height: null
+      upscale: false

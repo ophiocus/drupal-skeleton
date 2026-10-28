@@ -1,0 +1,21 @@
+/**
+ * @file
+ * Admin screens of ad_inventory.
+ */
+.ad-inventory-renditions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+
+.ad-inventory-renditions img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #ccc;
+}
+
+.ad-inventory-report td.num,
+.ad-inventory-report th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

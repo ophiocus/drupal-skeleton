@@ -1,0 +1,25 @@
+ad_inventory.add_booking:
+  route_name: entity.ad_booking.add_form
+  title: 'Add booking'
+  appears_on:
+    - entity.ad_booking.collection
+ad_inventory.add_creative:
+  route_name: entity.ad_creative.add_form
+  title: 'Add creative'
+  appears_on:
+    - entity.ad_creative.collection
+ad_inventory.add_slot:
+  route_name: entity.ad_slot.add_form
+  title: 'Add banner space'
+  appears_on:
+    - entity.ad_slot.collection
+ad_inventory.add_format:
+  route_name: entity.ad_format.add_form
+  title: 'Add banner format'
+  appears_on:
+    - entity.ad_format.collection
+ad_inventory.add_provider:
+  route_name: entity.ad_provider.add_form
+  title: 'Add ad provider'
+  appears_on:
+    - entity.ad_provider.collection

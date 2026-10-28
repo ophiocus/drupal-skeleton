@@ -1,0 +1,17 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - ad_inventory
+name: ad_inventory_skyscraper
+label: 'Banner skyscraper (1x)'
+effects:
+  1893b68c-ae69-5831-84e4-b207db9c0ace:
+    uuid: 1893b68c-ae69-5831-84e4-b207db9c0ace
+    id: image_scale
+    weight: 1
+    data:
+      width: 160
+      height: null
+      upscale: false

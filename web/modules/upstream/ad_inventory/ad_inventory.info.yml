@@ -1,0 +1,12 @@
+name: 'Ad inventory'
+type: module
+description: 'Banner spaces sold directly, house banners and ad providers in reserved, labelled boxes. One HTML for every reader; consent, filling and counting happen in the browser.'
+core_version_requirement: ^11.1
+package: Advertising
+configure: ad_inventory.settings
+dependencies:
+  - drupal:block
+  - drupal:file
+  - drupal:image
+  - drupal:media
+  - adstxt:adstxt

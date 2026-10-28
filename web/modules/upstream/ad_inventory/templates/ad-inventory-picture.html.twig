@@ -1,0 +1,21 @@
+{#
+/**
+ * @file
+ * A creative: its phone rendition below the breakpoint, its desktop one above.
+ *
+ * Each rendition is served at 1x (an image style) and 2x (the upload). The
+ * link goes through the counted click route and is marked sponsored.
+ *
+ * Available variables:
+ * - href: the counted click URL.
+ * - alt: what the banner says.
+ * - desktop, phone: {x1, x2, width, height}.
+ * - media: the media query of the phone source.
+ */
+#}
+<a class="ad-inventory__link" href="{{ href }}" rel="sponsored noopener" target="_blank">
+  <picture>
+    <source media="{{ media }}" srcset="{{ phone.x1 }} 1x, {{ phone.x2 }} 2x" width="{{ phone.width }}" height="{{ phone.height }}">
+    <img src="{{ desktop.x1 }}" srcset="{{ desktop.x1 }} 1x, {{ desktop.x2 }} 2x" width="{{ desktop.width }}" height="{{ desktop.height }}" alt="{{ alt }}" loading="lazy" decoding="async">
+  </picture>
+</a>

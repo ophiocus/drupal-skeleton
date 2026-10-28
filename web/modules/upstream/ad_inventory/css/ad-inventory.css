@@ -1,0 +1,111 @@
+/**
+ * @file
+ * A banner space: a labelled box that keeps its format's proportion.
+ *
+ * The box's width and height come from custom properties set on the space
+ * (--ad-dw/--ad-dh on wide screens, --ad-pw/--ad-ph on phones). The box never
+ * grows wider than its format and shrinks with a narrower column, so its
+ * space is reserved before anything loads and the swap shifts nothing.
+ *
+ * The phone breakpoint here (900px) matches the module's default setting; a
+ * site that changes the setting overrides these two media queries too.
+ */
+.ad-inventory {
+  --ad-ink: currentColor;
+  --ad-line: color-mix(in srgb, currentColor 22%, transparent);
+  box-sizing: border-box;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  margin-block: 1.5rem;
+  margin-inline: auto;
+}
+
+.ad-inventory__label {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.ad-inventory__draft {
+  padding: 0 0.35em;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+}
+
+.ad-inventory__box {
+  box-sizing: border-box;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: calc(var(--ad-dw) * 1px);
+  aspect-ratio: var(--ad-dw) / var(--ad-dh);
+  overflow: hidden;
+  border: 1px dashed var(--ad-line);
+}
+
+.ad-inventory--filled .ad-inventory__box {
+  border-color: transparent;
+}
+
+.ad-inventory__blocked {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.ad-inventory__blocked a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.ad-inventory__link,
+.ad-inventory__link picture,
+.ad-inventory__link img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ad-inventory__link img {
+  object-fit: contain;
+}
+
+.ad-inventory__caption {
+  position: absolute;
+  inset: auto 0 0;
+  margin: 0;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+}
+
+.ad-inventory--phone {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .ad-inventory__box {
+    max-width: calc(var(--ad-pw) * 1px);
+    aspect-ratio: var(--ad-pw) / var(--ad-ph);
+  }
+
+  .ad-inventory--phone {
+    display: grid;
+  }
+
+  .ad-inventory--desktop {
+    display: none;
+  }
+}
