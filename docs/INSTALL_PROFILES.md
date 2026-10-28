@@ -40,6 +40,21 @@ ddev drush site:install skeleton_site --locale=es -y   # the site's language (D2
 ddev drush config:export -y
 ```
 
+**The first install of a non-English site with English keeps writing config,
+so export once and install again.** Once English is kept, `locale` writes
+English overrides of all shipped config while it finishes translations ("N
+configuration objects updated" at `install_finish_translations`; about 160 on a
+shop). Those land in the database, not in `config/sync`, and show as "Only in
+DB" after the first install. Export them once (`config/sync/language/en/`), then
+install again from that export. `config:status` must then say "No differences",
+and that second install is the proof. A sync that lacks them yields a site
+that differs from its config from the first day; a fleet config without them
+came back with 21 more English overrides than its sync after a fresh install.
+
+The installer logs `Translation file not found: …/<project>-<version>.en.po`
+for every project. These are notices: there are no English `.po` files to
+download.
+
 ## 2. Why: English is deleted on a non-English install
 
 On a site whose default language is not English, core's installer deletes the
@@ -258,3 +273,11 @@ remove a feature a site already has. Next recipes, in the order sites need them:
 the shop, delivery (`shop_delivery`), banners, and the second language
 (`language`, `locale`, `content_translation`, `config_translation`). Each one
 gets a kernel test like `AppointmentsRecipeTest`.
+
+The second-language recipe carries one fix every bilingual listing needs. A
+view of a translatable entity filters on `langcode`
+`***LANGUAGE_language_content***`, sets `rendering_language` to the same, and
+turns on `distinct` when it joins translatable terms. Without it, each item is
+listed once per translation, always in the default language. The recipe can
+apply it with config actions on the views it knows; a site's own views get it
+in their config.
