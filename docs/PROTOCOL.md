@@ -702,3 +702,45 @@ on drupal.org.
 has chosen, not inserting units from site JavaScript with one `push()` each:
 the AdSense plugin is proven only on a live, approved account. Nothing else in
 the module depends on it.
+
+### D34 — Pages the clock changes are cached until a deadline; listings follow the content language; entity changes ship as a one-time step
+
+**Decision (Carlos, 2026-10-28, on the booking page: "go, build it
+upstream").** Three rules came out of the appointments work. They hold for
+any upstream module.
+
+- **A page whose truth moves with the clock is still cached.** It carries
+  cache tags for everything that changes it by a save, so a save purges it
+  everywhere, the CDN included (D26). Its max-age is when the clock alone
+  makes it wrong. `no_cache` is for pages that hold one visitor's data. Three
+  mechanics are easy to miss:
+  - Drupal's page cache keeps a page by its `Expires`, which core sets in
+    1978 (that is, forever). Such a page sends `Expires: now + N` even on a
+    site whose page max-age is 0.
+  - Dynamic and internal page caches replay a stored page with its old
+    max-age. The deadline travels as a moment, not a duration, and is
+    re-aged on the way out.
+  - edge_purge's long CDN lifetime applies only where a page set none.
+
+  Reference: appointments' `Freshness`, `FreshHeaders` and `FreshMiddleware`.
+- **On a site with a second language, every listing is language-aware.**
+  - Read one row per entity: the default translation, or the content
+    language with a fallback.
+  - Render each row in the content language.
+  - Make a query *distinct* when it joins translatable terms.
+
+  Without this, an entity is listed once per translation, and always in the
+  default language. That was seen on a bilingual shop's catalogue and on the
+  booking page. A module that lists entities does this itself
+  (`Calendar::services()`). A Views listing a site builds sets it in the view.
+- **A change to how an entity type is stored ships as a one-time step, never
+  an update hook (D25).** The module ships a drush command:
+  - it inspects the last installed definitions;
+  - it does only what is missing, so it is idempotent and does nothing on a
+    fresh install;
+  - it has a `--check`.
+
+  The module's README lists the step for the deploy that brings the code, and
+  a kernel test rehearses it from the old schema with data in it.
+  Appointments: `drush appointments:entity-updates`. The same release rehearses
+  the step on a copy of a site's database before any deploy.

@@ -5,6 +5,53 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-28 — appointments: a cacheable picker, translatable services
+
+- **The booking page is cacheable**, by Drupal and at the edge, for as long as
+  what it shows stays true. It carries the tags `appointment_list`,
+  `appointment_service_list`, `config:appointment_room_list`,
+  `config:appointments.settings` and `config:system.date`, so any booking,
+  service, room or settings change purges it, at the CDN too through
+  edge_purge. It varies by `?service=`, `?room=`, `?from=`, `?reschedule=` and
+  the content language.
+- **Its lifetime N** is the shortest of: the earliest start shown minus the
+  minimum notice minus now, the next midnight, and one step. It is 0 for
+  `?reschedule=`. `no_cache` is gone from `appointments.book` only.
+  - New `EventSubscriber\FreshHeaders` at -10. It sends `public, max-age=N` and
+    `Cloudflare-CDN-Cache-Control: max-age=N` where core made the page public,
+    and `Expires: now + N` always, so Drupal's page cache drops the page on
+    time even where the site's page max-age is 0. For N = 0 it triggers the
+    kill switch and sends `no-cache, private`.
+  - New `StackMiddleware\FreshMiddleware`, outside the page cache, re-ages a
+    copy served again from it.
+- **edge_purge:** `CacheTagHeader` sets the CDN lifetime only when the page set
+  none.
+- **Services are translatable**: a data table
+  (`appointment_service_field_data`), with label, description and changed per
+  language. Key, duration, buffer, price, weight and bookable are shared. The
+  *Translate* operation comes from content_translation's link templates under
+  `/admin/appointments/services/{id}/translations`. Rooms keep config
+  translation, as before.
+- **Listings are language-aware**: `Calendar::services()` (picker, service
+  list, room form) reads the default-language rows and renders each service in
+  the content language, ordered by weight, translated name and id.
+  `Appointment::getService()` returns the translation, and mails use their own
+  language.
+- **Seeds:** an `appointment_services` row takes
+  `translations: { <langcode>: { label, description } }`. A check run no longer
+  leaves its changes on the loaded entity.
+- **One-time step for deployed sites:** `drush appointments:entity-updates`
+  (`EntitySchema`, idempotent, `--check`). It makes services translatable, with
+  every service copied over, and it also records `appointment_room` if
+  missing, replacing that release's php:eval line. There is no update hook
+  (D25). The step is rehearsed by `EntitySchemaTest`, starting from the old
+  one-table schema.
+- Tests: `PickerCacheTest`, `TranslatedServicesTest`, `EntitySchemaTest`
+  (kernel), `FreshnessTest` (unit), `PickerEdgeCacheTest` and
+  `BilingualPickerTest` (functional), plus a new `CacheTagHeaderTest` case.
+- README: *Caching*, *Languages*, the one-time step, and adoption steps for a
+  site with one language and for a bilingual one. PROTOCOL D34.
+
 ## 2026-10-27 — ad_inventory (PROTOCOL D32)
 
 - New upstream module `ad_inventory`: banner spaces for a site whose public
@@ -30,6 +77,7 @@ you whether the foundation you cloned is recent enough.
   and troubleshooting.
 - Baseline: `drupal/adstxt ^1.5` in `upstream-configuration/composer.json`
   (lock updated).
+
 ## 2026-10-27 — CI spends fewer Actions minutes
 
 - `build-and-push.yml`: a new `reuse` job skips the test gate when the pushed

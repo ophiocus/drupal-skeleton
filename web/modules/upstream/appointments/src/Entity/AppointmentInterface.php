@@ -39,6 +39,8 @@ interface AppointmentInterface extends ContentEntityInterface, EntityChangedInte
 
   /**
    * The service booked, or NULL if it was deleted.
+   *
+   * In the current content language when it has a translation in it.
    */
   public function getService(): ?AppointmentServiceInterface;
 

@@ -21,6 +21,10 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  *
  * Content, not config: the services a site offers are business data, seeded
  * by the site and edited by its staff, like products in a shop.
+ *
+ * Translatable: the name and description have a translation per language,
+ * everything else (key, duration, price, bookable) is shared. A service has
+ * no page of its own, so the translation pages hang off the edit form.
  */
 #[ContentEntityType(
   id: 'appointment_service',
@@ -32,6 +36,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
     'id' => 'id',
     'uuid' => 'uuid',
     'label' => 'label',
+    'langcode' => 'langcode',
     'published' => 'status',
   ],
   handlers: [
@@ -47,12 +52,25 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
     'add-form' => '/admin/appointments/services/add',
     'edit-form' => '/admin/appointments/services/{appointment_service}',
     'delete-form' => '/admin/appointments/services/{appointment_service}/delete',
+    'drupal:content-translation-overview' => '/admin/appointments/services/{appointment_service}/translations',
+    'drupal:content-translation-add' => '/admin/appointments/services/{appointment_service}/translations/add/{source}/{target}',
+    'drupal:content-translation-edit' => '/admin/appointments/services/{appointment_service}/translations/edit/{language}',
+    'drupal:content-translation-delete' => '/admin/appointments/services/{appointment_service}/translations/delete/{language}',
   ],
   admin_permission: 'administer appointments',
   base_table: 'appointment_service',
+  data_table: 'appointment_service_field_data',
+  translatable: TRUE,
   label_count: [
     'singular' => '@count service',
     'plural' => '@count services',
+  ],
+  // What content_translation sets itself only for types with a canonical
+  // page: who may open the translation pages.
+  additional: [
+    'translation' => [
+      'content_translation' => ['access_callback' => 'content_translation.manager:access'],
+    ],
   ],
 )]
 final class AppointmentService extends ContentEntityBase implements AppointmentServiceInterface {
@@ -108,6 +126,7 @@ final class AppointmentService extends ContentEntityBase implements AppointmentS
     $fields['label'] = BaseFieldDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Name'))
       ->setRequired(TRUE)
+      ->setTranslatable(TRUE)
       ->setSetting('max_length', 255)
       ->setDisplayOptions('form', ['type' => 'string_textfield', 'weight' => -9])
       ->setDisplayConfigurable('form', TRUE)
@@ -115,6 +134,7 @@ final class AppointmentService extends ContentEntityBase implements AppointmentS
 
     $fields['description'] = BaseFieldDefinition::create('string_long')
       ->setLabel(new TranslatableMarkup('Description'))
+      ->setTranslatable(TRUE)
       ->setDisplayOptions('form', ['type' => 'string_textarea', 'weight' => -8])
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
@@ -150,13 +170,16 @@ final class AppointmentService extends ContentEntityBase implements AppointmentS
       ->setDisplayOptions('form', ['type' => 'number', 'weight' => 5])
       ->setDisplayConfigurable('form', TRUE);
 
+    // Bookable or not in every language at once: the calendar is one.
     $fields['status']
       ->setLabel(new TranslatableMarkup('Bookable'))
+      ->setTranslatable(FALSE)
       ->setDisplayOptions('form', ['type' => 'boolean_checkbox', 'weight' => 10])
       ->setDisplayConfigurable('form', TRUE);
 
     $fields['changed'] = BaseFieldDefinition::create('changed')
-      ->setLabel(new TranslatableMarkup('Changed'));
+      ->setLabel(new TranslatableMarkup('Changed'))
+      ->setTranslatable(TRUE);
 
     return $fields;
   }

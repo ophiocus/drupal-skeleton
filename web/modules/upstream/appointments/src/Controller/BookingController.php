@@ -8,10 +8,14 @@ use Drupal\appointments\BookingManager;
 use Drupal\appointments\Calendar;
 use Drupal\appointments\Entity\AppointmentInterface;
 use Drupal\appointments\Entity\AppointmentServiceInterface;
+use Drupal\appointments\Freshness;
 use Drupal\appointments\Ics;
 use Drupal\appointments\Messages;
+use Drupal\Component\Datetime\TimeInterface;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
+use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -26,6 +30,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * One page picks the time: a service dropdown, the rooms that offer it
  * (hidden when there is only one), and the free start times a week of open
  * days at a time. A chosen time opens the client's details form.
+ *
+ * The picker is cacheable, by Drupal and at the edge, for as long as what it
+ * shows stays true (Freshness); the pages after it are never cached.
  */
 final class BookingController extends ControllerBase {
 
@@ -39,6 +46,7 @@ final class BookingController extends ControllerBase {
     private readonly BookingManager $booking,
     private readonly Messages $messages,
     private readonly DateFormatterInterface $dateFormatter,
+    private readonly TimeInterface $time,
   ) {}
 
   /**
@@ -50,6 +58,7 @@ final class BookingController extends ControllerBase {
       $container->get('appointments.booking'),
       $container->get('appointments.messages'),
       $container->get('date.formatter'),
+      $container->get('datetime.time'),
     );
   }
 
@@ -72,12 +81,28 @@ final class BookingController extends ControllerBase {
    */
   public function picker(Request $request): array {
     $langcode = $this->languageManager()->getCurrentLanguage()->getId();
-    $services = $this->bookableServices();
+    // What the page depends on. Bookings (appointment_list), services, rooms
+    // and settings invalidate it by tag, at the edge too; the clock by its
+    // deadline (Freshness).
+    $cacheability = (new CacheableMetadata())
+      ->addCacheTags([
+        'appointment_list',
+        'appointment_service_list',
+        'config:appointment_room_list',
+        'config:appointments.settings',
+        'config:system.date',
+      ])
+      ->addCacheContexts([
+        'url.query_args:service',
+        'url.query_args:room',
+        'url.query_args:from',
+        'url.query_args:reschedule',
+        'languages:' . LanguageInterface::TYPE_CONTENT,
+      ]);
+    $services = $this->calendar->services();
     if (!$services) {
-      return [
-        '#markup' => '<p>' . $this->t('There is nothing to book at the moment.') . '</p>',
-        '#cache' => ['max-age' => 0],
-      ];
+      $build = ['#markup' => '<p>' . $this->t('There is nothing to book at the moment.') . '</p>'];
+      return $this->fresh($build, $cacheability, $this->calendar->freshFor(NULL));
     }
 
     $moving = $this->movingAppointment($request);
@@ -105,7 +130,13 @@ final class BookingController extends ControllerBase {
       'service' => $moving ? NULL : $service->getKey(),
       'reschedule' => $moving?->getToken(),
     ]);
-    $here = static fn (array $query): string => Url::fromRoute('appointments.book', [], ['query' => array_filter($query)])->toString();
+    // Generated URLs carry cacheability of their own (the language prefix).
+    $url = static function (Url $url) use ($cacheability): string {
+      $generated = $url->toString(TRUE);
+      $cacheability->addCacheableDependency($generated);
+      return $generated->getGeneratedUrl();
+    };
+    $here = static fn (array $query): string => $url(Url::fromRoute('appointments.book', [], ['query' => array_filter($query)]));
 
     $room_links = [];
     if (count($rooms) > 1) {
@@ -140,16 +171,18 @@ final class BookingController extends ControllerBase {
     $tz = $this->calendar->timezone();
     $days = [];
     $any = FALSE;
+    $earliest = NULL;
     foreach (array_slice($dates, $offset, self::DAYS_PER_PAGE) as $date) {
       $slots = [];
       foreach ($this->calendar->slots($service, $date, $moving ? (int) $moving->id() : NULL, $room) as $start) {
+        $earliest ??= $start;
         $query = array_filter(['room' => $room]);
-        $url = $moving
+        $slot_url = $moving
           ? Url::fromRoute('appointments.move', ['token' => $moving->getToken(), 'start' => $start], ['query' => $query])
           : Url::fromRoute('appointments.book_slot', ['appointment_service' => $service->id(), 'start' => $start], ['query' => $query]);
         $slots[] = [
           'time' => $this->dateFormatter->format($start, 'custom', 'H:i', $tz, $langcode),
-          'url' => $url->toString(),
+          'url' => $url($slot_url),
         ];
       }
       $any = $any || $slots;
@@ -166,9 +199,9 @@ final class BookingController extends ControllerBase {
     }
     $price = (float) $service->getPrice() > 0 ? $this->messages->price($service->getPrice(), $langcode) : '';
 
-    return [
+    $build = [
       '#theme' => 'appointments_picker',
-      '#action' => Url::fromRoute('appointments.book')->toString(),
+      '#action' => $url(Url::fromRoute('appointments.book')),
       '#services' => $moving ? [] : $options,
       '#service' => [
         'label' => $service->label(),
@@ -185,10 +218,32 @@ final class BookingController extends ControllerBase {
       '#next' => $next ? $here($paging + ['from' => $next]) : '',
       '#timezone' => $tz,
       '#attached' => ['library' => ['appointments/booking', 'appointments/picker']],
-      // Free times move with the clock as well as with bookings: never
-      // cached, by Drupal or by the edge (the route is no_cache too).
-      '#cache' => ['max-age' => 0],
     ];
+    // An appointment being moved is one client's page: never kept anywhere.
+    return $this->fresh($build, $cacheability, $moving ? 0 : $this->calendar->freshFor($earliest));
+  }
+
+  /**
+   * Adds a picker page's cacheability and its deadline.
+   *
+   * @param array<string, mixed> $build
+   *   The render array.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   What the page depends on.
+   * @param int $seconds
+   *   How long it stays true; 0: not cacheable.
+   *
+   * @return array<string, mixed>
+   *   The render array.
+   */
+  private function fresh(array $build, CacheableMetadata $cacheability, int $seconds): array {
+    $cacheability->mergeCacheMaxAge($seconds);
+    $cacheability->applyTo($build);
+    // The deadline as a moment, not a duration: a copy served later by the
+    // dynamic page cache still knows when it stops being true.
+    $until = (int) $this->time->getCurrentTime() + $seconds;
+    $build['#attached']['http_header'][] = [Freshness::HEADER, (string) $until, TRUE];
+    return $build;
   }
 
   /**
@@ -307,28 +362,6 @@ final class BookingController extends ControllerBase {
       'Cache-Control' => 'private, no-store',
       'X-Robots-Tag' => 'noindex',
     ]);
-  }
-
-  /**
-   * The published services, keyed by service key, lightest first.
-   *
-   * @return array<string, \Drupal\appointments\Entity\AppointmentServiceInterface>
-   *   Services.
-   */
-  private function bookableServices(): array {
-    $storage = $this->entityTypeManager()->getStorage('appointment_service');
-    $ids = $storage->getQuery()
-      ->accessCheck(TRUE)
-      ->condition('status', 1)
-      ->sort('weight')
-      ->sort('label')
-      ->execute();
-    $services = [];
-    /** @var \Drupal\appointments\Entity\AppointmentServiceInterface $service */
-    foreach ($storage->loadMultiple($ids) as $service) {
-      $services[$service->getKey()] = $service;
-    }
-    return $services;
   }
 
   /**

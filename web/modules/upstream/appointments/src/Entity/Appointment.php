@@ -88,6 +88,12 @@ final class Appointment extends ContentEntityBase implements AppointmentInterfac
    */
   public function getService(): ?AppointmentServiceInterface {
     $service = $this->get('service')->entity;
+    if (!$service instanceof AppointmentServiceInterface) {
+      return NULL;
+    }
+    // In the language of the page (or its default language when it has no
+    // translation in it), as everywhere a client or staff reads its name.
+    $service = \Drupal::service('entity.repository')->getTranslationFromContext($service);
     return $service instanceof AppointmentServiceInterface ? $service : NULL;
   }
 
