@@ -107,7 +107,9 @@ cd ~/tecnocratica/projects/mythingname/
 # 3. Boot the testbed.
 ddev start
 ddev composer install
-ddev drush si --account-name=admin --account-pass=admin -y
+# The fleet profile (docs/INSTALL_PROFILES.md); --locale is the site language.
+ddev drush si skeleton_site --locale=es --account-name=admin --account-pass=admin -y
+ddev drush recipe ../recipes/appointments   # one recipe per feature it needs
 ddev drush en my_module my_theme -y      # whichever you kept
 # Pin config export at the tracked dir — DDEV defaults it to
 # sites/default/files/sync and the first export silently lands there
@@ -145,7 +147,9 @@ for the bodies that taught it.
 
 ## What this skeleton is *not*
 
-- Not a `drush si` profile; you still install Drupal yourself.
+- Not a profile that builds a site. `skeleton_site` only keeps English on a
+  non-English install from config; the site is its `config/sync`, and
+  features are switched on by recipes (docs/INSTALL_PROFILES.md).
 - Not opinionated about your data layer. Postgres, MariaDB,
   MongoDB-via-gateway, plain REST — decide for your project and
   document the choice in PROTOCOL.md.

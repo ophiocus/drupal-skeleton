@@ -1,0 +1,13 @@
+name: 'Bookings with appointments'
+description: 'Turns on the upstream appointments module for a site that takes bookings: one calendar, services, the /book picker. Visitors may book. Apply on a local copy, then export (docs/INSTALL_PROFILES.md, "Recipes"): drush recipe ../recipes/appointments'
+type: Site
+install:
+  - appointments
+config:
+  actions:
+    user.role.anonymous:
+      grantPermissions:
+        - 'book appointments'
+    user.role.authenticated:
+      grantPermissions:
+        - 'book appointments'

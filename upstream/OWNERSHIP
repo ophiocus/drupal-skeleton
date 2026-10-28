@@ -13,6 +13,11 @@ upstream-configuration/
 upstream/
 # Modules every site carries and enables as it chooses (docs/UPSTREAM.md).
 web/modules/upstream/
+# The install profile every site names in core.extension (PROTOCOL D33).
+web/profiles/upstream/
+# Recipes that switch an upstream feature on (PROTOCOL D33, D23).
+recipes/appointments/
+recipes/maper-map/
 scripts/ci/
 scripts/upstream/
 .github/workflows/build-and-push.yml
@@ -31,3 +36,4 @@ phpstan.neon
 phpunit.xml.dist
 docs/UPSTREAM.md
 docs/DEPLOY.md
+docs/INSTALL_PROFILES.md

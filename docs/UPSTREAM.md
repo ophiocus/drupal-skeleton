@@ -20,8 +20,10 @@ upstream's or the site's, never both.
 | `Dockerfile`, `.dockerignore`, `deploy/entrypoint.sh`, `deploy/settings.prod.php`, `deploy/docker-compose.yaml`, `deploy/.env.example` | `deploy/settings.site.php`: settings that are this site's alone |
 | `.github/workflows/build-and-push.yml`, `composer-audit.yml`, `test-gate.yml`, `upstream-sync.yml` | `config/`: the site's configuration |
 | `scripts/ci/`, `scripts/upstream/`, `phpcs.xml.dist`, `phpstan.neon`, `phpunit.xml.dist` | `web/modules/custom/`, `web/themes/custom/`: the site's code |
-| `docs/UPSTREAM.md`, `docs/DEPLOY.md` | `.ddev/`, `README.md`, `CHANGELOG.md`, its other docs and seeds |
-| `web/modules/upstream/`: modules every site carries and enables as it chooses | |
+| `docs/UPSTREAM.md`, `docs/DEPLOY.md`, `docs/INSTALL_PROFILES.md` | `.ddev/`, `README.md`, `CHANGELOG.md`, its other docs and seeds |
+| `web/modules/upstream/`: modules every site carries and enables as it chooses | `recipes/` other than the upstream's: the site's own recipes |
+| `web/profiles/upstream/`: `skeleton_site`, the install profile every site names (PROTOCOL D33) | |
+| `recipes/appointments/`, `recipes/maper-map/`: one recipe per upstream feature (D33) | |
 
 The skeleton's sample module and theme are copied out when a site is minted and
 belong to the site from then on.

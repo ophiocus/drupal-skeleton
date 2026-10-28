@@ -5,6 +5,27 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-28 — The fleet install profile, and recipes as the feature switch
+
+- `web/profiles/upstream/skeleton_site`: the install profile every site names in
+  `core.extension` (PROTOCOL D33). It carries `keep_english: true` and nothing
+  else: on `standard`, `site:install --existing-config` of a non-English site
+  could delete English and its config translations (core #3545306).
+- `scripts/upstream/profile-converge.php`: moves a deployed site from `standard`
+  to the profile its `config/sync` names, which config import refuses to do.
+  The host runs it before every config import (`docs/DEPLOY.md` §3 now lists
+  it in `deploy-prod`). `--check` prints the plan.
+- Tests: `KeepEnglishInstallTest` (a Spanish site with English installed from
+  config keeps both), `ProfileConvergeTest` (the switch, its refusals, a half-done
+  run finished). The gate now covers `web/profiles/upstream/` (tests.sh,
+  phpcs, phpstan) and phpcs skips `*/tests/fixtures/*` as phpstan does.
+- `recipes/appointments`: the first feature recipe, with `AppointmentsRecipeTest`.
+  `recipes/appointments/` and `recipes/maper-map/` are now upstream-owned.
+- `docs/INSTALL_PROFILES.md` (upstream-owned): the profile, the migration of a
+  deployed site, the rollout order and the recipes evaluation.
+- A site that piloted its own `web/profiles/custom/skeleton_site` deletes it in
+  the sync pull request that brings this one.
+
 ## 2026-10-27 — CI spends fewer Actions minutes
 
 - `build-and-push.yml`: a new `reuse` job skips the test gate when the pushed

@@ -94,6 +94,8 @@ host's `deploy-prod` knows.
 
    ```
    deploy-prod <site>              # cd <property dir> && docker compose pull && up -d
+                                   #   && drush php:script scripts/upstream/profile-converge.php
+                                   #      (before the import: INSTALL_PROFILES.md §3)
                                    #   && drush deploy -y || drush cr
                                    #   (idempotent; never touches data/)
                                    #   behind a CDN: then purge + warm (§7)
@@ -107,8 +109,9 @@ host's `deploy-prod` knows.
    nothing else.
 
 First deploy is manual: fill `.env`, `docker compose up -d`, then either
-`drush site:install … && drush config:import` or restore a dump — after
-that, every push to `master` is a release.
+`drush site:install --existing-config` (on the `skeleton_site` profile its
+`config/sync` names, INSTALL_PROFILES.md) or restore a dump — after that,
+every push to `master` is a release.
 
 Run drush inside the container **as the web user** so anything it writes
 under `files/` (twig cache, aggregated assets, uploads via migrations) stays

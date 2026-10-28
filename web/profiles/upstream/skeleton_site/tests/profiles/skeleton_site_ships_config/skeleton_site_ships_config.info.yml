@@ -1,0 +1,5 @@
+name: 'Skeleton site test: a profile that ships config'
+type: profile
+description: 'ProfileConvergeTest: the converge refuses to install a profile that ships config on a built site.'
+core_version_requirement: ^11
+hidden: true
