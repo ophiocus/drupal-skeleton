@@ -141,6 +141,30 @@ Roll back by re-tagging: `docker compose pull` of a previous `sha-…` tag (set
 `IMAGE=` in `.env` temporarily) or push a revert commit. Volumes are never
 touched by the pipeline, so rollback is image-only.
 
+### Actions minutes
+
+A private repository on GitHub Free gets 2,000 Actions minutes a month for
+all its account's private repos together. Public repositories cost nothing.
+Every job is billed by its own duration, rounded up to the minute. A site that
+deploys often can spend them in three weeks. The workflows spend as few as
+they can without giving up a gate:
+
+- **The test gate runs once per change.** It runs on the PR. After the merge,
+  `build-and-push.yml`'s `reuse` job checks two things: that the pushed commit
+  is that PR's merge, and that its tree is identical to the PR head where
+  the gate passed. If both hold, the gate does not run again. A direct push,
+  a PR branch that was behind master, or a manual run gets the full gate.
+  Keep PR branches up to date with master before merging, so the tree
+  matches.
+- **The audit workflow runs only when `composer.json` or `composer.lock`
+  changes**, plus weekly. The build still audits the lock before every image.
+- **Batch.** One PR, one deploy per site. Every push to master is a build
+  and a deploy.
+- **A self-hosted runner costs no minutes.** The jobs are plain Ubuntu jobs,
+  with a MariaDB service container for the gate. A Linux runner with Docker
+  runs them unchanged, but only for private repositories: a public
+  repository's PRs can run untrusted code on it.
+
 ## 5. Local parity
 
 DDEV runs `apache-fpm` (D17) so `.htaccess`, rewrites and upstream behaviour
