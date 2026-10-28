@@ -5,7 +5,4 @@ id: half_page
 label: 'Half page'
 width: 300
 height: 600
-network_sizes:
-  - min_width: 0
-    width: 300
-    height: 600
+weight: 4

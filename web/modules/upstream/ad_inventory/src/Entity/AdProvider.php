@@ -4,49 +4,36 @@ declare(strict_types=1);
 
 namespace Drupal\ad_inventory\Entity;
 
-use Drupal\ad_inventory\AdInventoryException;
-use Drupal\ad_inventory\Access\AdProviderAccessControlHandler;
-use Drupal\ad_inventory\Form\AdProviderForm;
-use Drupal\ad_inventory\ListBuilder\AdProviderListBuilder;
-use Drupal\ad_inventory\Plugin\AdProvider\AdProviderPluginInterface;
-use Drupal\ad_inventory\ProviderPolicy;
+use Drupal\ad_inventory\Plugin\AdProviderInterface;
 use Drupal\Core\Config\Entity\ConfigEntityBase;
 use Drupal\Core\Entity\Attribute\ConfigEntityType;
-use Drupal\Core\Entity\EntityDeleteForm;
-use Drupal\Core\Entity\EntityStorageInterface;
-use Drupal\Core\Entity\Routing\AdminHtmlRouteProvider;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
- * A network provider instance, in fill order.
+ * One configured ad provider: a plugin instance with its settings.
  *
- * Saving an enabled provider is refused when it uses a format another
- * enabled provider forbids site-wide, or forbids one another uses (a
- * pop-under beside AdSense).
+ * A site keeps an ordered list of these. A provider in draft fills spaces
+ * only for staff who preview drafts; an approved one fills them for every
+ * reader who granted advertising consent.
  */
 #[ConfigEntityType(
   id: 'ad_provider',
-  label: new TranslatableMarkup('Ad network provider'),
-  label_collection: new TranslatableMarkup('Ad network providers'),
-  label_singular: new TranslatableMarkup('ad network provider'),
-  label_plural: new TranslatableMarkup('ad network providers'),
+  label: new TranslatableMarkup('Ad provider'),
+  label_collection: new TranslatableMarkup('Ad providers'),
   config_prefix: 'provider',
   entity_keys: [
     'id' => 'id',
     'label' => 'label',
     'weight' => 'weight',
-    'status' => 'status',
   ],
   handlers: [
-    'access' => AdProviderAccessControlHandler::class,
-    'list_builder' => AdProviderListBuilder::class,
+    'list_builder' => 'Drupal\ad_inventory\ListBuilder\AdProviderListBuilder',
     'form' => [
-      'add' => AdProviderForm::class,
-      'edit' => AdProviderForm::class,
-      'delete' => EntityDeleteForm::class,
+      'default' => 'Drupal\ad_inventory\Form\AdProviderForm',
+      'delete' => 'Drupal\Core\Entity\EntityDeleteForm',
     ],
     'route_provider' => [
-      'html' => AdminHtmlRouteProvider::class,
+      'html' => 'Drupal\Core\Entity\Routing\AdminHtmlRouteProvider',
     ],
   ],
   links: [
@@ -56,129 +43,115 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
     'delete-form' => '/admin/structure/ad-inventory/providers/{ad_provider}/delete',
   ],
   admin_permission: 'administer ad inventory',
-  label_count: [
-    'singular' => '@count ad network provider',
-    'plural' => '@count ad network providers',
-  ],
-  config_export: [
-    'id',
-    'label',
-    'plugin',
-    'weight',
-    'settings',
-  ],
+  config_export: ['id', 'label', 'plugin', 'settings', 'slots', 'state', 'weight'],
 )]
-class AdProvider extends ConfigEntityBase implements AdProviderInterface {
+final class AdProvider extends ConfigEntityBase {
 
   /**
-   * The machine name.
-   *
-   * @var string
+   * Fills spaces only for staff who preview drafts.
    */
-  protected $id;
+  public const DRAFT = 'draft';
 
   /**
-   * The name editors read.
-   *
-   * @var string
+   * Fills spaces for readers.
    */
-  protected $label;
+  public const APPROVED = 'approved';
 
   /**
-   * The plugin id.
-   *
-   * @var string
+   * Machine name.
    */
-  protected $plugin = '';
+  protected string $id;
 
   /**
-   * The place in fill order.
-   *
-   * @var int
+   * Human name.
    */
-  protected $weight = 0;
+  protected string $label;
 
   /**
-   * The plugin settings.
-   *
-   * @var array
+   * Plugin id.
    */
-  protected $settings = [];
+  protected string $plugin = '';
 
   /**
-   * {@inheritdoc}
+   * Plugin settings.
+   *
+   * @var array<string, mixed>
+   */
+  protected array $settings = [];
+
+  /**
+   * Space ids this provider may fill.
+   *
+   * Empty means every space that accepts providers.
+   *
+   * @var string[]
+   */
+  protected array $slots = [];
+
+  /**
+   * The state: 'draft' or 'approved'.
+   */
+  protected string $state = self::DRAFT;
+
+  /**
+   * Order among providers: the first that fills a space wins.
+   */
+  protected int $weight = 0;
+
+  /**
+   * Plugin id.
    */
   public function pluginId(): string {
-    return (string) $this->plugin;
+    return $this->plugin;
   }
 
   /**
-   * {@inheritdoc}
-   */
-  public function weight(): int {
-    return (int) $this->weight;
-  }
-
-  /**
-   * {@inheritdoc}
+   * Plugin settings.
+   *
+   * @return array<string, mixed>
+   *   Settings.
    */
   public function settings(): array {
-    return (array) $this->settings;
+    return $this->settings;
   }
 
   /**
-   * {@inheritdoc}
+   * Whether this provider may fill a space.
    */
-  public function plugin(): ?AdProviderPluginInterface {
-    $manager = \Drupal::service('plugin.manager.ad_provider');
-    if (!$manager->hasDefinition($this->pluginId())) {
-      return NULL;
-    }
-    $plugin = $manager->createInstance($this->pluginId(), [
-      'provider_id' => (string) $this->id(),
-      'settings' => $this->settings(),
-    ]);
-    return $plugin instanceof AdProviderPluginInterface ? $plugin : NULL;
+  public function covers(string $slot_id): bool {
+    return $this->slots === [] || in_array($slot_id, $this->slots, TRUE);
   }
 
   /**
-   * {@inheritdoc}
+   * The state: 'draft' or 'approved'.
    */
-  public function isRestricted(): bool {
-    $manager = \Drupal::service('plugin.manager.ad_provider');
-    if (!$manager->hasDefinition($this->pluginId())) {
-      return TRUE;
-    }
-    return (bool) ($manager->getDefinition($this->pluginId())['restricted'] ?? FALSE);
+  public function state(): string {
+    return $this->state;
   }
 
   /**
-   * {@inheritdoc}
-   *
-   * @throws \Drupal\ad_inventory\AdInventoryException
-   *   When the provider's plugin is missing, or its formats exclude another
-   *   enabled provider's (or the other way round).
+   * Whether readers see it.
    */
-  public function preSave(EntityStorageInterface $storage): void {
-    parent::preSave($storage);
-    $plugin = $this->plugin();
-    if ($plugin === NULL) {
-      throw new AdInventoryException(sprintf('The ad provider plugin "%s" does not exist.', $this->pluginId()));
-    }
-    if (!$this->status()) {
-      return;
-    }
-    $described = [];
-    foreach ($storage->loadMultiple() as $other) {
-      if ($other instanceof AdProviderInterface && $other->id() !== $this->id() && $other->status() && ($other_plugin = $other->plugin())) {
-        $described[] = ProviderPolicy::describe((string) $other->id(), (string) $other->label(), $other_plugin);
-      }
-    }
-    $described[] = ProviderPolicy::describe((string) $this->id(), (string) $this->label(), $plugin);
-    $conflicts = ProviderPolicy::conflicts($described, (string) $this->id());
-    if ($conflicts) {
-      throw new AdInventoryException(implode(' ', $conflicts));
-    }
+  public function isApproved(): bool {
+    return $this->status() && $this->state === self::APPROVED;
+  }
+
+  /**
+   * Weight.
+   */
+  public function getWeight(): int {
+    return $this->weight;
+  }
+
+  /**
+   * The plugin instance, configured with this provider's settings.
+   */
+  public function instance(): AdProviderInterface {
+    /** @var \Drupal\ad_inventory\Plugin\AdProviderPluginManager $manager */
+    $manager = \Drupal::service('plugin.manager.ad_inventory.provider');
+    /** @var \Drupal\ad_inventory\Plugin\AdProviderInterface $plugin */
+    $plugin = $manager->createInstance($this->plugin, $this->settings + ['provider_id' => $this->id()]);
+    return $plugin;
   }
 
 }

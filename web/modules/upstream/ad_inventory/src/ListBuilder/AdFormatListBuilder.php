@@ -4,44 +4,32 @@ declare(strict_types=1);
 
 namespace Drupal\ad_inventory\ListBuilder;
 
-use Drupal\ad_inventory\Entity\AdFormatInterface;
+use Drupal\ad_inventory\Entity\AdFormat;
 use Drupal\Core\Config\Entity\ConfigEntityListBuilder;
 use Drupal\Core\Entity\EntityInterface;
 
 /**
- * Lists ad formats.
+ * Lists banner formats.
  */
 final class AdFormatListBuilder extends ConfigEntityListBuilder {
 
   /**
    * {@inheritdoc}
    */
-  public function buildHeader() {
-    return [
-      'label' => $this->t('Format'),
-      'id' => $this->t('Machine name'),
-      'size' => $this->t('Size'),
-      'upload' => $this->t('Upload at'),
-      'network' => $this->t('Network unit by viewport'),
-    ] + parent::buildHeader();
+  public function buildHeader(): array {
+    $header['label'] = $this->t('Format');
+    $header['size'] = $this->t('Size');
+    return $header + parent::buildHeader();
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildRow(EntityInterface $entity) {
-    assert($entity instanceof AdFormatInterface);
-    $network = [];
-    foreach ($entity->networkSizes() as $row) {
-      $network[] = sprintf('≥%d: %d×%d', $row['min_width'], $row['width'], $row['height']);
-    }
-    return [
-      'label' => $entity->label(),
-      'id' => $entity->id(),
-      'size' => sprintf('%d×%d', $entity->width(), $entity->height()),
-      'upload' => sprintf('%d×%d', $entity->width() * 2, $entity->height() * 2),
-      'network' => $network ? implode(', ', $network) : '–',
-    ] + parent::buildRow($entity);
+  public function buildRow(EntityInterface $entity): array {
+    assert($entity instanceof AdFormat);
+    $row['label'] = $entity->label();
+    $row['size'] = $entity->size();
+    return $row + parent::buildRow($entity);
   }
 
 }

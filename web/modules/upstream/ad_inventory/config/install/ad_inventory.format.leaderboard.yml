@@ -5,10 +5,4 @@ id: leaderboard
 label: 'Leaderboard'
 width: 728
 height: 90
-network_sizes:
-  - min_width: 0
-    width: 468
-    height: 60
-  - min_width: 728
-    width: 728
-    height: 90
+weight: 0

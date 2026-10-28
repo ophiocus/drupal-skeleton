@@ -4,322 +4,206 @@ declare(strict_types=1);
 
 namespace Drupal\ad_inventory\Entity;
 
-use Drupal\ad_inventory\Access\AdInventoryAccessControlHandler;
-use Drupal\ad_inventory\Form\AdBookingForm;
-use Drupal\ad_inventory\Form\BookingStateForm;
-use Drupal\ad_inventory\ListBuilder\AdBookingListBuilder;
-use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\Attribute\ContentEntityType;
 use Drupal\Core\Entity\ContentEntityBase;
-use Drupal\Core\Entity\ContentEntityDeleteForm;
 use Drupal\Core\Entity\EntityChangedTrait;
-use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
-use Drupal\Core\Entity\Routing\AdminHtmlRouteProvider;
 use Drupal\Core\Field\BaseFieldDefinition;
-use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\user\EntityOwnerTrait;
 
 /**
- * An ad booking.
+ * A sold booking: a creative in one or more spaces, from one day to another.
  *
- * Dates are whole days in the site's time zone, never hours. Saving an
- * approved booking runs the approval checks (renditions, kinds, the
- * validation event): a refusal puts it back to draft with the reason, a stop
- * stops it. Every save and delete invalidates the fill tag of its slots, so
- * pages and email images pick the change up at their next render.
+ * The scope narrows the pages a booking shows on, by what the page is about
+ * (a city, a genre: keys a site defines), never by who reads it. Days are the
+ * site's days. An approved booking in force wins its space over providers
+ * and house banners; a stopped booking leaves the page at the next render.
  */
 #[ContentEntityType(
   id: 'ad_booking',
-  label: new TranslatableMarkup('Ad booking'),
-  label_collection: new TranslatableMarkup('Ad bookings'),
-  label_singular: new TranslatableMarkup('ad booking'),
-  label_plural: new TranslatableMarkup('ad bookings'),
+  label: new TranslatableMarkup('Banner booking'),
+  label_collection: new TranslatableMarkup('Banner bookings'),
+  label_singular: new TranslatableMarkup('banner booking'),
+  label_plural: new TranslatableMarkup('banner bookings'),
   entity_keys: [
     'id' => 'id',
     'uuid' => 'uuid',
     'label' => 'label',
-    'owner' => 'uid',
   ],
   handlers: [
-    'access' => AdInventoryAccessControlHandler::class,
-    'list_builder' => AdBookingListBuilder::class,
+    'list_builder' => 'Drupal\ad_inventory\ListBuilder\AdBookingListBuilder',
     'form' => [
-      'default' => AdBookingForm::class,
-      'add' => AdBookingForm::class,
-      'edit' => AdBookingForm::class,
-      'delete' => ContentEntityDeleteForm::class,
-      'approve' => BookingStateForm::class,
-      'stop' => BookingStateForm::class,
+      'default' => 'Drupal\ad_inventory\Form\AdBookingForm',
+      'delete' => 'Drupal\Core\Entity\ContentEntityDeleteForm',
     ],
     'route_provider' => [
-      'html' => AdminHtmlRouteProvider::class,
+      'html' => 'Drupal\Core\Entity\Routing\AdminHtmlRouteProvider',
     ],
   ],
   links: [
-    'collection' => '/admin/content/ad-booking',
-    'add-form' => '/admin/content/ad-booking/add',
-    'edit-form' => '/admin/content/ad-booking/{ad_booking}',
-    'delete-form' => '/admin/content/ad-booking/{ad_booking}/delete',
-    'approve-form' => '/admin/content/ad-booking/{ad_booking}/approve',
-    'stop-form' => '/admin/content/ad-booking/{ad_booking}/stop',
+    'collection' => '/admin/content/ad-inventory/bookings',
+    'add-form' => '/admin/content/ad-inventory/bookings/add',
+    'canonical' => '/admin/content/ad-inventory/bookings/{ad_booking}',
+    'edit-form' => '/admin/content/ad-inventory/bookings/{ad_booking}/edit',
+    'delete-form' => '/admin/content/ad-inventory/bookings/{ad_booking}/delete',
   ],
-  admin_permission: 'administer ad inventory',
+  admin_permission: 'manage ad bookings',
   base_table: 'ad_booking',
-  label_count: [
-    'singular' => '@count ad booking',
-    'plural' => '@count ad bookings',
-  ],
 )]
-class AdBooking extends ContentEntityBase implements AdBookingInterface {
+final class AdBooking extends ContentEntityBase {
 
   use EntityChangedTrait;
-  use EntityOwnerTrait;
+
+  public const DRAFT = 'draft';
+  public const APPROVED = 'approved';
+  public const STOPPED = 'stopped';
 
   /**
    * {@inheritdoc}
    */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type): array {
     $fields = parent::baseFieldDefinitions($entity_type);
-    $fields += static::ownerBaseFieldDefinitions($entity_type);
-
     $fields['label'] = BaseFieldDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Name'))
-      ->setDescription(new TranslatableMarkup('For editors, the advertiser and reports.'))
       ->setRequired(TRUE)
-      ->setSetting('max_length', 255)
-      ->setDisplayOptions('form', ['type' => 'string_textfield', 'weight' => -10])
-      ->setDisplayConfigurable('form', TRUE);
-
+      ->setSetting('max_length', 255);
     $fields['creative'] = BaseFieldDefinition::create('entity_reference')
       ->setLabel(new TranslatableMarkup('Creative'))
       ->setRequired(TRUE)
-      ->setSetting('target_type', 'ad_creative')
-      ->setDisplayOptions('form', ['type' => 'entity_reference_autocomplete', 'weight' => -5])
-      ->setDisplayConfigurable('form', TRUE);
-
-    $fields['slots'] = BaseFieldDefinition::create('list_string')
-      ->setLabel(new TranslatableMarkup('Slots'))
-      ->setDescription(new TranslatableMarkup('Slots, or a slot group (every slot in it).'))
-      ->setRequired(TRUE)
-      ->setCardinality(FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED)
-      ->setSetting('allowed_values_function', 'Drupal\ad_inventory\Entity\AdBooking::slotOptions')
-      ->setDisplayOptions('form', ['type' => 'options_buttons', 'weight' => -4])
-      ->setDisplayConfigurable('form', TRUE);
-
+      ->setSetting('target_type', 'ad_creative');
+    $fields['slots'] = BaseFieldDefinition::create('map')
+      ->setLabel(new TranslatableMarkup('Spaces'));
     $fields['scope'] = BaseFieldDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Pages'))
-      ->setDescription(new TranslatableMarkup('Empty: every page of the slots. Otherwise a page context the site provides (for example "city:12"); never anything about the reader.'))
-      ->setSetting('max_length', 128)
-      ->setDefaultValue('')
-      ->setDisplayOptions('form', ['type' => 'string_textfield', 'weight' => -3])
-      ->setDisplayConfigurable('form', TRUE);
-
-    $fields['start_day'] = BaseFieldDefinition::create('datetime')
+      ->setLabel(new TranslatableMarkup('Scope'))
+      ->setDescription(new TranslatableMarkup('Empty: every page of the spaces. Otherwise one scope key (for example a city).'))
+      ->setSetting('max_length', 128);
+    $fields['start_day'] = BaseFieldDefinition::create('string')
       ->setLabel(new TranslatableMarkup('First day'))
+      ->setDescription(new TranslatableMarkup('YYYY-MM-DD, in the site time zone.'))
       ->setRequired(TRUE)
-      ->setSetting('datetime_type', 'date')
-      ->setDisplayOptions('form', ['type' => 'datetime_default', 'weight' => -2])
-      ->setDisplayConfigurable('form', TRUE);
-
-    $fields['end_day'] = BaseFieldDefinition::create('datetime')
+      ->setSetting('max_length', 10);
+    $fields['end_day'] = BaseFieldDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Last day'))
+      ->setDescription(new TranslatableMarkup('YYYY-MM-DD, in the site time zone, included.'))
       ->setRequired(TRUE)
-      ->setSetting('datetime_type', 'date')
-      ->setDisplayOptions('form', ['type' => 'datetime_default', 'weight' => -1])
-      ->setDisplayConfigurable('form', TRUE);
-
+      ->setSetting('max_length', 10);
     $fields['exclusive'] = BaseFieldDefinition::create('boolean')
       ->setLabel(new TranslatableMarkup('Exclusive'))
-      ->setDescription(new TranslatableMarkup('While in force, no other booking shows in these slots.'))
-      ->setDefaultValue(FALSE)
-      ->setDisplayOptions('form', ['type' => 'boolean_checkbox', 'weight' => 0])
-      ->setDisplayConfigurable('form', TRUE);
-
-    $fields['state'] = BaseFieldDefinition::create('list_string')
+      ->setDescription(new TranslatableMarkup('No other booking may hold these spaces in this scope on these days.'))
+      ->setDefaultValue(TRUE);
+    $fields['reference'] = BaseFieldDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Reference code'))
+      ->setDescription(new TranslatableMarkup('A code the buyer supplies, checked by the site (for example a show registration code).'))
+      ->setSetting('max_length', 64);
+    $fields['state'] = BaseFieldDefinition::create('string')
       ->setLabel(new TranslatableMarkup('State'))
-      ->setRequired(TRUE)
-      ->setDefaultValue('draft')
-      ->setSetting('allowed_values', [
-        'draft' => 'Draft',
-        'approved' => 'Approved',
-        'stopped' => 'Stopped',
-      ]);
-
-    $fields['reason'] = BaseFieldDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Reason'))
-      ->setDescription(new TranslatableMarkup('Why the booking was refused or stopped.'))
-      ->setSetting('max_length', 1024)
-      ->setDefaultValue('');
-
-    $fields['uid']
-      ->setLabel(new TranslatableMarkup('Booked by'));
-
+      ->setDefaultValue(self::DRAFT)
+      ->setSetting('max_length', 16);
+    $fields['state_reason'] = BaseFieldDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Why it stopped'))
+      ->setSetting('max_length', 255);
+    $fields['notes'] = BaseFieldDefinition::create('string_long')
+      ->setLabel(new TranslatableMarkup('Notes'))
+      ->setDescription(new TranslatableMarkup('Price, invoice, contact: for staff only.'));
     $fields['created'] = BaseFieldDefinition::create('created')
       ->setLabel(new TranslatableMarkup('Created'));
-
     $fields['changed'] = BaseFieldDefinition::create('changed')
       ->setLabel(new TranslatableMarkup('Changed'));
-
     return $fields;
   }
 
   /**
-   * Allowed values of the slots field: every slot, then every group.
-   *
-   * @return array<string, string>
-   *   Labels keyed by slot id or "group:<name>".
+   * The booked creative.
    */
-  public static function slotOptions(): array {
-    $options = [];
-    $groups = [];
-    foreach (AdSlot::loadMultiple() as $slot) {
-      $options[(string) $slot->id()] = sprintf('%s (%s)', $slot->label(), $slot->channel());
-      if ($slot->group() !== '') {
-        $groups[$slot->group()] = TRUE;
-      }
-    }
-    foreach (array_keys($groups) as $group) {
-      $options['group:' . $group] = (string) new TranslatableMarkup('Group: @group', ['@group' => $group]);
-    }
-    return $options;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function creative(): ?AdCreativeInterface {
+  public function creative(): ?AdCreative {
     $creative = $this->get('creative')->entity;
-    return $creative instanceof AdCreativeInterface ? $creative : NULL;
+    return $creative instanceof AdCreative ? $creative : NULL;
   }
 
   /**
-   * {@inheritdoc}
+   * Space ids.
+   *
+   * @return string[]
+   *   Space ids.
    */
-  public function slotValues(): array {
-    $values = [];
-    foreach ($this->get('slots') as $item) {
-      if ((string) $item->value !== '') {
-        $values[] = (string) $item->value;
-      }
-    }
-    return $values;
+  public function slots(): array {
+    $value = $this->get('slots')->first()?->getValue() ?? [];
+    return array_values(array_filter((array) ($value['ids'] ?? []), 'is_string'));
   }
 
   /**
-   * {@inheritdoc}
+   * Sets the booked spaces.
+   *
+   * Stored as {ids: [...]}: a map field keyed 0, 1… reads back on load as
+   * one item per value and loses them.
+   *
+   * @param string[] $ids
+   *   Space ids.
+   */
+  public function setSlots(array $ids): static {
+    $this->set('slots', ['ids' => array_values($ids)]);
+    return $this;
+  }
+
+  /**
+   * The scope key, or '' for every page.
    */
   public function scope(): string {
-    return trim((string) $this->get('scope')->value);
+    return (string) $this->get('scope')->value;
   }
 
   /**
-   * {@inheritdoc}
+   * First day, YYYY-MM-DD.
    */
-  public function start(): string {
+  public function startDay(): string {
     return (string) $this->get('start_day')->value;
   }
 
   /**
-   * {@inheritdoc}
+   * Last day, YYYY-MM-DD.
    */
-  public function end(): string {
+  public function endDay(): string {
     return (string) $this->get('end_day')->value;
   }
 
   /**
-   * {@inheritdoc}
+   * Whether the booking covers a day (YYYY-MM-DD).
    */
-  public function isExclusive(): bool {
-    return (bool) $this->get('exclusive')->value;
+  public function covers(string $day): bool {
+    return $this->startDay() !== '' && $this->startDay() <= $day && $day <= $this->endDay();
   }
 
   /**
-   * {@inheritdoc}
+   * The state.
    */
   public function state(): string {
-    return (string) ($this->get('state')->value ?: 'draft');
+    return (string) ($this->get('state')->value ?: self::DRAFT);
   }
 
   /**
-   * {@inheritdoc}
+   * Stops the booking, with the reason.
    */
-  public function setState(string $state): static {
-    $this->set('state', $state);
+  public function stop(string $reason): static {
+    $this->set('state', self::STOPPED);
+    $this->set('state_reason', mb_substr($reason, 0, 255));
     return $this;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function reason(): string {
-    return (string) $this->get('reason')->value;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setReason(string $reason): static {
-    $this->set('reason', mb_substr($reason, 0, 1024));
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function inForceOn(string $day): bool {
-    return $this->state() === 'approved' && $this->start() !== '' && $this->start() <= $day && $this->end() >= $day;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function preSave(EntityStorageInterface $storage): void {
-    parent::preSave($storage);
-    if ($this->state() === 'approved') {
-      \Drupal::service('ad_inventory.approval')->enforce($this, 'save');
+  public function getCacheTagsToInvalidate(): array {
+    $tags = parent::getCacheTagsToInvalidate();
+    foreach ($this->slots() as $slot) {
+      $tags[] = AdSlot::tag($slot);
     }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function postSave(EntityStorageInterface $storage, $update = TRUE): void {
-    parent::postSave($storage, $update);
-    $values = $this->slotValues();
-    $original = $this->getOriginal();
-    if ($original instanceof AdBookingInterface) {
-      $values = array_merge($values, $original->slotValues());
-    }
-    self::invalidateSlots($values);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function postDelete(EntityStorageInterface $storage, array $entities): void {
-    parent::postDelete($storage, $entities);
-    $values = [];
-    foreach ($entities as $booking) {
-      if ($booking instanceof AdBookingInterface) {
-        $values = array_merge($values, $booking->slotValues());
+    $original = $this->isNew() ? NULL : $this->getOriginal();
+    if ($original instanceof self) {
+      foreach ($original->slots() as $slot) {
+        $tags[] = AdSlot::tag($slot);
       }
     }
-    self::invalidateSlots($values);
-  }
-
-  /**
-   * Invalidates the fill tags of slots and groups.
-   *
-   * @param string[] $values
-   *   Slot ids and "group:<name>" values.
-   */
-  protected static function invalidateSlots(array $values): void {
-    $slots = \Drupal::service('ad_inventory.inventory')->expandSlots($values);
-    if ($slots) {
-      Cache::invalidateTags(array_map([AdSlot::class, 'fillTag'], $slots));
-    }
+    return array_values(array_unique($tags));
   }
 
 }

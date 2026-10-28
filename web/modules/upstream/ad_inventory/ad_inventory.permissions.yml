@@ -1,26 +1,17 @@
 administer ad inventory:
-  title: 'Administer the ad inventory'
-  description: 'Edit formats, slots, providers and the settings, and read the status page.'
+  title: 'Administer ad inventory'
+  description: 'Manage formats, spaces, providers and settings.'
   restrict access: true
-administer pasted ad snippets:
-  title: 'Administer pasted ad snippets'
-  description: 'Create and edit providers that print pasted third-party code on public pages.'
-  restrict access: true
-manage ad creatives:
-  title: 'Manage ad creatives'
-  description: 'Create, edit and delete creatives (renditions, target, caption).'
 manage ad bookings:
-  title: 'Manage ad bookings'
-  description: 'Create, edit and delete bookings as drafts.'
-approve ad bookings:
-  title: 'Approve and stop ad bookings'
-  description: 'Put a booking in force or take it off the pages.'
-view ad booking reports:
-  title: 'View ad booking reports'
-  description: 'See and export the views and clicks of every booking.'
+  title: 'Manage creatives and bookings'
+  description: 'Upload creatives, book spaces, approve or stop bookings, and read the reports.'
+preview ad drafts:
+  title: 'Preview draft creatives and providers'
+  description: 'See draft house banners, draft bookings and draft providers on the public pages. Readers without this permission see a space only when something approved is in force.'
 bypass advertising:
   title: 'Bypass advertising'
-  description: 'Network units are left out of the pages this role sees. Booked and house creatives still show, so staff can check them.'
-use ad inventory overrides:
-  title: 'Use per-page ad slot controls'
-  description: 'Turn slots off on one page, pick another allowed format, or set how many of a repeatable slot it shows.'
+  description: 'Never receive network ad units (self-clicks are invalid traffic). Booked and house banners still show, so staff can check them.'
+use ad snippet provider:
+  title: 'Use the pasted-snippet provider'
+  description: 'Paste markup and scripts from an ad network into a provider. Anyone with this permission can put arbitrary code on public pages.'
+  restrict access: true

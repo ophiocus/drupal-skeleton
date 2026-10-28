@@ -8,35 +8,42 @@ use Drupal\Component\Plugin\Attribute\Plugin;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
- * Defines an ad network provider plugin.
- *
- * Plugins live in a module's src/Plugin/AdProvider and implement
- * \Drupal\ad_inventory\Plugin\AdProvider\AdProviderPluginInterface.
+ * Declares an ad provider plugin.
  */
 #[\Attribute(\Attribute::TARGET_CLASS)]
 final class AdProvider extends Plugin {
 
   /**
-   * Constructs an AdProvider attribute.
+   * Constructs the attribute.
    *
    * @param string $id
-   *   The plugin id.
+   *   Plugin id.
    * @param \Drupal\Core\StringTranslation\TranslatableMarkup $label
-   *   The name editors read.
-   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|null $description
-   *   What the provider prints.
-   * @param bool $restricted
-   *   Whether editing an instance needs "administer pasted ad snippets"
-   *   (the plugin prints site-supplied code on public pages).
-   * @param class-string|null $deriver
-   *   The deriver class.
+   *   Human name.
+   * @param string[] $labels
+   *   The only labels the network allows above its units; empty means the
+   *   site's label is fine.
+   * @param string[] $excludes
+   *   Formats this provider serves that other providers forbid on the same
+   *   site: 'popunder', 'push', 'vignette', 'interstitial', 'exit', 'slide_in'.
+   * @param string[] $forbids
+   *   Formats this provider refuses to share a site with.
+   * @param bool $houseBehind
+   *   Whether a house banner may show behind an unfilled unit.
+   * @param int $perPage
+   *   The most units of this provider on one page; 0 means no limit.
+   * @param string|null $permission
+   *   A permission required to configure it.
    */
   public function __construct(
     public readonly string $id,
     public readonly TranslatableMarkup $label,
-    public readonly ?TranslatableMarkup $description = NULL,
-    public readonly bool $restricted = FALSE,
-    public readonly ?string $deriver = NULL,
+    public readonly array $labels = [],
+    public readonly array $excludes = [],
+    public readonly array $forbids = [],
+    public readonly bool $houseBehind = TRUE,
+    public readonly int $perPage = 0,
+    public readonly ?string $permission = NULL,
   ) {}
 
 }

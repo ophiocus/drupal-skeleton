@@ -4,292 +4,201 @@ declare(strict_types=1);
 
 namespace Drupal\ad_inventory\Entity;
 
-use Drupal\ad_inventory\Form\AdSlotForm;
-use Drupal\ad_inventory\ListBuilder\AdSlotListBuilder;
-use Drupal\Core\Cache\Cache;
 use Drupal\Core\Config\Entity\ConfigEntityBase;
 use Drupal\Core\Entity\Attribute\ConfigEntityType;
-use Drupal\Core\Entity\EntityDeleteForm;
-use Drupal\Core\Entity\EntityStorageInterface;
-use Drupal\Core\Entity\Routing\AdminHtmlRouteProvider;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
- * An ad slot.
+ * A banner space: one reserved place, sold and counted on its own.
  *
- * Placed on pages through its block (one block per web slot) or printed by a
- * template as `#type => 'ad_slot'`. Email slots are served as an image and a
- * click address (`/ad/e/<slot>.png`, `/ad/e/<slot>/go`).
+ * A space has a format on desktop and one on phones; every booking of it
+ * carries a rendition for both. Where it appears is decided by block
+ * placement (a block per space) or by a template that prints the ad_slot
+ * element, so the same space can sit in one place on desktop and another on
+ * phones.
  */
 #[ConfigEntityType(
   id: 'ad_slot',
-  label: new TranslatableMarkup('Ad slot'),
-  label_collection: new TranslatableMarkup('Ad slots'),
-  label_singular: new TranslatableMarkup('ad slot'),
-  label_plural: new TranslatableMarkup('ad slots'),
+  label: new TranslatableMarkup('Banner space'),
+  label_collection: new TranslatableMarkup('Banner spaces'),
   config_prefix: 'slot',
   entity_keys: [
     'id' => 'id',
     'label' => 'label',
+    'weight' => 'weight',
   ],
   handlers: [
-    'list_builder' => AdSlotListBuilder::class,
+    'list_builder' => 'Drupal\ad_inventory\ListBuilder\AdSlotListBuilder',
     'form' => [
-      'add' => AdSlotForm::class,
-      'edit' => AdSlotForm::class,
-      'delete' => EntityDeleteForm::class,
+      'default' => 'Drupal\ad_inventory\Form\AdSlotForm',
+      'delete' => 'Drupal\Core\Entity\EntityDeleteForm',
     ],
     'route_provider' => [
-      'html' => AdminHtmlRouteProvider::class,
+      'html' => 'Drupal\Core\Entity\Routing\AdminHtmlRouteProvider',
     ],
   ],
   links: [
-    'collection' => '/admin/structure/ad-inventory/slots',
-    'add-form' => '/admin/structure/ad-inventory/slots/add',
-    'edit-form' => '/admin/structure/ad-inventory/slots/{ad_slot}',
-    'delete-form' => '/admin/structure/ad-inventory/slots/{ad_slot}/delete',
+    'collection' => '/admin/structure/ad-inventory/spaces',
+    'add-form' => '/admin/structure/ad-inventory/spaces/add',
+    'edit-form' => '/admin/structure/ad-inventory/spaces/{ad_slot}',
+    'delete-form' => '/admin/structure/ad-inventory/spaces/{ad_slot}/delete',
   ],
   admin_permission: 'administer ad inventory',
-  label_count: [
-    'singular' => '@count ad slot',
-    'plural' => '@count ad slots',
-  ],
   config_export: [
     'id',
     'label',
+    'description',
     'channel',
     'desktop_format',
     'phone_format',
-    'alternative_formats',
-    'sources',
-    'booking_kinds',
-    'group',
-    'repeatable',
-    'units',
+    'alternatives',
+    'fill',
+    'kinds',
+    'weight',
   ],
 )]
-class AdSlot extends ConfigEntityBase implements AdSlotInterface {
+final class AdSlot extends ConfigEntityBase {
 
   /**
-   * The machine name.
-   *
-   * @var string
+   * A space on web pages.
    */
-  protected $id;
+  public const WEB = 'web';
 
   /**
-   * The name editors read.
-   *
-   * @var string
+   * A space in mail templates, served as an image from the edge.
    */
-  protected $label;
+  public const EMAIL = 'email';
 
   /**
-   * The channel: "web" or "email".
-   *
-   * @var string
+   * Machine name.
    */
-  protected $channel = 'web';
+  protected string $id;
 
   /**
-   * The desktop format id.
-   *
-   * @var string
+   * Human name.
    */
-  protected $desktop_format = '';
+  protected string $label;
 
   /**
-   * The phone format id.
-   *
-   * @var string
+   * Where the space sits, in a sentence for staff and the catalogue.
    */
-  protected $phone_format = '';
+  protected string $description = '';
+
+  /**
+   * The channel: 'web' or 'email'.
+   */
+  protected string $channel = self::WEB;
+
+  /**
+   * Format id on wide screens.
+   */
+  protected string $desktop_format = '';
+
+  /**
+   * Format id on phones.
+   */
+  protected string $phone_format = '';
+
+  /**
+   * Other format ids staff may choose for this space on one page.
+   *
+   * @var string[]
+   */
+  protected array $alternatives = [];
+
+  /**
+   * What may fill the space: 'booking', 'provider', 'house'.
+   *
+   * @var string[]
+   */
+  protected array $fill = ['booking', 'provider', 'house'];
+
+  /**
+   * Creative kinds a booking of this space may carry; empty means any.
+   *
+   * @var string[]
+   */
+  protected array $kinds = [];
+
+  /**
+   * Sort order in lists.
+   */
+  protected int $weight = 0;
+
+  /**
+   * The cache tag every page carrying this space holds.
+   */
+  public static function tag(string $id): string {
+    return 'ad_inventory_slot:' . $id;
+  }
+
+  /**
+   * Where the space sits.
+   */
+  public function description(): string {
+    return $this->description;
+  }
+
+  /**
+   * The channel: 'web' or 'email'.
+   */
+  public function channel(): string {
+    return $this->channel;
+  }
+
+  /**
+   * Format id on wide screens.
+   */
+  public function desktopFormat(): string {
+    return $this->desktop_format;
+  }
+
+  /**
+   * Format id on phones (the desktop one for email spaces).
+   */
+  public function phoneFormat(): string {
+    return $this->phone_format !== '' ? $this->phone_format : $this->desktop_format;
+  }
+
+  /**
+   * Format ids a booking of this space must carry renditions for.
+   *
+   * @return string[]
+   *   Unique format ids.
+   */
+  public function formats(): array {
+    return array_values(array_unique(array_filter([$this->desktop_format, $this->phoneFormat()])));
+  }
 
   /**
    * Alternative format ids.
    *
-   * @var string[]
+   * @return string[]
+   *   Format ids.
    */
-  protected $alternative_formats = [];
+  public function alternatives(): array {
+    return $this->alternatives;
+  }
 
   /**
-   * Allowed fill sources.
-   *
-   * @var string[]
+   * Whether a fill source may fill this space.
    */
-  protected $sources = ['booking', 'network', 'house'];
+  public function accepts(string $source): bool {
+    return in_array($source, $this->fill, TRUE);
+  }
 
   /**
-   * Allowed booking kinds.
-   *
-   * @var string[]
+   * Whether a creative kind may be booked here.
    */
-  protected $booking_kinds = [];
-
-  /**
-   * The slot group.
-   *
-   * @var string
-   */
-  protected $group = '';
-
-  /**
-   * Whether the slot repeats.
-   *
-   * @var bool
-   */
-  protected $repeatable = FALSE;
-
-  /**
-   * Network units per provider.
-   *
-   * @var array
-   */
-  protected $units = [];
-
-  /**
-   * {@inheritdoc}
-   */
-  public function channel(): string {
-    return $this->channel === 'email' ? 'email' : 'web';
+  public function allowsKind(string $kind): bool {
+    return $this->kinds === [] || in_array($kind, $this->kinds, TRUE);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function desktopFormat(): string {
-    return (string) $this->desktop_format;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function phoneFormat(): string {
-    if ($this->channel() === 'email' || (string) $this->phone_format === '') {
-      return $this->desktopFormat();
-    }
-    return (string) $this->phone_format;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function alternativeFormats(): array {
-    return array_values(array_map('strval', (array) $this->alternative_formats));
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function sources(): array {
-    $sources = array_values(array_intersect(self::SOURCES, (array) $this->sources));
-    if ($this->channel() === 'email') {
-      // No network in email: AdSense, for one, forbids ads in mail.
-      $sources = array_values(array_diff($sources, ['network']));
-    }
-    return $sources;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function allows(string $source): bool {
-    return in_array($source, $this->sources(), TRUE);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function bookingKinds(): array {
-    return array_values(array_map('strval', (array) $this->booking_kinds));
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function group(): string {
-    return (string) $this->group;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function isRepeatable(): bool {
-    return $this->channel() === 'web' && (bool) $this->repeatable;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function units(): array {
-    $units = [];
-    foreach ((array) $this->units as $provider => $fields) {
-      $units[(string) $provider] = array_map('strval', (array) $fields);
-    }
-    return $units;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function fillTag(string $slot_id): string {
-    return 'ad_slot:' . $slot_id;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function calculateDependencies() {
-    parent::calculateDependencies();
-    $formats = array_unique(array_filter(array_merge([$this->desktopFormat(), $this->phoneFormat()], $this->alternativeFormats())));
-    foreach (AdFormat::loadMultiple($formats) as $format) {
-      $this->addDependency('config', $format->getConfigDependencyName());
-    }
-    foreach (AdProvider::loadMultiple(array_keys($this->units())) as $provider) {
-      $this->addDependency('config', $provider->getConfigDependencyName());
-    }
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * A deleted provider takes only its unit with it, and a deleted alternative
-   * format only leaves the list; losing the desktop or phone format still
-   * deletes the slot.
-   */
-  public function onDependencyRemoval(array $dependencies) {
-    $changed = parent::onDependencyRemoval($dependencies);
-    foreach ($dependencies['config'] ?? [] as $dependency) {
-      if ($dependency instanceof AdProviderInterface && isset($this->units[$dependency->id()])) {
-        unset($this->units[$dependency->id()]);
-        $changed = TRUE;
-      }
-      if ($dependency instanceof AdFormatInterface && in_array($dependency->id(), $this->alternativeFormats(), TRUE)
-        && !in_array($dependency->id(), [$this->desktopFormat(), $this->phoneFormat()], TRUE)) {
-        $this->alternative_formats = array_values(array_diff($this->alternativeFormats(), [$dependency->id()]));
-        $changed = TRUE;
-      }
-    }
-    return $changed;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function postSave(EntityStorageInterface $storage, $update = TRUE): void {
-    parent::postSave($storage, $update);
-    Cache::invalidateTags([self::fillTag((string) $this->id())]);
-    // One block per web slot.
-    \Drupal::service('plugin.manager.block')->clearCachedDefinitions();
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function postDelete(EntityStorageInterface $storage, array $entities): void {
-    parent::postDelete($storage, $entities);
-    \Drupal::service('plugin.manager.block')->clearCachedDefinitions();
+  public function getCacheTagsToInvalidate(): array {
+    return array_merge(parent::getCacheTagsToInvalidate(), [self::tag((string) $this->id())]);
   }
 
 }

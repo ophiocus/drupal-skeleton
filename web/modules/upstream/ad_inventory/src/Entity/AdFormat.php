@@ -4,44 +4,35 @@ declare(strict_types=1);
 
 namespace Drupal\ad_inventory\Entity;
 
-use Drupal\ad_inventory\Form\AdFormatForm;
-use Drupal\ad_inventory\ListBuilder\AdFormatListBuilder;
 use Drupal\Core\Config\Entity\ConfigEntityBase;
 use Drupal\Core\Entity\Attribute\ConfigEntityType;
-use Drupal\Core\Entity\EntityDeleteForm;
-use Drupal\Core\Entity\EntityStorageInterface;
-use Drupal\Core\Entity\Routing\AdminHtmlRouteProvider;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\image\Entity\ImageStyle;
 
 /**
- * An ad format: a reserved size, and how network units fill it.
+ * A banner size: its width and height in CSS pixels.
  *
- * Each format owns two image styles, "ad_inventory_<id>_1x" and "_2x"
- * (scale and crop to the size and to twice the size), created when the
- * format is saved outside a configuration import. A creative's rendition is
- * uploaded at twice the size and printed through both.
+ * A creative is uploaded at twice this size for sharp screens. A space keeps
+ * the format's proportion and shrinks with a narrower column, so its box is
+ * known before anything loads.
  */
 #[ConfigEntityType(
   id: 'ad_format',
-  label: new TranslatableMarkup('Ad format'),
-  label_collection: new TranslatableMarkup('Ad formats'),
-  label_singular: new TranslatableMarkup('ad format'),
-  label_plural: new TranslatableMarkup('ad formats'),
+  label: new TranslatableMarkup('Banner format'),
+  label_collection: new TranslatableMarkup('Banner formats'),
   config_prefix: 'format',
   entity_keys: [
     'id' => 'id',
     'label' => 'label',
+    'weight' => 'weight',
   ],
   handlers: [
-    'list_builder' => AdFormatListBuilder::class,
+    'list_builder' => 'Drupal\ad_inventory\ListBuilder\AdFormatListBuilder',
     'form' => [
-      'add' => AdFormatForm::class,
-      'edit' => AdFormatForm::class,
-      'delete' => EntityDeleteForm::class,
+      'default' => 'Drupal\ad_inventory\Form\AdFormatForm',
+      'delete' => 'Drupal\Core\Entity\EntityDeleteForm',
     ],
     'route_provider' => [
-      'html' => AdminHtmlRouteProvider::class,
+      'html' => 'Drupal\Core\Entity\Routing\AdminHtmlRouteProvider',
     ],
   ],
   links: [
@@ -51,153 +42,69 @@ use Drupal\image\Entity\ImageStyle;
     'delete-form' => '/admin/structure/ad-inventory/formats/{ad_format}/delete',
   ],
   admin_permission: 'administer ad inventory',
-  label_count: [
-    'singular' => '@count ad format',
-    'plural' => '@count ad formats',
-  ],
-  config_export: [
-    'id',
-    'label',
-    'width',
-    'height',
-    'network_sizes',
-  ],
+  config_export: ['id', 'label', 'width', 'height', 'weight'],
 )]
-class AdFormat extends ConfigEntityBase implements AdFormatInterface {
+final class AdFormat extends ConfigEntityBase {
 
   /**
-   * The machine name.
-   *
-   * @var string
+   * Machine name.
    */
-  protected $id;
+  protected string $id;
 
   /**
-   * The name editors read.
-   *
-   * @var string
+   * Human name.
    */
-  protected $label;
+  protected string $label;
 
   /**
-   * The width in CSS pixels.
-   *
-   * @var int
+   * Width in CSS pixels.
    */
-  protected $width = 0;
+  protected int $width = 0;
 
   /**
-   * The height in CSS pixels.
-   *
-   * @var int
+   * Height in CSS pixels.
    */
-  protected $height = 0;
+  protected int $height = 0;
 
   /**
-   * Network sizes per breakpoint.
-   *
-   * @var array
+   * Sort order in lists.
    */
-  protected $network_sizes = [];
+  protected int $weight = 0;
 
   /**
-   * {@inheritdoc}
+   * Width in CSS pixels.
    */
   public function width(): int {
-    return (int) $this->width;
+    return $this->width;
   }
 
   /**
-   * {@inheritdoc}
+   * Height in CSS pixels.
    */
   public function height(): int {
-    return (int) $this->height;
+    return $this->height;
   }
 
   /**
-   * {@inheritdoc}
+   * The size as text, for example "728×90".
    */
-  public function networkSizes(): array {
-    $sizes = [];
-    foreach ((array) $this->network_sizes as $row) {
-      $sizes[] = [
-        'min_width' => (int) ($row['min_width'] ?? 0),
-        'width' => (int) ($row['width'] ?? 0),
-        'height' => (int) ($row['height'] ?? 0),
-      ];
-    }
-    usort($sizes, static fn(array $a, array $b): int => $a['min_width'] <=> $b['min_width']);
-    return $sizes;
+  public function size(): string {
+    return $this->width . '×' . $this->height;
   }
 
   /**
-   * {@inheritdoc}
+   * Whether an image of these pixel dimensions fits this format.
+   *
+   * The proportion must match within 1%, and the image must be at least the
+   * format's own size (twice is asked for).
    */
-  public function styleName(int $density): string {
-    return 'ad_inventory_' . $this->id() . '_' . $density . 'x';
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function postSave(EntityStorageInterface $storage, $update = TRUE): void {
-    parent::postSave($storage, $update);
-    // A configuration import brings the styles with it.
-    if (!$this->isSyncing()) {
-      $this->ensureStyles();
+  public function fits(int $width, int $height): bool {
+    if ($this->width <= 0 || $this->height <= 0 || $width < $this->width || $height < $this->height) {
+      return FALSE;
     }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function postDelete(EntityStorageInterface $storage, array $entities): void {
-    parent::postDelete($storage, $entities);
-    foreach ($entities as $format) {
-      if ($format instanceof AdFormatInterface && !$format->isSyncing()) {
-        foreach ([1, 2] as $density) {
-          ImageStyle::load($format->styleName($density))?->delete();
-        }
-      }
-    }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function ensureStyles(): void {
-    if ($this->width() < 1 || $this->height() < 1) {
-      return;
-    }
-    foreach ([1, 2] as $density) {
-      $name = $this->styleName($density);
-      $width = $this->width() * $density;
-      $height = $this->height() * $density;
-      $style = ImageStyle::load($name);
-      if ($style === NULL) {
-        $style = ImageStyle::create([
-          'name' => $name,
-          'label' => sprintf('Ad: %s %dx', $this->label(), $density),
-        ]);
-      }
-      $current = [];
-      foreach ($style->getEffects() as $effect) {
-        $current[] = [$effect->getPluginId(), $effect->getConfiguration()['data'] ?? []];
-      }
-      $wanted = ['width' => $width, 'height' => $height, 'anchor' => 'center-center'];
-      if (count($current) === 1 && $current[0][0] === 'image_scale_and_crop' && $current[0][1] == $wanted && !$style->isNew()) {
-        continue;
-      }
-      foreach ($style->getEffects() as $effect) {
-        $style->deleteImageEffect($effect);
-      }
-      $style->addImageEffect([
-        'id' => 'image_scale_and_crop',
-        'weight' => 0,
-        'data' => $wanted,
-      ]);
-      $style->save();
-    }
+    $expected = $this->width / $this->height;
+    $actual = $width / $height;
+    return abs($actual - $expected) / $expected <= 0.01;
   }
 
 }

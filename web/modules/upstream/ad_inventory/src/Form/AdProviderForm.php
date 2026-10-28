@@ -4,59 +4,49 @@ declare(strict_types=1);
 
 namespace Drupal\ad_inventory\Form;
 
-use Drupal\ad_inventory\AdInventoryException;
-use Drupal\ad_inventory\AdProviderManager;
 use Drupal\ad_inventory\Entity\AdProvider;
-use Drupal\ad_inventory\Entity\AdProviderInterface;
-use Drupal\ad_inventory\ProviderPolicy;
+use Drupal\ad_inventory\Plugin\AdProviderPluginManager;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Form\SubformState;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Adds or edits a network provider instance.
+ * Adds or edits an ad provider.
+ *
+ * Refuses a provider whose formats another enabled provider forbids on the
+ * same site (a pop-under beside Google, for one), and a provider type whose
+ * permission the editor lacks.
  */
 final class AdProviderForm extends EntityForm {
 
-  public function __construct(
-    protected AdProviderManager $providerManager,
-  ) {}
+  /**
+   * Provider plugins.
+   */
+  protected AdProviderPluginManager $providers;
 
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container) {
-    return new static($container->get('plugin.manager.ad_provider'));
+  public static function create(ContainerInterface $container): static {
+    $instance = parent::create($container);
+    $instance->providers = $container->get('plugin.manager.ad_inventory.provider');
+    return $instance;
   }
 
   /**
-   * The plugin manager.
+   * {@inheritdoc}
    */
-  private function manager(): AdProviderManager {
-    return $this->providerManager;
-  }
-
-  /**
-   * Plugin options this editor may choose.
-   */
-  private function pluginOptions(): array {
-    $snippets = $this->currentUser()->hasPermission('administer pasted ad snippets');
-    $options = [];
-    foreach ($this->manager()->getDefinitions() as $id => $definition) {
-      if (empty($definition['restricted']) || $snippets) {
-        $options[$id] = $definition['label'];
+  public function form(array $form, FormStateInterface $form_state): array {
+    $form = parent::form($form, $form_state);
+    /** @var \Drupal\ad_inventory\Entity\AdProvider $provider */
+    $provider = $this->entity;
+    $types = [];
+    foreach ($this->providers->getDefinitions() as $id => $definition) {
+      if (empty($definition['permission']) || $this->currentUser()->hasPermission($definition['permission'])) {
+        $types[$id] = $definition['label'];
       }
     }
-    return $options;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function form(array $form, FormStateInterface $form_state) {
-    $form = parent::form($form, $form_state);
-    $provider = $this->entity;
-    assert($provider instanceof AdProviderInterface);
     $form['label'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Name'),
@@ -66,144 +56,125 @@ final class AdProviderForm extends EntityForm {
     $form['id'] = [
       '#type' => 'machine_name',
       '#default_value' => $provider->id(),
-      '#machine_name' => ['exists' => [AdProvider::class, 'load']],
+      '#machine_name' => ['exists' => [static::class, 'exists']],
       '#disabled' => !$provider->isNew(),
-      '#description' => $this->t("Account ids are read from <code>\$settings['ad_inventory_accounts']['&lt;this name&gt;']</code> or the plugin's environment variable, never from configuration."),
     ];
-    $options = $this->pluginOptions();
-    if ($provider->isNew()) {
-      $form['plugin'] = [
-        '#type' => 'radios',
-        '#title' => $this->t('Network'),
-        '#options' => $options,
-        '#required' => TRUE,
-        '#default_value' => array_key_first($options),
-      ];
-      $plugins = array_keys($options);
+    $form['plugin'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Type'),
+      '#options' => $types,
+      '#default_value' => $provider->pluginId(),
+      '#required' => TRUE,
+      '#disabled' => !$provider->isNew(),
+      '#ajax' => ['callback' => '::settingsAjax', 'wrapper' => 'ad-provider-settings'],
+    ];
+    $form['state'] = [
+      '#type' => 'radios',
+      '#title' => $this->t('State'),
+      '#options' => [
+        AdProvider::DRAFT => $this->t('Draft: fills spaces only for staff who preview drafts'),
+        AdProvider::APPROVED => $this->t('Approved: fills spaces for readers who granted advertising consent'),
+      ],
+      '#default_value' => $provider->state(),
+    ];
+    $slots = [];
+    foreach ($this->entityTypeManager->getStorage('ad_slot')->loadMultiple() as $id => $slot) {
+      $slots[$id] = $slot->label();
     }
-    else {
-      $form['plugin_name'] = [
-        '#type' => 'item',
-        '#title' => $this->t('Network'),
-        '#markup' => $this->manager()->hasDefinition($provider->pluginId()) ? $this->manager()->getDefinition($provider->pluginId())['label'] : $provider->pluginId(),
-      ];
-      $plugins = [$provider->pluginId()];
-    }
-    $form['status'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Enabled'),
-      '#default_value' => $provider->isNew() ? TRUE : $provider->status(),
+    $form['slots'] = [
+      '#type' => 'checkboxes',
+      '#title' => $this->t('Spaces'),
+      '#description' => $this->t('None checked: every space that accepts providers.'),
+      '#options' => $slots,
+      '#default_value' => (array) $provider->get('slots'),
     ];
     $form['weight'] = [
-      '#type' => 'number',
-      '#title' => $this->t('Fill order'),
-      '#description' => $this->t('Lower fills first, after bookings and before house creatives.'),
-      '#default_value' => $provider->weight(),
+      '#type' => 'weight',
+      '#title' => $this->t('Order'),
+      '#description' => $this->t('The first provider with a unit for a space fills it.'),
+      '#default_value' => $provider->getWeight(),
     ];
-    $form['settings'] = ['#tree' => TRUE];
-    foreach ($plugins as $plugin_id) {
-      if (!$this->manager()->hasDefinition($plugin_id)) {
-        continue;
-      }
-      $plugin = $this->manager()->createInstance($plugin_id, [
-        'provider_id' => (string) $provider->id(),
-        'settings' => $provider->pluginId() === $plugin_id ? $provider->settings() : [],
-      ]);
-      $form['settings'][$plugin_id] = [
-        '#type' => 'details',
-        '#title' => $this->t('Settings'),
-        '#open' => TRUE,
-      ] + $plugin->settingsForm($plugin->settings());
-      if ($provider->isNew()) {
-        $form['settings'][$plugin_id]['#states'] = ['visible' => [':input[name="plugin"]' => ['value' => $plugin_id]]];
-      }
+    $form['settings'] = ['#type' => 'container', '#tree' => TRUE, '#attributes' => ['id' => 'ad-provider-settings']];
+    $plugin_id = (string) ($form_state->getValue('plugin') ?: $provider->pluginId());
+    if ($plugin_id !== '' && isset($types[$plugin_id])) {
+      $plugin = $this->providers->createInstance($plugin_id, $provider->settings());
+      $form['settings'] += $plugin->buildConfigurationForm([], SubformState::createForSubform($form['settings'], $form, $form_state));
     }
     return $form;
   }
 
   /**
-   * {@inheritdoc}
+   * Rebuilds the settings for the chosen type.
+   *
+   * @param array<string, mixed> $form
+   *   The form.
+   *
+   * @return array<string, mixed>
+   *   The settings element.
    */
-  public function buildEntity(array $form, FormStateInterface $form_state) {
-    $provider = parent::buildEntity($form, $form_state);
-    assert($provider instanceof AdProviderInterface);
-    $plugin_id = $this->entity->isNew() ? (string) $form_state->getValue('plugin') : $this->entity->pluginId();
-    $provider->set('plugin', $plugin_id);
-    $settings = [];
-    if ($this->manager()->hasDefinition($plugin_id)) {
-      $defaults = $this->manager()->createInstance($plugin_id, [])->defaultSettings();
-      $submitted = (array) $form_state->getValue(['settings', $plugin_id]);
-      foreach ($defaults as $key => $default) {
-        $settings[$key] = self::cast($default, $submitted[$key] ?? $default);
-      }
-    }
-    $provider->set('settings', $settings);
-    $provider->set('weight', (int) $form_state->getValue('weight'));
-    $provider->setStatus((bool) $form_state->getValue('status'));
-    return $provider;
+  public function settingsAjax(array $form): array {
+    return $form['settings'];
   }
 
   /**
-   * A submitted value in the type of its default.
+   * Whether a provider id is taken.
    */
-  public static function cast(mixed $default, mixed $value): mixed {
-    if (is_array($default)) {
-      if (is_string($value)) {
-        return array_values(array_filter(array_map('trim', preg_split('/\R/', $value) ?: [])));
-      }
-      return array_values(array_filter((array) $value, static fn($v): bool => $v !== 0 && $v !== '0' && $v !== '' && $v !== NULL));
-    }
-    if (is_bool($default)) {
-      return (bool) $value;
-    }
-    if (is_int($default)) {
-      return (int) $value;
-    }
-    return trim((string) $value);
+  public static function exists(string $id): bool {
+    return \Drupal::entityTypeManager()->getStorage('ad_provider')->load($id) !== NULL;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function validateForm(array &$form, FormStateInterface $form_state) {
+  public function validateForm(array &$form, FormStateInterface $form_state): void {
     parent::validateForm($form, $form_state);
-    $provider = $this->buildEntity($form, $form_state);
-    assert($provider instanceof AdProviderInterface);
-    if ($provider->isRestricted() && !$this->currentUser()->hasPermission('administer pasted ad snippets')) {
-      $form_state->setErrorByName('plugin', $this->t('This network needs the "Administer pasted ad snippets" permission.'));
+    $plugin_id = (string) $form_state->getValue('plugin');
+    $definition = $this->providers->getDefinition($plugin_id, FALSE);
+    if ($definition === NULL) {
+      $form_state->setErrorByName('plugin', $this->t('Choose a type.'));
       return;
     }
-    $plugin = $provider->plugin();
-    if ($plugin === NULL || !$provider->status()) {
-      return;
+    if (!empty($definition['permission']) && !$this->currentUser()->hasPermission($definition['permission'])) {
+      $form_state->setErrorByName('plugin', $this->t('You may not configure this type.'));
     }
-    $described = [];
-    foreach (AdProvider::loadMultiple() as $other) {
-      if ($other->id() !== $provider->id() && $other->status() && ($other_plugin = $other->plugin())) {
-        $described[] = ProviderPolicy::describe((string) $other->id(), (string) $other->label(), $other_plugin);
+    foreach ($this->entityTypeManager->getStorage('ad_provider')->loadByProperties(['status' => TRUE]) as $id => $other) {
+      if ($id === $this->entity->id() || !$other instanceof AdProvider) {
+        continue;
       }
-    }
-    $described[] = ProviderPolicy::describe((string) $provider->id(), (string) $provider->label(), $plugin);
-    foreach (ProviderPolicy::conflicts($described, (string) $provider->id()) as $conflict) {
-      $form_state->setErrorByName('status', $conflict);
+      $conflict = $this->providers->conflict($plugin_id, $other->pluginId());
+      if ($conflict !== NULL) {
+        $form_state->setErrorByName('plugin', $this->t('Cannot run beside %other: @why', [
+          '%other' => $other->label(),
+          '@why' => $conflict,
+        ]));
+      }
     }
   }
 
   /**
    * {@inheritdoc}
    */
-  public function save(array $form, FormStateInterface $form_state) {
-    try {
-      $status = parent::save($form, $form_state);
+  public function submitForm(array &$form, FormStateInterface $form_state): void {
+    $form_state->setValue('slots', array_values(array_filter((array) $form_state->getValue('slots'))));
+    $plugin_id = (string) $form_state->getValue('plugin');
+    $settings = (array) $form_state->getValue('settings');
+    if ($this->providers->hasDefinition($plugin_id)) {
+      /** @var \Drupal\ad_inventory\Plugin\AdProviderInterface $plugin */
+      $plugin = $this->providers->createInstance($plugin_id);
+      $settings = $plugin->settingsFromForm($settings);
     }
-    catch (AdInventoryException $e) {
-      $this->messenger()->addError($e->getMessage());
-      $form_state->setRebuild();
-      return 0;
-    }
+    $form_state->setValue('settings', $settings);
+    parent::submitForm($form, $form_state);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function save(array $form, FormStateInterface $form_state): int {
+    $result = parent::save($form, $form_state);
     $this->messenger()->addStatus($this->t('Saved the provider %label.', ['%label' => $this->entity->label()]));
     $form_state->setRedirectUrl($this->entity->toUrl('collection'));
-    return $status;
+    return $result;
   }
 
 }

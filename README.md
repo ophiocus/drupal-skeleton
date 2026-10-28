@@ -36,7 +36,7 @@ drupal-skeleton/
 │   ├── DEPLOY.md                     ← the repo ↔ CI ↔ host deploy contract
 │   └── BATTLE_SCARS.md               ← lessons that earn permanent residence
 ├── web/modules/custom/example_module/   ← contrib-grade module template
-├── web/modules/upstream/ad_inventory/   ← banner slots that keep the page cache, filled after ad consent (+ ad_inventory_report dashboard; PROTOCOL D32)
+├── web/modules/upstream/ad_inventory/   ← banner spaces that keep the page cache, filled after ad consent (PROTOCOL D32)
 ├── web/modules/upstream/ga4_report/     ← GA4 visits report in the admin (upstream-owned; PROTOCOL D24)
 ├── web/modules/upstream/image_fallback/ ← logo (or a file) in place of an empty image/media field (upstream-owned)
 ├── web/modules/upstream/managing_admins/ ← the host-listed managing admins exist on every site (upstream-owned; PROTOCOL D29)

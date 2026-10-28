@@ -5,4 +5,4 @@ id: email
 label: 'Email banner'
 width: 600
 height: 200
-network_sizes: []
+weight: 5

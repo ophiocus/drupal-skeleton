@@ -666,8 +666,8 @@ check its last push date when a PHP security release lands (BATTLE_SCARS §47).
 ### D32 — Advertising: one inventory module, filled in the browser after consent
 
 **Decision (Carlos, 2026-10-24 and 2026-10-26; build approved 2026-10-27).** A
-site that sells or carries advertising uses `web/modules/upstream/ad_inventory`
-(and, to watch it, `ad_inventory_report`). Our own module, with contrib
+site that sells or carries advertising uses `web/modules/upstream/ad_inventory`.
+Our own module, built in a site first and moved upstream unchanged, with contrib
 `drupal/adstxt` (in the baseline) serving `/ads.txt`. The pieces:
 
 - **Fill order:** a booking sold directly, then the network providers (an
@@ -682,9 +682,12 @@ site that sells or carries advertising uses `web/modules/upstream/ad_inventory`
   session or per-reader context; scoped bookings follow the page, never the
   reader; counting is a first-party beacon and a redirect that store no
   reader data.
-- **Fail closed:** network units print only where the host sets
-  `AD_INVENTORY_NETWORK=1`; accounts come from the environment or
-  `settings.php`; `bypass advertising` keeps them from staff.
+- **Fail closed:** nothing approved means nothing printed: a space with no
+  booking, no approved house banner and no approved provider leaves no
+  markup. `bypass advertising` keeps network units from staff.
+- **Configuration, never code:** spaces and placements are config; a
+  template prints a theme region, never a space, so a site's banner setup
+  travels as config and seeds.
 - **Email slots** are one image and one click address per slot, the same
   answer for everyone, purged at the edge by tag.
 

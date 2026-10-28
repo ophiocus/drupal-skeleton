@@ -1,119 +1,83 @@
-ad_inventory.structure:
-  path: '/admin/structure/ad-inventory'
-  defaults:
-    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
-    _title: 'Ad inventory'
-  requirements:
-    _permission: 'administer ad inventory'
-
 ad_inventory.settings:
-  path: '/admin/config/services/ad-inventory'
+  path: '/admin/structure/ad-inventory'
   defaults:
     _form: '\Drupal\ad_inventory\Form\SettingsForm'
     _title: 'Ad inventory'
   requirements:
     _permission: 'administer ad inventory'
 
-ad_inventory.status:
-  path: '/admin/config/services/ad-inventory/status'
+ad_inventory.report:
+  path: '/admin/content/ad-inventory/report'
   defaults:
-    _controller: '\Drupal\ad_inventory\Controller\StatusController::page'
-    _title: 'Ad inventory status'
+    _controller: '\Drupal\ad_inventory\Controller\ReportController::page'
+    _title: 'Banner report'
   requirements:
-    _permission: 'administer ad inventory'
+    _permission: 'manage ad bookings'
 
-# The viewability beacon: POST only, never cached, starts no session.
+ad_inventory.report_csv:
+  path: '/admin/content/ad-inventory/report.csv'
+  defaults:
+    _controller: '\Drupal\ad_inventory\Controller\ReportController::csv'
+  requirements:
+    _permission: 'manage ad bookings'
+
+ad_inventory.email_snippet:
+  path: '/admin/structure/ad-inventory/spaces/{ad_slot}/email-snippet'
+  defaults:
+    _controller: '\Drupal\ad_inventory\Controller\ReportController::emailSnippet'
+    _title: 'Mail template snippet'
+  requirements:
+    _permission: 'manage ad bookings'
+
+# Public, uncached, sessionless: the viewability beacon.
 ad_inventory.beacon:
   path: '/ad/v'
   methods: [POST]
   defaults:
     _controller: '\Drupal\ad_inventory\Controller\CountController::beacon'
   requirements:
-    # Public: every reader's browser sends it; ids are checked, nothing else is stored.
+    # Every reader's browser posts here; ids are checked, nothing personal is kept.
     _access: 'TRUE'
   options:
-    no_cache: 'TRUE'
+    no_cache: TRUE
 
+# Public, uncached: a counted click, then a 302 to the creative's link.
 ad_inventory.click:
   path: '/ad/c/{ad_creative}'
   defaults:
     _controller: '\Drupal\ad_inventory\Controller\CountController::click'
   requirements:
-    # Public: the link on every banner; an inactive creative answers 404.
+    # Every reader clicks banners; it only counts and redirects.
     _access: 'TRUE'
     ad_creative: '\d+'
   options:
-    no_cache: 'TRUE'
+    no_cache: TRUE
     parameters:
       ad_creative:
-        type: 'entity:ad_creative'
+        type: entity:ad_creative
 
-# "<slot>.png": a placeholder must be a whole path segment, so the suffix is
-# part of the value and the controller strips it.
+# Public: a mail template's image (cached at the edge) and its counted link.
 ad_inventory.email_image:
-  path: '/ad/e/{image}'
+  path: '/ad/e/{ad_slot}/banner.png'
   defaults:
-    _controller: '\Drupal\ad_inventory\Controller\EmailController::image'
+    _controller: '\Drupal\ad_inventory\Controller\EmailSlotController::image'
   requirements:
-    # Public: the image every mail shows; the same answer for every reader.
+    # Mail clients fetch it with no login; it is the public banner.
     _access: 'TRUE'
-    image: '[a-z0-9_]+\.png'
+  options:
+    parameters:
+      ad_slot:
+        type: entity:ad_slot
 
 ad_inventory.email_go:
-  path: '/ad/e/{slot}/go'
+  path: '/ad/e/{ad_slot}/go'
   defaults:
-    _controller: '\Drupal\ad_inventory\Controller\EmailController::go'
+    _controller: '\Drupal\ad_inventory\Controller\EmailSlotController::go'
   requirements:
-    # Public: the link every mail carries.
+    # Mail readers click with no login; it only counts and redirects.
     _access: 'TRUE'
-    slot: '[a-z0-9_]+'
   options:
-    no_cache: 'TRUE'
-
-ad_inventory.email_snippets:
-  path: '/admin/structure/ad-inventory/slots/{ad_slot}/email'
-  defaults:
-    _controller: '\Drupal\ad_inventory\Controller\EmailController::snippets'
-    _title: 'Email snippets'
-  requirements:
-    _permission: 'administer ad inventory'
-
-entity.ad_booking.approve_form:
-  path: '/admin/content/ad-booking/{ad_booking}/approve'
-  defaults:
-    _entity_form: 'ad_booking.approve'
-    _title: 'Approve booking'
-  requirements:
-    _entity_access: 'ad_booking.approve'
-  options:
-    _admin_route: TRUE
-
-entity.ad_booking.stop_form:
-  path: '/admin/content/ad-booking/{ad_booking}/stop'
-  defaults:
-    _entity_form: 'ad_booking.stop'
-    _title: 'Stop booking'
-  requirements:
-    _entity_access: 'ad_booking.stop'
-  options:
-    _admin_route: TRUE
-
-ad_inventory.booking_report:
-  path: '/admin/content/ad-booking/{ad_booking}/report'
-  defaults:
-    _controller: '\Drupal\ad_inventory\Controller\BookingReportController::page'
-    _title: 'Booking report'
-  requirements:
-    _custom_access: '\Drupal\ad_inventory\Controller\BookingReportController::access'
-  options:
-    _admin_route: TRUE
-
-ad_inventory.booking_report_csv:
-  path: '/admin/content/ad-booking/{ad_booking}/report/csv'
-  defaults:
-    _controller: '\Drupal\ad_inventory\Controller\BookingReportController::csv'
-  requirements:
-    _custom_access: '\Drupal\ad_inventory\Controller\BookingReportController::access'
-  options:
-    _admin_route: TRUE
-    no_cache: 'TRUE'
+    no_cache: TRUE
+    parameters:
+      ad_slot:
+        type: entity:ad_slot

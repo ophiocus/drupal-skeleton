@@ -1,14 +1,12 @@
 name: 'Ad inventory'
 type: module
-description: 'Labelled banner slots that keep the page cache: dated bookings, network providers and house creatives filled in the browser after the reader grants advertising consent, first-party view and click counts, email slots served from the edge, and ads.txt lines per provider.'
+description: 'Banner spaces sold directly, house banners and ad providers in reserved, labelled boxes. One HTML for every reader; consent, filling and counting happen in the browser.'
 core_version_requirement: ^11.1
 package: Advertising
 configure: ad_inventory.settings
 dependencies:
-  - adstxt:adstxt
   - drupal:block
-  - drupal:datetime
+  - drupal:file
   - drupal:image
   - drupal:media
-  - drupal:options
-  - drupal:user
+  - adstxt:adstxt

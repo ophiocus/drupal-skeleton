@@ -4,16 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\ad_inventory\Hook;
 
-use Drupal\ad_inventory\Inventory;
-use Drupal\ad_inventory\Overrides;
-use Drupal\ad_inventory\Scheduler;
-use Drupal\Core\Access\AccessResult;
-use Drupal\Core\Access\AccessResultInterface;
-use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
-use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\ad_inventory\Boundaries;
+use Drupal\ad_inventory\Entity\AdProvider;
+use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Hook\Attribute\Hook;
-use Drupal\Core\Session\AccountInterface;
 
 /**
  * Hook implementations for ad_inventory.
@@ -21,8 +16,8 @@ use Drupal\Core\Session\AccountInterface;
 final class AdInventoryHooks {
 
   public function __construct(
-    private readonly Inventory $inventory,
-    private readonly Scheduler $scheduler,
+    private readonly Boundaries $boundaries,
+    private readonly EntityTypeManagerInterface $entityTypeManager,
   ) {}
 
   /**
@@ -31,23 +26,39 @@ final class AdInventoryHooks {
   #[Hook('theme')]
   public function theme(): array {
     return [
-      'ad_slot' => [
+      'ad_inventory_slot' => [
         'variables' => [
-          'slot' => '',
+          'slot_id' => '',
+          'source' => '',
+          'creative_id' => 0,
+          'devices' => 'both',
+          'draft' => FALSE,
+          'desktop' => [],
+          'phone' => [],
           'label' => '',
-          'blocked_text' => '',
-          'blocked_link_text' => '',
-          'blocked_link_url' => '',
-          'entries' => [],
-          'attributes' => [],
+          'blocked_reason' => '',
+          'blocked_link' => '',
+          'consent_attribute' => '',
+          'candidates' => [],
         ],
       ],
-      'ad_creative' => [
+      'ad_inventory_picture' => [
         'variables' => [
           'href' => '',
           'alt' => '',
           'desktop' => [],
-          'phone' => NULL,
+          'phone' => [],
+          'media' => '',
+        ],
+      ],
+      'ad_inventory_email' => [
+        'variables' => [
+          'label' => '',
+          'image' => '',
+          'link' => '',
+          'width' => 600,
+          'height' => 200,
+          'alt' => '',
         ],
       ],
     ];
@@ -56,60 +67,59 @@ final class AdInventoryHooks {
   /**
    * Implements hook_cron().
    *
-   * Once a day: invalidates the slots whose bookings started or ended, and
-   * re-validates running bookings. Prunes old placement records.
+   * Once per site day: renews pages whose bookings start or end, and stops
+   * bookings the site no longer allows.
    */
   #[Hook('cron')]
   public function cron(): void {
-    $this->scheduler->run();
+    $this->boundaries->run();
   }
 
   /**
-   * Implements hook_entity_field_access().
+   * Implements hook_adstxt() (contrib adstxt).
    *
-   * Per-page slot controls are edited only with "use ad inventory
-   * overrides"; a site grants it to staff, or also to a page's holder.
+   * Adds the seller lines of approved providers to /ads.txt. adstxt answers
+   * 404 while the file would be empty, which is what buyers expect from a
+   * site with no seller: a file with zero records reads as "nobody may sell".
    */
-  #[Hook('entity_field_access')]
-  public function fieldAccess(string $operation, FieldDefinitionInterface $field_definition, AccountInterface $account, ?FieldItemListInterface $items = NULL): AccessResultInterface {
-    if ($field_definition->getType() !== Overrides::FIELD_TYPE || $operation !== 'edit') {
-      return AccessResult::neutral();
+  #[Hook('adstxt')]
+  public function adstxt(CacheableMetadata $cacheable_metadata): array {
+    $cacheable_metadata->addCacheTags(['config:ad_provider_list']);
+    $lines = [];
+    foreach ($this->entityTypeManager->getStorage('ad_provider')->loadByProperties(['status' => TRUE]) as $provider) {
+      if ($provider instanceof AdProvider && $provider->isApproved()) {
+        foreach ($provider->instance()->adsTxtLines() as $line) {
+          if (preg_match('/^[a-z0-9.-]+\.[a-z]{2,}, *[A-Za-z0-9_-]+, *(DIRECT|RESELLER)(, *[A-Za-z0-9]+)?$/', trim($line)) === 1) {
+            $lines[] = trim($line);
+          }
+        }
+      }
     }
-    return AccessResult::forbiddenIf(!$account->hasPermission('use ad inventory overrides'))->cachePerPermissions();
+    return $lines === [] ? [] : [implode("\n", array_unique($lines))];
   }
 
   /**
    * Implements hook_page_attachments().
    *
-   * A provider's site verification tag, the same for every reader.
+   * Site-ownership tags of approved providers go in every page head. They
+   * are the same for every reader.
    */
   #[Hook('page_attachments')]
   public function pageAttachments(array &$attachments): void {
+    $providers = $this->entityTypeManager->getStorage('ad_provider')->loadByProperties(['status' => TRUE]);
     $attachments['#cache']['tags'][] = 'config:ad_provider_list';
-    foreach ($this->inventory->providers() as $id => $provider) {
-      $tag = $provider->plugin()?->verificationTag();
-      if ($tag !== NULL) {
-        $attachments['#attached']['html_head'][] = [$tag, 'ad_inventory_verify_' . $id];
+    foreach ($providers as $provider) {
+      if (!$provider instanceof AdProvider || !$provider->isApproved()) {
+        continue;
+      }
+      $tag = $provider->instance()->verificationTag();
+      if (preg_match('/^<meta name="([a-z0-9_.:-]+)" content="([A-Za-z0-9_.:\/-]+)">$/', $tag, $m) === 1) {
+        $attachments['#attached']['html_head'][] = [
+          ['#tag' => 'meta', '#attributes' => ['name' => $m[1], 'content' => $m[2]]],
+          'ad_inventory_verify_' . $provider->id(),
+        ];
       }
     }
-  }
-
-  /**
-   * Implements hook_adstxt().
-   *
-   * The ads.txt lines every enabled provider declares, after what editors
-   * wrote in the ads.txt admin page.
-   */
-  #[Hook('adstxt')]
-  public function adsTxt(RefinableCacheableDependencyInterface $metadata): array {
-    $metadata->addCacheTags(['config:ad_provider_list']);
-    $lines = [];
-    foreach ($this->inventory->providers() as $provider) {
-      foreach ($provider->plugin()?->adsTxtLines() ?? [] as $line) {
-        $lines[] = $line;
-      }
-    }
-    return array_values(array_unique($lines));
   }
 
 }

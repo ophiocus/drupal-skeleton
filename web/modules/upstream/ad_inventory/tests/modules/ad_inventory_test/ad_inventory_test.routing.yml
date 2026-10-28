@@ -1,8 +1,8 @@
 ad_inventory_test.page:
-  path: '/ad-inventory-test/page'
+  path: '/ad-inventory-test'
   defaults:
-    _controller: '\Drupal\ad_inventory_test\Controller\TestPageController::page'
-    _title: 'Slots'
+    _controller: '\Drupal\ad_inventory_test\Controller\TestPage::page'
+    _title: 'Banner test page'
   requirements:
-    # A public fixture page, as a site's listing would be.
+    # A public test page, like the site's own pages.
     _access: 'TRUE'

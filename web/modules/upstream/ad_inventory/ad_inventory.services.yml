@@ -3,104 +3,48 @@ services:
     parent: logger.channel_base
     arguments: ['ad_inventory']
 
-  plugin.manager.ad_provider:
-    class: Drupal\ad_inventory\AdProviderManager
+  plugin.manager.ad_inventory.provider:
+    class: Drupal\ad_inventory\Plugin\AdProviderPluginManager
     parent: default_plugin_manager
-  Drupal\ad_inventory\AdProviderManager: '@plugin.manager.ad_provider'
 
-  plugin.manager.ad_mail_provider:
-    class: Drupal\ad_inventory\AdMailProviderManager
-    parent: default_plugin_manager
-  Drupal\ad_inventory\AdMailProviderManager: '@plugin.manager.ad_mail_provider'
+  ad_inventory.site_day:
+    class: Drupal\ad_inventory\SiteDay
+    arguments: ['@datetime.time', '@config.factory']
 
-  ad_inventory.no_store:
-    class: Drupal\ad_inventory\EventSubscriber\NoStore
+  # What a page is about, from its URL only. Sites tag their own resolvers
+  # `ad_inventory.scope_resolver` to add keys such as a city or a genre.
+  ad_inventory.scopes:
+    class: Drupal\ad_inventory\Scope\ScopeCollector
+    arguments: ['@current_route_match']
     tags:
-      - { name: event_subscriber }
-
-  ad_inventory.calendar:
-    class: Drupal\ad_inventory\Calendar
-    arguments: ['@config.factory', '@datetime.time']
-  Drupal\ad_inventory\Calendar: '@ad_inventory.calendar'
-
-  ad_inventory.network_gate:
-    class: Drupal\ad_inventory\NetworkGate
-  Drupal\ad_inventory\NetworkGate: '@ad_inventory.network_gate'
-
-  ad_inventory.inventory:
-    class: Drupal\ad_inventory\Inventory
-    arguments: ['@entity_type.manager']
-  Drupal\ad_inventory\Inventory: '@ad_inventory.inventory'
+      - { name: service_collector, tag: ad_inventory.scope_resolver, call: addResolver }
 
   ad_inventory.overrides:
-    class: Drupal\ad_inventory\Overrides
-    arguments: ['@entity_field.manager', '@current_route_match']
-  Drupal\ad_inventory\Overrides: '@ad_inventory.overrides'
+    class: Drupal\ad_inventory\OverrideStore
+    arguments: ['@entity_type.manager']
 
-  ad_inventory.placements:
-    class: Drupal\ad_inventory\Placements
-    arguments: ['@keyvalue', '@datetime.time']
-  Drupal\ad_inventory\Placements: '@ad_inventory.placements'
+  ad_inventory.resolver:
+    class: Drupal\ad_inventory\AdResolver
+    arguments: ['@entity_type.manager', '@ad_inventory.site_day', '@ad_inventory.overrides']
 
-  ad_inventory.approval:
-    class: Drupal\ad_inventory\Approval
-    arguments: ['@ad_inventory.inventory', '@event_dispatcher']
-  Drupal\ad_inventory\Approval: '@ad_inventory.approval'
+  ad_inventory.slot_builder:
+    class: Drupal\ad_inventory\SlotBuilder
+    arguments: ['@ad_inventory.resolver', '@ad_inventory.scopes', '@current_user', '@entity_type.manager', '@file_url_generator', '@config.factory']
 
   ad_inventory.counter:
-    class: Drupal\ad_inventory\Counter
-    arguments: ['@database', '@ad_inventory.calendar', '@entity_type.manager']
-  Drupal\ad_inventory\Counter: '@ad_inventory.counter'
+    class: Drupal\ad_inventory\AdCounter
+    arguments: ['@database', '@ad_inventory.site_day']
 
-  ad_inventory.scheduler:
-    class: Drupal\ad_inventory\Scheduler
-    arguments:
-      - '@entity_type.manager'
-      - '@ad_inventory.inventory'
-      - '@ad_inventory.approval'
-      - '@ad_inventory.calendar'
-      - '@state'
-      - '@cache_tags.invalidator'
-      - '@ad_inventory.placements'
-      - '@logger.channel.ad_inventory'
-  Drupal\ad_inventory\Scheduler: '@ad_inventory.scheduler'
+  ad_inventory.boundaries:
+    class: Drupal\ad_inventory\Boundaries
+    arguments: ['@entity_type.manager', '@ad_inventory.site_day', '@state', '@cache_tags.invalidator', '@event_dispatcher', '@logger.channel.ad_inventory']
 
-  ad_inventory.slot_renderer:
-    class: Drupal\ad_inventory\SlotRenderer
-    arguments:
-      - '@ad_inventory.inventory'
-      - '@ad_inventory.overrides'
-      - '@ad_inventory.placements'
-      - '@ad_inventory.network_gate'
-      - '@ad_inventory.calendar'
-      - '@config.factory'
-      - '@entity_type.manager'
-      - '@current_user'
-      - '@current_route_match'
-      - '@router.admin_context'
-      - '@state'
-      - '@module_handler'
-      - '@file_url_generator'
-  Drupal\ad_inventory\SlotRenderer: '@ad_inventory.slot_renderer'
-
-  ad_inventory.email:
-    class: Drupal\ad_inventory\EmailServer
-    arguments:
-      - '@ad_inventory.inventory'
-      - '@ad_inventory.calendar'
-      - '@ad_inventory.counter'
-      - '@entity_type.manager'
-      - '@file.mime_type.guesser'
-  Drupal\ad_inventory\EmailServer: '@ad_inventory.email'
-
-  ad_inventory.status:
-    class: Drupal\ad_inventory\StatusChecker
-    arguments:
-      - '@ad_inventory.inventory'
-      - '@ad_inventory.network_gate'
-      - '@config.factory'
-      - '@module_handler'
-      - '@entity_type.manager'
-      - '@ad_inventory.calendar'
-      - '@ad_inventory.placements'
-  Drupal\ad_inventory\StatusChecker: '@ad_inventory.status'
+  # The OOP hook class and Drush autowire look constructor type hints up as
+  # service ids; without these aliases they fail or vanish silently.
+  Drupal\ad_inventory\Boundaries: '@ad_inventory.boundaries'
+  Drupal\ad_inventory\AdCounter: '@ad_inventory.counter'
+  Drupal\ad_inventory\AdResolver: '@ad_inventory.resolver'
+  Drupal\ad_inventory\SlotBuilder: '@ad_inventory.slot_builder'
+  Drupal\ad_inventory\OverrideStore: '@ad_inventory.overrides'
+  Drupal\ad_inventory\Scope\ScopeCollector: '@ad_inventory.scopes'
+  Drupal\ad_inventory\SiteDay: '@ad_inventory.site_day'

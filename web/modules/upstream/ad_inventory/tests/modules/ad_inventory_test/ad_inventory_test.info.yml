@@ -1,7 +1,6 @@
-name: 'Ad inventory test'
+name: 'Banner spaces test page'
 type: module
-description: 'A page with three slots, a validation subscriber and a scope hook driven by state.'
+description: 'A public page for ad_inventory functional tests.'
 package: Testing
+core_version_requirement: ^11
 hidden: true
-dependencies:
-  - ad_inventory:ad_inventory

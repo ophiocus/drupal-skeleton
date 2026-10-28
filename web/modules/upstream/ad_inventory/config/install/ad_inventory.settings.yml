@@ -1,13 +1,7 @@
 label: 'Sponsored Links'
-breakpoint: 768
-timezone: ''
+breakpoint: 900
 consent:
-  global: siteConsent
-  property: ads
-  event: site-consent
-blocked:
-  text: 'Advertising is off until you allow it.'
-  link_text: 'Privacy settings'
-  link_url: '#privacy-settings'
-kinds: []
-email_alt: ''
+  global: adConsent
+  category: ads
+  event: 'ad:consent'
+  open_attribute: data-ad-consent-open
