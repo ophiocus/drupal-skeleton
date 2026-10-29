@@ -5,6 +5,15 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-28 — security: CAPTCHA 2.0.11, symfony/mime 7.4.22
+
+- Lock-only bump for the advisories of 2026-10-28: `drupal/captcha` 2.0.10 → 2.0.11
+  (SA-CONTRIB-2026-281) and `symfony/mime` v7.4.19 → v7.4.22 (CVE-2026-45070), made with
+  `composer update drupal/captcha symfony/mime --with-dependencies --minimal-changes` so
+  nothing else moves. `composer audit` is clean again.
+- Sites carry their own lock: each needs the same command, plus `drupal/commerce` and
+  `drupal/commerce_*` where Commerce is installed (SA-CONTRIB-2026-254 to 262).
+
 ## 2026-10-28 — The fleet install profile, and recipes as the feature switch
 
 - `web/profiles/upstream/skeleton_site`: the install profile every site names in
