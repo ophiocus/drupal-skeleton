@@ -47,8 +47,15 @@ drush managing-admins:converge --check  # report what would change, write nothin
 ```
 
 It prints one line with each listed name and what happened to it (`created`,
-`role added`, `unchanged`); never an e-mail address, because deploy logs
-keep it.
+`role added`, `unchanged`, `not promoted: an account it did not create`);
+never an e-mail address, because deploy logs keep it.
+
+It gives the administrator role only to an account it created itself (marked in
+user data), or keeps it on one that already holds it. An account somebody else
+opened under a listed e-mail is reported as `not promoted`, never promoted: on a
+site where visitors can register, anyone could take a listed e-mail first. Check
+who owns such an account, then promote it by hand (or delete it, and the next
+converge creates the real one).
 
 ## Getting in the first time
 

@@ -8,6 +8,7 @@ use Drupal\Component\Utility\EmailValidatorInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
+use Drupal\user\UserDataInterface;
 use Drupal\user\UserInterface;
 
 /**
@@ -15,9 +16,13 @@ use Drupal\user\UserInterface;
  *
  * Every account listed exists, found by its e-mail, with the administrator
  * role. A missing one is created active, with no password: its owner gets in
- * through a password reset to that mailbox. An existing one only gains the
- * role when it lacks it; its name, password, status and other roles are its
- * owner's. No other account is ever read for change, and no mail is sent.
+ * through a password reset to that mailbox. The role is only ever given to an
+ * account this code created (marked in user data), or kept on one that holds
+ * it already: on a site where visitors can register, anyone could open an
+ * account under a listed e-mail first, and adopting it would hand them the
+ * site. Such an account is reported, never promoted. Name, password, status
+ * and other roles stay the owner's. No other account is ever read for change,
+ * and no mail is sent.
  */
 final class ManagingAdmins {
 
@@ -26,11 +31,17 @@ final class ManagingAdmins {
    */
   public const ROLE = 'administrator';
 
+  /**
+   * The user data key that marks an account this code created or adopted.
+   */
+  public const MARK = 'managed';
+
   public function __construct(
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly EmailValidatorInterface $emailValidator,
     private readonly Connection $database,
     private readonly LanguageManagerInterface $languageManager,
+    private readonly UserDataInterface $userData,
   ) {}
 
   /**
@@ -73,7 +84,9 @@ final class ManagingAdmins {
    * @return array<string, string>
    *   What happened (or would) to each account, keyed by its listed name:
    *   "created", "created, named by its e-mail" (another account holds the
-   *   name), "role added", "unchanged"; ", blocked" is appended for an
+   *   name), "role added" (an account this code created had lost it),
+   *   "unchanged", or "not promoted: an account it did not create" (promote
+   *   it by hand, after checking who owns it); ", blocked" is appended for an
    *   existing account that is blocked, which is left so. No e-mail address
    *   appears in it: it is printed in deploy logs.
    *
@@ -94,8 +107,19 @@ final class ManagingAdmins {
       }
       $account = reset($found);
       if ($account instanceof UserInterface) {
+        $uid = (int) $account->id();
+        $managed = (bool) $this->userData->get('managing_admins', $uid, self::MARK);
         $did = 'unchanged';
-        if (!$account->hasRole(self::ROLE)) {
+        if ($account->hasRole(self::ROLE)) {
+          // Already an administrator: it is the managing admin's account.
+          if (!$managed && !$check) {
+            $this->userData->set('managing_admins', $uid, self::MARK, 1);
+          }
+        }
+        elseif (!$managed) {
+          $did = 'not promoted: an account it did not create';
+        }
+        else {
           $account->addRole(self::ROLE);
           if (!$check) {
             $account->save();
@@ -120,6 +144,7 @@ final class ManagingAdmins {
       ]);
       if (!$check) {
         $account->save();
+        $this->userData->set('managing_admins', (int) $account->id(), self::MARK, 1);
       }
       $result[$name] = $taken ? 'created, named by its e-mail' : 'created';
     }

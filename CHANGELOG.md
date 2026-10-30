@@ -5,6 +5,15 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-30 — managing_admins: never promote an account it did not create
+
+- `managing-admins:converge` used to give the administrator role to any existing account that
+  held a listed e-mail, whoever had opened it. On a site where visitors register, anyone could
+  take a listed e-mail first and be made an administrator by the next deploy. It now promotes
+  only accounts it created (marked in user data, key `managing_admins.managed`), keeps the role
+  on accounts that already hold it (and marks them), and reports any other as
+  `not promoted: an account it did not create`, for a person to check.
+
 ## 2026-10-28 — security: CAPTCHA 2.0.11, symfony/mime 7.4.22
 
 - Lock-only bump for the advisories of 2026-10-28: `drupal/captcha` 2.0.10 → 2.0.11
