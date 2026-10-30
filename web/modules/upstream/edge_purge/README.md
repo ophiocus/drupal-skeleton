@@ -57,8 +57,7 @@ tags. The first run only records. `--dry-run` reports without recording;
 That is the only way `rendered` reaches the CDN. It is on every rendered page, and core
 invalidates it whenever the render cache is cleared (`drush cache:clear render`, a theme
 setting saved), so the queue drops it from ordinary invalidations (`EdgeTags::WHOLE_EDGE`).
-Before that, a post-deploy "empty the render bin" step emptied the whole edge after every
-release.
+Before that, a single `drush cache:clear render` on production emptied the whole edge.
 
 ## Deploys keep Drupal's finished pages
 

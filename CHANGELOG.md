@@ -8,9 +8,10 @@ you whether the foundation you cloned is recent enough.
 ## 2026-10-30 — edge_purge: clearing the render cache no longer empties the edge
 
 - `drush cache:clear render` (and a theme setting saved) invalidates core's `rendered` tag,
-  which every rendered page carries. The purge queue forwarded it, so a post-deploy step that
-  emptied the render bin made the CDN drop every page after each release (measured: the warm
-  after a release found ~2,500 HIT / ~13,500 MISS with only 15 pages changed). The queue now
+  which every rendered page carries, and the purge queue forwarded it: one
+  `drush cache:clear render` on production emptied the whole edge. (It was a suspect for the
+  near-empty edge seen after releases, but measured post-deploy steps never queued it; that
+  cause is still open, and the tag names below are how to find it.) The queue now
   drops `rendered` from ordinary invalidations (`EdgeTags::WHOLE_EDGE`); a purge of every page
   stays possible on purpose with `drush edge-purge:release --purge-all`.
 - `drush edge-purge:claim` also prints `tag <hash> <name>` lines, so the host's purger can log
