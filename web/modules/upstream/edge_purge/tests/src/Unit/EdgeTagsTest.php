@@ -53,7 +53,7 @@ final class EdgeTagsTest extends UnitTestCase {
       'config:field.storage.node.field_values', 'mysite:day', '4xx-response',
     ];
     $this->assertSame(
-      ['node:1', 'rendered', 'config:field.storage.node.field_values', 'mysite:day', '4xx-response'],
+      ['node:1', 'config:field.storage.node.field_values', 'mysite:day', '4xx-response'],
       EdgeTags::purgeable($tags),
     );
     new Settings(['edge_purge_ignore_tags' => ['mysite:day']]);

@@ -5,6 +5,15 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-10-30 — edge_purge: clearing the render cache no longer empties the edge
+
+- `drush cache:clear render` (and a theme setting saved) invalidates core's `rendered` tag,
+  which every rendered page carries. The purge queue forwarded it, so a post-deploy step that
+  emptied the render bin made the CDN drop every page after each release (measured: the warm
+  after a release found ~2,500 HIT / ~13,500 MISS with only 15 pages changed). The queue now
+  drops `rendered` from ordinary invalidations (`EdgeTags::WHOLE_EDGE`); a purge of every page
+  stays possible on purpose with `drush edge-purge:release --purge-all`.
+
 ## 2026-10-28 — security: CAPTCHA 2.0.11, symfony/mime 7.4.22
 
 - Lock-only bump for the advisories of 2026-10-28: `drupal/captcha` 2.0.10 → 2.0.11

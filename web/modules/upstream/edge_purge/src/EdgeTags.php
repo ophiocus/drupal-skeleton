@@ -64,12 +64,24 @@ final class EdgeTags {
   public const INTERNAL = ['http_response', 'route_match', 'routes', 'local_task'];
 
   /**
+   * Tags on every page that an invalidation must not turn into a purge.
+   *
+   * "rendered" is on every rendered page, and core invalidates it whenever
+   * the render cache is cleared ("drush cache:clear render", a theme setting
+   * saved): forwarding it empties the whole edge. A purge of every page is
+   * only ever deliberate, so it goes by "drush edge-purge:release
+   * --purge-all", which queues "rendered" itself.
+   */
+  public const WHOLE_EDGE = ['rendered'];
+
+  /**
    * The tags of these invalidated, minus the ones never worth a purge.
    *
-   * Besides INTERNAL: "<type>:<id>:revisions" and "<type>_values" belong to
-   * the entity storage's own cache, which Drupal 11.4 invalidates on every
-   * resetCache(); a bulk load of 5,000 unchanged entities used to queue
-   * 5,000 of them. $settings['edge_purge_ignore_tags'] adds more.
+   * Besides INTERNAL and WHOLE_EDGE: "<type>:<id>:revisions" and
+   * "<type>_values" belong to the entity storage's own cache, which Drupal
+   * 11.4 invalidates on every resetCache(); a bulk load of 5,000 unchanged
+   * entities used to queue 5,000 of them.
+   * $settings['edge_purge_ignore_tags'] adds more.
    *
    * @param string[] $tags
    *   Drupal cache tags.
@@ -78,7 +90,11 @@ final class EdgeTags {
    *   The ones to purge at the CDN.
    */
   public static function purgeable(array $tags): array {
-    $ignore = array_merge(self::INTERNAL, (array) Settings::get('edge_purge_ignore_tags', []));
+    $ignore = array_merge(
+      self::INTERNAL,
+      self::WHOLE_EDGE,
+      (array) Settings::get('edge_purge_ignore_tags', []),
+    );
     return array_values(array_filter($tags, static function (string $tag) use ($ignore): bool {
       if (in_array($tag, $ignore, TRUE) || str_ends_with($tag, ':revisions')) {
         return FALSE;

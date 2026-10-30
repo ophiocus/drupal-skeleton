@@ -54,6 +54,12 @@ nothing; config and content the release changed are queued by their own
 tags. The first run only records. `--dry-run` reports without recording;
 `--purge-all` also queues `rendered` (every page), by hand.
 
+That is the only way `rendered` reaches the CDN. It is on every rendered page, and core
+invalidates it whenever the render cache is cleared (`drush cache:clear render`, a theme
+setting saved), so the queue drops it from ordinary invalidations (`EdgeTags::WHOLE_EDGE`).
+Before that, a post-deploy "empty the render bin" step emptied the whole edge after every
+release.
+
 ## Deploys keep Drupal's finished pages
 
 `drush cr` empties every cache bin, the page, dynamic page and render bins
