@@ -17,7 +17,7 @@ can be kept at the edge for a day and still change the moment an editor saves.
    requests a minute, 100 tags each):
 
    ```
-   drush edge-purge:claim --limit=100     # "through <seq> remaining <n>", then one hash per line
+   drush edge-purge:claim --limit=100     # "through <seq> remaining <n>", one hash per line, then "tag <hash> <name>" lines for the purger's log
    # POST {"tags": [...]} to the CDN's purge API
    drush edge-purge:ack <h1,h2,...> --through=<seq>
    ```

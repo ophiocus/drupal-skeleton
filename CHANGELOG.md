@@ -13,6 +13,9 @@ you whether the foundation you cloned is recent enough.
   after a release found ~2,500 HIT / ~13,500 MISS with only 15 pages changed). The queue now
   drops `rendered` from ordinary invalidations (`EdgeTags::WHOLE_EDGE`); a purge of every page
   stays possible on purpose with `drush edge-purge:release --purge-all`.
+- `drush edge-purge:claim` also prints `tag <hash> <name>` lines, so the host's purger can log
+  which tags it purged (it logged counts only, which left a whole-edge purge after a release
+  untraceable). Readers that take only the hash lines are unaffected.
 
 ## 2026-10-28 — security: CAPTCHA 2.0.11, symfony/mime 7.4.22
 

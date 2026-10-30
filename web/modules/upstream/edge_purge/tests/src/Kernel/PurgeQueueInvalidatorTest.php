@@ -63,4 +63,28 @@ final class PurgeQueueInvalidatorTest extends KernelTestBase {
     $this->assertSame(['4xx-response', 'node:2'], $this->queued());
   }
 
+  /**
+   * Clearing the render cache queues nothing: "rendered" is on every page.
+   */
+  public function testRenderedNeverQueuedByInvalidation(): void {
+    Cache::invalidateTags(['rendered', 'node:3']);
+    $this->assertSame(['node:3'], $this->queued());
+
+    // A deliberate full purge still goes, by the queue itself.
+    $this->container->get('edge_purge.queue')->add(['rendered']);
+    $this->assertSame(['node:3', 'rendered'], $this->queued());
+  }
+
+  /**
+   * A claim names each hash's tag, for the purger's log.
+   */
+  public function testClaimNamesTags(): void {
+    Cache::invalidateTags(['node:4', 'config:block_list']);
+    $claim = $this->container->get('edge_purge.queue')->claim(10);
+    $this->assertCount(2, $claim['hashes']);
+    $this->assertEqualsCanonicalizing(['node:4', 'config:block_list'], array_values($claim['tags']));
+    $this->assertSame($claim['hashes'], array_keys($claim['tags']));
+    $this->assertGreaterThan(0, $claim['through']);
+  }
+
 }

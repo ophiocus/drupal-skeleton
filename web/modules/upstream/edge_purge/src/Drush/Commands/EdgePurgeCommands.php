@@ -42,6 +42,10 @@ final class EdgePurgeCommands extends DrushCommands {
     foreach ($claim['hashes'] as $hash) {
       $this->output()->writeln($hash);
     }
+    // Names for the purger's log, on lines a hash-only reader skips.
+    foreach ($claim['tags'] as $hash => $tag) {
+      $this->output()->writeln(sprintf('tag %s %s', $hash, $tag));
+    }
   }
 
   /**

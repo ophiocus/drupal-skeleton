@@ -46,20 +46,23 @@ final class PurgeQueue {
   /**
    * The oldest queued tags, and the sequence number that covers them.
    *
-   * @return array{through: int, hashes: string[]}
+   * @return array{through: int, hashes: string[], tags: array<string, string>}
    *   Pass "through" back to ack(), so a tag invalidated again after this
-   *   claim stays queued.
+   *   claim stays queued. "tags" maps each hash to its Drupal tag, for the
+   *   purger's log.
    */
   public function claim(int $limit): array {
     $rows = $this->database->select(self::TABLE, 'q')
-      ->fields('q', ['hash', 'seq'])
+      ->fields('q', ['hash', 'tag', 'seq'])
       ->orderBy('seq')
       ->range(0, $limit)
       ->execute()
-      ->fetchAllKeyed();
+      ->fetchAllAssoc('hash');
+    $seqs = array_map(static fn (object $row): int => (int) $row->seq, $rows);
     return [
-      'through' => $rows ? max(array_map('intval', $rows)) : 0,
+      'through' => $seqs ? max($seqs) : 0,
       'hashes' => array_map('strval', array_keys($rows)),
+      'tags' => array_map(static fn (object $row): string => (string) $row->tag, $rows),
     ];
   }
 
