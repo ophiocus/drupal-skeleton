@@ -771,5 +771,10 @@ any upstream module.
 
   The module's README lists the step for the deploy that brings the code, and
   a kernel test rehearses it from the old schema with data in it.
+
+  `drush deploy` imports config *before* the step can run. So the step also
+  repairs what other modules installed against the old shape in that import.
+  content_translation, for one, picks its own fields from the last installed
+  definition. The test covers that order: config first, then the step.
   Appointments: `drush appointments:entity-updates`. The same release rehearses
   the step on a copy of a site's database before any deploy.

@@ -59,4 +59,5 @@ services:
       - '@entity_field.manager'
       - '@entity.definition_update_manager'
       - '@entity.last_installed_schema.repository'
+      - '@database'
   Drupal\appointments\EntitySchema: '@appointments.entity_schema'
