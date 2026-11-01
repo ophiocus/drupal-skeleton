@@ -20,7 +20,7 @@ final class AppointmentServiceListBuilder extends EntityListBuilder {
   public function __construct(
     EntityTypeInterface $entity_type,
     EntityStorageInterface $storage,
-    protected readonly Calendar $calendar,
+    protected Calendar $calendar,
   ) {
     parent::__construct($entity_type, $storage);
   }
