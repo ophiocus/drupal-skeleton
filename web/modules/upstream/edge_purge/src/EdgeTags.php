@@ -75,9 +75,40 @@ final class EdgeTags {
   public const WHOLE_EDGE = ['rendered'];
 
   /**
+   * Tags kept off the CDN altogether: neither in the header nor ever purged.
+   *
+   * Core invalidates "4xx-response" on every create and update of any entity
+   * with a canonical link, so forwarding it emptied every cached 404, 403
+   * and 410 at the edge on each save, and every crawler request for a dead
+   * address went back to the origin. A 4xx page carries its own path tag
+   * instead (pathTag()), purged only when something may now answer there.
+   */
+  public const NOT_AT_EDGE = ['4xx-response'];
+
+  /**
+   * The prefix of a path's own tag, carried by a 4xx response at that path.
+   */
+  public const PATH_PREFIX = 'edge_purge:path:';
+
+  /**
+   * The tag a 4xx response at this path carries, and its purge names.
+   *
+   * Lowercase, without a trailing slash: core finds aliases in any letter
+   * case, so "/Eventos/x/" and "/eventos/x" are one address.
+   *
+   * @param string $path
+   *   A path as the site serves it, language prefix included, base path not,
+   *   URL-encoded or not.
+   */
+  public static function pathTag(string $path): string {
+    $path = '/' . trim(mb_strtolower(rawurldecode($path)), '/');
+    return self::PATH_PREFIX . $path;
+  }
+
+  /**
    * The tags of these invalidated, minus the ones never worth a purge.
    *
-   * Besides INTERNAL and WHOLE_EDGE: "<type>:<id>:revisions" and
+   * Besides INTERNAL, WHOLE_EDGE and NOT_AT_EDGE: "<type>:<id>:revisions" and
    * "<type>_values" belong to the entity storage's own cache, which Drupal
    * 11.4 invalidates on every resetCache(); a bulk load of 5,000 unchanged
    * entities used to queue 5,000 of them.
@@ -93,6 +124,7 @@ final class EdgeTags {
     $ignore = array_merge(
       self::INTERNAL,
       self::WHOLE_EDGE,
+      self::NOT_AT_EDGE,
       (array) Settings::get('edge_purge_ignore_tags', []),
     );
     return array_values(array_filter($tags, static function (string $tag) use ($ignore): bool {
@@ -115,7 +147,8 @@ final class EdgeTags {
    *
    * Tags past MAX_HEADER are dropped: those pages then rotate by max-age
    * instead of being purged by that tag. Every rendered page also carries
-   * "rendered", which a full purge invalidates.
+   * "rendered", which a full purge invalidates. NOT_AT_EDGE tags are left
+   * out.
    *
    * @param string[] $tags
    *   Drupal cache tags.
@@ -123,7 +156,7 @@ final class EdgeTags {
   public static function header(array $tags): string {
     $hashes = [];
     $length = 0;
-    foreach (array_unique($tags) as $tag) {
+    foreach (array_diff(array_unique($tags), self::NOT_AT_EDGE) as $tag) {
       $length += 13;
       if ($length > self::MAX_HEADER) {
         break;

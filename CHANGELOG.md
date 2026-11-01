@@ -5,6 +5,21 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-11-01 — edge_purge: dead pages stay at the edge until their address may answer
+
+- Core invalidates `4xx-response` on every create and update of any entity with a page, and the
+  queue forwarded it (it even passed while a router rebuild held the queue): every save emptied
+  every cached 404, 403 and 410 at the edge, so each crawler request for an old address went back
+  to the origin as a full render. Measured on one site over 24 h: a third of the readers' HTML
+  misses were 404s and 410s.
+- `4xx-response` is now kept off the edge (`EdgeTags::NOT_AT_EDGE`): out of the `Cache-Tag`
+  header and never queued. A 4xx response carries its own address instead,
+  `edge_purge:path:<path>`, purged by `PathPurger` only when that address may answer
+  differently: an entity with a page created, published or unpublished, or an alias created,
+  changed or deleted (old and new address, every language prefix).
+- A router rebuild now queues nothing at all. An address that starts answering without a save
+  (a new route) goes with `drush edge-purge:path <path>…`.
+
 ## 2026-10-30 — edge_purge: clearing the render cache no longer empties the edge
 
 - `drush cache:clear render` (and a theme setting saved) invalidates core's `rendered` tag,

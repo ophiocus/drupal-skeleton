@@ -6,6 +6,7 @@ namespace Drupal\edge_purge\Drush\Commands;
 
 use Drupal\Core\State\StateInterface;
 use Drupal\edge_purge\EdgeTags;
+use Drupal\edge_purge\PathPurger;
 use Drupal\edge_purge\PurgeQueue;
 use Drupal\edge_purge\RenderFingerprint;
 use Drush\Attributes\Argument;
@@ -26,6 +27,7 @@ final class EdgePurgeCommands extends DrushCommands {
   public function __construct(
     private readonly PurgeQueue $queue,
     private readonly StateInterface $state,
+    private readonly PathPurger $pathPurger,
   ) {
     parent::__construct();
   }
@@ -122,6 +124,20 @@ final class EdgePurgeCommands extends DrushCommands {
     if (count($changed) > 20) {
       $this->output()->writeln(sprintf('  … and %d more', count($changed) - 20));
     }
+  }
+
+  /**
+   * Queues the purge of a 4xx page cached at these addresses.
+   *
+   * For an address that starts answering without any entity being saved: a
+   * route new in a release, a redirect added by hand. Give each path as the
+   * site serves it, language prefix included.
+   */
+  #[Command(name: 'edge-purge:path')]
+  #[Argument(name: 'paths', description: 'Paths, e.g. /es/eventos /nueva-ruta.')]
+  public function path(array $paths): void {
+    $this->pathPurger->queuePaths($paths);
+    $this->output()->writeln(sprintf('queued %d path(s)', count(array_unique(array_map(EdgeTags::pathTag(...), $paths)))));
   }
 
   /**

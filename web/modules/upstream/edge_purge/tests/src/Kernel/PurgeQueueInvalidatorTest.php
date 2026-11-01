@@ -52,15 +52,23 @@ final class PurgeQueueInvalidatorTest extends KernelTestBase {
   }
 
   /**
-   * A router rebuild ("drush cr") queues nothing a reader could see.
+   * A router rebuild ("drush cr") queues nothing.
    */
-  public function testRouterRebuildQueuesOnlyNotFoundPages(): void {
+  public function testRouterRebuildQueuesNothing(): void {
     $this->container->get('router.builder')->rebuild();
-    $this->assertSame(['4xx-response'], $this->queued());
+    $this->assertSame([], $this->queued());
 
     // The hold ends with the rebuild: the next save is purged again.
     Cache::invalidateTags(['node:2']);
-    $this->assertSame(['4xx-response', 'node:2'], $this->queued());
+    $this->assertSame(['node:2'], $this->queued());
+  }
+
+  /**
+   * Core's "4xx-response", invalidated by every entity save, is never queued.
+   */
+  public function testNotFoundTagNeverQueued(): void {
+    Cache::invalidateTags(['4xx-response', 'node:5']);
+    $this->assertSame(['node:5'], $this->queued());
   }
 
   /**
