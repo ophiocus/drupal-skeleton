@@ -108,9 +108,12 @@ final class ManagingAdminsTest extends KernelTestBase {
   }
 
   /**
-   * An existing account is found by e-mail in any case, and only gains a role.
+   * An account it did not create is never promoted, whoever opened it.
+   *
+   * On a site where visitors register, anyone could take a listed e-mail
+   * first; adopting that account would hand them the site.
    */
-  public function testAdoptsExisting(): void {
+  public function testNeverPromotesAnAccountItDidNotCreate(): void {
     $existing = User::create([
       'name' => 'ana-own-name',
       'mail' => 'ANA@example.com',
@@ -124,17 +127,40 @@ final class ManagingAdminsTest extends KernelTestBase {
     $other->save();
 
     $result = $this->admins()->converge($this->admins()->parse('Ana:ana@example.com'));
-    $this->assertSame(['Ana' => 'role added, blocked'], $result);
+    $this->assertSame(['Ana' => 'not promoted: an account it did not create, blocked'], $result);
 
     $account = User::load($existing->id());
+    $this->assertFalse($account->hasRole('administrator'), 'the role is not given');
     $this->assertSame('ana-own-name', $account->getAccountName(), 'the name is the owner\'s');
     $this->assertTrue($account->hasRole('editor'), 'other roles are kept');
-    $this->assertTrue($account->hasRole('administrator'));
     $this->assertTrue($account->isBlocked(), 'a blocked account stays blocked');
     $this->assertSame($hash, $account->getPassword(), 'the password is the owner\'s');
 
     $this->assertSame([], User::load($other->id())->getRoles(TRUE), 'another account is not touched');
     $this->assertSame(3, $this->accounts());
+  }
+
+  /**
+   * An account it created gets the role back; an existing admin is adopted.
+   */
+  public function testRestoresWhatItManages(): void {
+    $admins = $this->admins()->parse('Ana:ana@example.com');
+    $this->admins()->converge($admins);
+    $ana = $this->byMail('ana@example.com');
+    $ana->removeRole('administrator');
+    $ana->save();
+    $this->assertSame(['Ana' => 'role added'], $this->admins()->converge($admins));
+    $this->assertTrue($this->byMail('ana@example.com')->hasRole('administrator'));
+
+    // An account that is already an administrator is the managing admin's:
+    // it is marked, so a later loss of the role is restored too.
+    User::create(['name' => 'bo', 'mail' => 'bo@example.com', 'status' => 1, 'roles' => ['administrator']])->save();
+    $bo = $this->admins()->parse('Bo:bo@example.com');
+    $this->assertSame(['Bo' => 'unchanged'], $this->admins()->converge($bo));
+    $account = $this->byMail('bo@example.com');
+    $account->removeRole('administrator');
+    $account->save();
+    $this->assertSame(['Bo' => 'role added'], $this->admins()->converge($bo));
   }
 
   /**
@@ -154,7 +180,7 @@ final class ManagingAdminsTest extends KernelTestBase {
   public function testCheckWritesNothing(): void {
     User::create(['name' => 'bo', 'mail' => 'bo@example.com', 'status' => 1])->save();
     $result = $this->admins()->converge($this->admins()->parse('Ana:ana@example.com,Bo:bo@example.com'), TRUE);
-    $this->assertSame(['Ana' => 'created', 'Bo' => 'role added'], $result);
+    $this->assertSame(['Ana' => 'created', 'Bo' => 'not promoted: an account it did not create'], $result);
     $this->assertSame(2, $this->accounts());
     $this->container->get('entity_type.manager')->getStorage('user')->resetCache();
     $this->assertFalse($this->byMail('bo@example.com')->hasRole('administrator'));

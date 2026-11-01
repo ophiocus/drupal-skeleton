@@ -38,7 +38,14 @@ final class CacheTagHeader implements EventSubscriberInterface {
     if (!$event->isMainRequest() || !$response instanceof CacheableResponseInterface || !$event->getRequest()->isMethodCacheable()) {
       return;
     }
-    $header = EdgeTags::header($response->getCacheableMetadata()->getCacheTags());
+    $tags = $response->getCacheableMetadata()->getCacheTags();
+    // A dead or forbidden address is named by its path, so it stays at the
+    // edge until something may answer there (PathPurger), not until any
+    // entity anywhere is saved. First, so a long header never drops it.
+    if ($response->isClientError()) {
+      array_unshift($tags, EdgeTags::pathTag($event->getRequest()->getPathInfo()));
+    }
+    $header = EdgeTags::header($tags);
     if ($header !== '') {
       $response->headers->set(EdgeTags::HEADER, $header);
       // What the page says, as a hash: a release compares it with a fresh

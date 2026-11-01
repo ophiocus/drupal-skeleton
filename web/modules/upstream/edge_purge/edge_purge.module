@@ -1,0 +1,31 @@
+<?php
+
+/**
+ * @file
+ * Purges the edge's cached 4xx pages at an address that may now answer.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Entity\EntityInterface;
+
+/**
+ * Implements hook_entity_insert().
+ */
+function edge_purge_entity_insert(EntityInterface $entity): void {
+  \Drupal::service('edge_purge.path_purger')->inserted($entity);
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+function edge_purge_entity_update(EntityInterface $entity): void {
+  \Drupal::service('edge_purge.path_purger')->updated($entity);
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function edge_purge_entity_delete(EntityInterface $entity): void {
+  \Drupal::service('edge_purge.path_purger')->deleted($entity);
+}

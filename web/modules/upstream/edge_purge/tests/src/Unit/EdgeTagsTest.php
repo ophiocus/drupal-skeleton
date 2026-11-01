@@ -33,6 +33,22 @@ final class EdgeTagsTest extends UnitTestCase {
   }
 
   /**
+   * Core's 4xx-response tag never reaches the edge: every save invalidates it.
+   */
+  public function testHeaderLeavesOutNotAtEdgeTags(): void {
+    $this->assertSame(EdgeTags::hash('node:1'), EdgeTags::header(['4xx-response', 'node:1']));
+  }
+
+  /**
+   * One address, one path tag, whatever its letter case, slash or encoding.
+   */
+  public function testPathTagNormalizes(): void {
+    $this->assertSame('edge_purge:path:/eventos/año', EdgeTags::pathTag('/Eventos/A%C3%B1o/'));
+    $this->assertSame(EdgeTags::pathTag('/en/x'), EdgeTags::pathTag('en/x'));
+    $this->assertSame('edge_purge:path:/', EdgeTags::pathTag('/'));
+  }
+
+  /**
    * A page with too many tags stays under Cloudflare's 16 KB header limit.
    */
   public function testHeaderStaysUnderTheLimit(): void {
@@ -53,7 +69,7 @@ final class EdgeTagsTest extends UnitTestCase {
       'config:field.storage.node.field_values', 'mysite:day', '4xx-response',
     ];
     $this->assertSame(
-      ['node:1', 'rendered', 'config:field.storage.node.field_values', 'mysite:day', '4xx-response'],
+      ['node:1', 'config:field.storage.node.field_values', 'mysite:day'],
       EdgeTags::purgeable($tags),
     );
     new Settings(['edge_purge_ignore_tags' => ['mysite:day']]);

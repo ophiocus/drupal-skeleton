@@ -5,6 +5,60 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-11-01 — security floors: the upstream is the only security path
+
+- The 2026-10-28 entry below bumped only this repository's own lock. `scripts/upstream/sync.sh`
+  re-resolves a site's lock only when the metapackage's requirements change, so that bump reached
+  no site; the sites were then patched one by one, which the upstream exists to prevent.
+- `upstream-configuration/composer.json` now carries the floors: `drupal/captcha` `^2.0.11`, and a
+  `conflict` for `symfony/mime <7.4.22`, `drupal/commerce <3.3.13` and
+  `drupal/commerce_shipping <3.0.6` (the Commerce modules are installed by the shop sites, not the
+  baseline; a conflict installs nothing, it only forbids those versions).
+- `sync.sh` treats a changed `conflict` like a changed requirement: the lock is stale, and the
+  packages it names are re-resolved where the site's lock has them.
+- `docs/UPSTREAM.md`, "An advisory, end to end": no site patches an advisory by itself, and how to
+  set a floor for a package the baseline does not require.
+- `sync.sh` now runs the upstream's own copy of itself (re-executes it after the fetch when it
+  differs), so a change to how a sync works applies on the sync that brings it. Proved needed on
+  the first try: a site's older `sync.sh` cannot raise a `conflict` floor on a package the site
+  requires itself (Commerce), and stops with "resolve by hand". A site whose `sync.sh` predates
+  this runs its first sync with the upstream's copy once (`SYNC_ROOT`, docs/UPSTREAM.md).
+## 2026-11-01 — edge_purge: dead pages stay at the edge until their address may answer
+
+- Core invalidates `4xx-response` on every create and update of any entity with a page, and the
+  queue forwarded it (it even passed while a router rebuild held the queue): every save emptied
+  every cached 404, 403 and 410 at the edge, so each crawler request for an old address went back
+  to the origin as a full render. Measured on one site over 24 h: a third of the readers' HTML
+  misses were 404s and 410s.
+- `4xx-response` is now kept off the edge (`EdgeTags::NOT_AT_EDGE`): out of the `Cache-Tag`
+  header and never queued. A 4xx response carries its own address instead,
+  `edge_purge:path:<path>`, purged by `PathPurger` only when that address may answer
+  differently: an entity with a page created, published or unpublished, or an alias created,
+  changed or deleted (old and new address, every language prefix).
+- A router rebuild now queues nothing at all. An address that starts answering without a save
+  (a new route) goes with `drush edge-purge:path <path>…`.
+
+## 2026-10-30 — edge_purge: clearing the render cache no longer empties the edge
+
+- `drush cache:clear render` (and a theme setting saved) invalidates core's `rendered` tag,
+  which every rendered page carries, and the purge queue forwarded it: one
+  `drush cache:clear render` on production emptied the whole edge. (It was a suspect for the
+  near-empty edge seen after releases, but measured post-deploy steps never queued it; that
+  cause is still open, and the tag names below are how to find it.) The queue now
+  drops `rendered` from ordinary invalidations (`EdgeTags::WHOLE_EDGE`); a purge of every page
+  stays possible on purpose with `drush edge-purge:release --purge-all`.
+- `drush edge-purge:claim` also prints `tag <hash> <name>` lines, so the host's purger can log
+  which tags it purged (it logged counts only, which left a whole-edge purge after a release
+  untraceable). Readers that take only the hash lines are unaffected.
+## 2026-10-30 — managing_admins: never promote an account it did not create
+
+- `managing-admins:converge` used to give the administrator role to any existing account that
+  held a listed e-mail, whoever had opened it. On a site where visitors register, anyone could
+  take a listed e-mail first and be made an administrator by the next deploy. It now promotes
+  only accounts it created (marked in user data, key `managing_admins.managed`), keeps the role
+  on accounts that already hold it (and marks them), and reports any other as
+  `not promoted: an account it did not create`, for a person to check.
+
 ## 2026-10-28 — security: CAPTCHA 2.0.11, symfony/mime 7.4.22
 
 - Lock-only bump for the advisories of 2026-10-28: `drupal/captcha` 2.0.10 → 2.0.11
@@ -13,6 +67,29 @@ you whether the foundation you cloned is recent enough.
   nothing else moves. `composer audit` is clean again.
 - Sites carry their own lock: each needs the same command, plus `drupal/commerce` and
   `drupal/commerce_*` where Commerce is installed (SA-CONTRIB-2026-254 to 262).
+## 2026-10-28 — appointments: the one-time step repairs content_translation's fields
+
+- **The bug:** on a deployed bilingual site, `/en` kept showing services in the
+  default language after the 2026-10-28 upgrade. `drush deploy` imports config
+  before `appointments:entity-updates` can run. Its import of "translate
+  services" made content_translation install its own fields for the old,
+  untranslatable shape: its own changed time, and no translation status,
+  because `status` used to be translatable. Every translation then read as
+  unpublished, and the language fallback dropped it. Found on a production copy
+  of a bilingual site.
+- **The fix:** `drush appointments:entity-updates` (and `--check`) now also:
+  - installs content_translation's field storage definitions that are missing
+    from the installed ones (`content_translation_status`);
+  - removes the ones the definitions no longer have
+    (`content_translation_changed`);
+  - publishes any translation left without a status.
+
+  It is idempotent, so the deploy order `drush deploy` → entity-updates →
+  `property:seed` heals a site with no step by hand.
+- `EntitySchemaTest::testTranslationEnabledBeforeTheStep` reproduces that
+  order: translation enabled on the old shape, then the step, then a
+  translation shown by the picker's listing in its language. README (the
+  adoption step had said the import was enough) and PROTOCOL D34 are corrected.
 
 ## 2026-10-28 — The fleet install profile, and recipes as the feature switch
 
@@ -34,6 +111,7 @@ you whether the foundation you cloned is recent enough.
   deployed site, the rollout order and the recipes evaluation.
 - A site that piloted its own `web/profiles/custom/skeleton_site` deletes it in
   the sync pull request that brings this one.
+
 ## 2026-10-28 — appointments: a cacheable picker, translatable services
 
 - **The booking page is cacheable**, by Drupal and at the edge, for as long as

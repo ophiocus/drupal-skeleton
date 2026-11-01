@@ -27,7 +27,7 @@ final class EntitySchemaTest extends KernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'user', 'field', 'options', 'language', 'appointments'];
+  protected static $modules = ['system', 'user', 'field', 'options', 'language', 'content_translation', 'appointments'];
 
   /**
    * {@inheritdoc}
@@ -46,8 +46,10 @@ final class EntitySchemaTest extends KernelTestBase {
     $old->set('translatable', FALSE);
     $old->set('data_table', NULL);
     $fields = AppointmentService::baseFieldDefinitions($old);
-    foreach ($fields as $field) {
-      $field->setTranslatable(FALSE);
+    // What the old code declared: only the published trait's status was
+    // translatable. content_translation picks its own fields from this.
+    foreach ($fields as $name => $field) {
+      $field->setTranslatable($name === 'status');
     }
     $this->assertArrayNotHasKey('langcode', $fields);
     $this->container->get('entity.definition_update_manager')->installFieldableEntityType($old, $fields);
@@ -92,7 +94,7 @@ final class EntitySchemaTest extends KernelTestBase {
    */
   public function testServicesBecomeTranslatable(): void {
     $schema = $this->container->get('appointments.entity_schema');
-    $this->assertContains('make appointment_service translatable (data table, langcode)', $schema->pending());
+    $this->assertContains("make appointment_service translatable (data table, langcode), then align content_translation's fields", $schema->pending());
 
     $done = $schema->apply();
     $this->assertContains('made appointment_service translatable', $done);
@@ -142,6 +144,60 @@ final class EntitySchemaTest extends KernelTestBase {
     $storage->resetCache();
     $this->assertSame('Consulta (es)', $storage->load(1)->getTranslation('es')->label());
     $this->assertSame('Consulta general', $storage->load(1)->label());
+  }
+
+  /**
+   * A deploy imported "translate services" before the step ran.
+   *
+   * `drush deploy` imports config first: content_translation then installs
+   * its fields for the old shape (its own changed time; no translation
+   * status, since status was translatable). After the conversion it needs
+   * the opposite, and a translation without a status reads as unpublished,
+   * so pages fell back to the default language.
+   */
+  public function testTranslationEnabledBeforeTheStep(): void {
+    ConfigurableLanguage::createFromLangcode('es')->save();
+    $this->container->get('content_translation.manager')->setEnabled('appointment_service', 'appointment_service', TRUE);
+    $installed = fn (): array => array_keys($this->container->get('entity.last_installed_schema.repository')
+      ->getLastInstalledFieldStorageDefinitions('appointment_service'));
+    $this->assertContains('content_translation_changed', $installed(), 'The import installed the fields of the old shape.');
+    $this->assertNotContains('content_translation_status', $installed());
+
+    $schema = $this->container->get('appointments.entity_schema');
+    $done = $schema->apply();
+    $this->assertContains('made appointment_service translatable', $done);
+    $this->assertContains("installed content_translation's content_translation_status on appointment_service", $done);
+    $this->assertContains("removed content_translation's content_translation_changed from appointment_service", $done);
+    $this->assertSame([], $schema->pending());
+    $this->assertSame([], $schema->apply(), 'A second run does nothing.');
+    $changes = $this->container->get('entity.definition_update_manager')->getChangeList();
+    $this->assertArrayNotHasKey('appointment_service', $changes);
+
+    // Every translation reads as published, the old ones and new ones.
+    $storage = $this->container->get('entity_type.manager')->getStorage('appointment_service');
+    $storage->resetCache();
+    $storage->load(1)->addTranslation('es', ['label' => 'Consulta (es)'])->save();
+    $storage->resetCache();
+    $metadata = fn (string $langcode) => $this->container->get('content_translation.manager')
+      ->getTranslationMetadata($storage->load(1)->getTranslation($langcode));
+    $this->assertTrue($metadata('en')->isPublished());
+    $this->assertTrue($metadata('es')->isPublished());
+
+    // And a visitor's page in that language shows it: content_translation's
+    // language fallback drops a translation that reads as unpublished, which
+    // is how the bug looked on a deployed site.
+    $this->container->get('language.default')->set(ConfigurableLanguage::load('es'));
+    $this->container->get('language_manager')->reset();
+    $services = $this->container->get('appointments.calendar')->services();
+    $this->assertSame('Consulta (es)', $services['consulta']->label());
+
+    // A row left without a status (a repair made by hand) is published too.
+    $database = $this->container->get('database');
+    $database->update('appointment_service_field_data')->fields(['content_translation_status' => NULL])->condition('id', 2)->execute();
+    $this->assertSame(['publish 1 service translations that had no translation status'], $schema->pending());
+    $this->assertSame(['published 1 service translations that had no translation status'], $schema->apply());
+    $nulls = $database->select('appointment_service_field_data')->isNull('content_translation_status')->countQuery()->execute()->fetchField();
+    $this->assertSame(0, (int) $nulls);
   }
 
 }

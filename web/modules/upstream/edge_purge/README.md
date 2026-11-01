@@ -17,7 +17,7 @@ can be kept at the edge for a day and still change the moment an editor saves.
    requests a minute, 100 tags each):
 
    ```
-   drush edge-purge:claim --limit=100     # "through <seq> remaining <n>", then one hash per line
+   drush edge-purge:claim --limit=100     # "through <seq> remaining <n>", one hash per line, then "tag <hash> <name>" lines for the purger's log
    # POST {"tags": [...]} to the CDN's purge API
    drush edge-purge:ack <h1,h2,...> --through=<seq>
    ```
@@ -33,10 +33,36 @@ can be kept at the edge for a day and still change the moment an editor saves.
 - `<type>:<id>:revisions` and `<type>_values`: the entity storage's own
   cache; Drupal 11.4 invalidates them on every `resetCache()`, so a bulk load
   of unchanged entities (a seeder, an importer) queued thousands.
-- Anything else a router rebuild invalidates (every menu's tag), except
-  `4xx-response`: the queue is held from the rebuild's first event to its
-  last (`RouterRebuildHold`). A menu edited through the UI still purges.
+- `4xx-response`: core invalidates it on every create and update of any
+  entity with a page, so forwarding it emptied every cached 404, 403 and 410
+  at the edge on each save. It is left out of the header too
+  (`EdgeTags::NOT_AT_EDGE`); see "Dead pages" below.
+- Anything a router rebuild invalidates (every menu's tag): the queue is held
+  from the rebuild's first event to its last (`RouterRebuildHold`). A menu
+  edited through the UI still purges.
 - `$settings['edge_purge_ignore_tags']` adds tags of your own.
+
+## Dead pages: 404, 403, 410
+
+A response with a 4xx status carries one more tag, its own address:
+`edge_purge:path:<path>` (`EdgeTags::pathTag()`: the path as served, language
+prefix included, lowercase, no trailing slash). The edge keeps it until
+something may answer there, when `PathPurger` queues that tag:
+
+- an entity with a page is **created**: its system path and its aliases;
+- an entity is **published or unpublished**: the same;
+- an alias is **created, changed or deleted**: the old address and the new.
+
+Each in every language prefix the address can carry (language module's URL
+prefixes). Any other save leaves dead pages alone, so crawlers asking for old
+addresses are answered from the edge instead of a full render at the origin.
+
+An address that starts answering without any save (a route new in a release,
+a redirect added by hand) is purged by hand:
+
+```
+drush edge-purge:path /nueva-ruta /en/new-route
+```
 
 ## Releases: purge only what changed
 
@@ -53,6 +79,11 @@ queues nothing; the host then verifies every cached page (below). Unchanged:
 nothing; config and content the release changed are queued by their own
 tags. The first run only records. `--dry-run` reports without recording;
 `--purge-all` also queues `rendered` (every page), by hand.
+
+That is the only way `rendered` reaches the CDN. It is on every rendered page, and core
+invalidates it whenever the render cache is cleared (`drush cache:clear render`, a theme
+setting saved), so the queue drops it from ordinary invalidations (`EdgeTags::WHOLE_EDGE`).
+Before that, a single `drush cache:clear render` on production emptied the whole edge.
 
 ## Deploys keep Drupal's finished pages
 
