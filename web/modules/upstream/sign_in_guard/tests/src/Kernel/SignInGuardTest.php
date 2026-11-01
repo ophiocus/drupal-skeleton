@@ -101,6 +101,20 @@ final class SignInGuardTest extends KernelTestBase {
    * With the widget's keys, Turnstile guards sign-in and password reset.
    */
   public function testTurnstileWithKeys(): void {
+    // A public form the site protects, one it does not, and one of its own.
+    $points = [
+      'contact_message_feedback_form' => TRUE,
+      'contact_message_personal_form' => FALSE,
+      'mysite_signup_form' => TRUE,
+    ];
+    foreach ($points as $form => $on) {
+      $point = CaptchaPoint::load($form) ?? CaptchaPoint::create(['formId' => $form]);
+      $point->setCaptchaType('image_captcha/Image');
+      $on ? $point->enable() : $point->disable();
+      $point->save();
+    }
+    $this->setSetting('sign_in_guard_turnstile_forms', ['mysite_signup_form']);
+
     putenv('TURNSTILE_KEYS=' . json_encode(['site_key' => 'site-key-x', 'secret_key' => 'secret-key-y']));
     $this->container->get('config.factory')->reset();
     $this->container->get('entity_type.manager')->getStorage('captcha_point')->resetCache();
@@ -110,7 +124,13 @@ final class SignInGuardTest extends KernelTestBase {
       $this->assertTrue($point->status(), $form);
       $this->assertSame('turnstile/Turnstile', $point->getCaptchaType(), $form);
     }
-    $this->assertFalse(CaptchaPoint::load('user_register_form')->status());
+    // Public forms take Turnstile as their challenge; on or off stays the
+    // site's.
+    foreach ($points + ['user_register_form' => FALSE] as $form => $on) {
+      $point = CaptchaPoint::load($form);
+      $this->assertSame($on, $point->status(), $form);
+      $this->assertSame('turnstile/Turnstile', $point->getCaptchaType(), $form);
+    }
     $this->assertSame('sign_in_guard_turnstile', $this->read('turnstile.settings')->get('keys'));
     $keys = $this->container->get('key.repository')->getKey('sign_in_guard_turnstile')->getKeyValues();
     $this->assertSame('site-key-x', $keys['site_key']);

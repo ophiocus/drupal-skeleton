@@ -5,6 +5,14 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-11-01 — sign_in_guard: Turnstile on the public forms too
+
+- With `TURNSTILE_KEYS`, Turnstile was the challenge of the sign-in and password-reset forms only;
+  the contact forms and registration kept the image CAPTCHA. Their challenge is now Turnstile as
+  well (`SignInGuardOverrides::TURNSTILE_CHALLENGE_FORMS`); whether each is protected stays the
+  site's CAPTCHA point. `$settings['sign_in_guard_turnstile_forms']` adds a site's own forms, so a
+  site needs no Turnstile override of its own.
+
 ## 2026-11-01 — appointments: the service list builder survives unserialization on PHP 8.3
 
 - `AppointmentServiceListBuilder` declared its `Calendar` as a promoted `readonly` property. Its parent

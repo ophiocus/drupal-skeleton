@@ -7,12 +7,14 @@ namespace Drupal\sign_in_guard\Config;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryOverrideInterface;
 use Drupal\Core\Config\StorageInterface;
+use Drupal\Core\Site\Settings;
 
 /**
  * Turns the guard on from the host environment, never from config/sync.
  *
  * Two-factor sign-in is required once TFA_ENCRYPTION_KEY is set; Turnstile
- * guards the sign-in and password-reset forms once TURNSTILE_KEYS is set. With
+ * guards the sign-in and password-reset forms once TURNSTILE_KEYS is set, and
+ * becomes the challenge of the public forms a site already protects. With
  * neither (a local copy, CI, a fresh build) the contrib keeps its shipped
  * defaults, which change nothing, so no environment can lock itself out by
  * importing another's config.
@@ -25,9 +27,20 @@ final class SignInGuardOverrides implements ConfigFactoryOverrideInterface {
   public const TFA_ROLES = ['administrator', 'content_editor'];
 
   /**
-   * The forms Turnstile guards.
+   * The forms Turnstile guards, switched on.
    */
   public const TURNSTILE_FORMS = ['user_login_form', 'user_pass'];
+
+  /**
+   * Public forms whose challenge becomes Turnstile; on or off stays the site's.
+   *
+   * $settings['sign_in_guard_turnstile_forms'] adds a site's own form ids.
+   */
+  public const TURNSTILE_CHALLENGE_FORMS = [
+    'user_register_form',
+    'contact_message_feedback_form',
+    'contact_message_personal_form',
+  ];
 
   /**
    * {@inheritdoc}
@@ -65,8 +78,25 @@ final class SignInGuardOverrides implements ConfigFactoryOverrideInterface {
           $overrides[$name] = ['status' => TRUE, 'captchaType' => 'turnstile/Turnstile'];
         }
       }
+      foreach (self::challengeForms() as $form) {
+        $name = "captcha.captcha_point.$form";
+        if (in_array($name, $names, TRUE) && !isset($overrides[$name])) {
+          $overrides[$name] = ['captchaType' => 'turnstile/Turnstile'];
+        }
+      }
     }
     return $overrides;
+  }
+
+  /**
+   * The public forms whose challenge becomes Turnstile, the site's own added.
+   *
+   * @return string[]
+   *   Form ids.
+   */
+  public static function challengeForms(): array {
+    $own = array_filter((array) Settings::get('sign_in_guard_turnstile_forms', []), 'is_string');
+    return array_values(array_unique(array_merge(self::TURNSTILE_CHALLENGE_FORMS, $own)));
   }
 
   /**
@@ -87,7 +117,7 @@ final class SignInGuardOverrides implements ConfigFactoryOverrideInterface {
    * {@inheritdoc}
    */
   public function getCacheSuffix(): string {
-    return 'sign_in_guard:' . (int) self::tfaOn() . (int) self::turnstileOn();
+    return 'sign_in_guard:' . (int) self::tfaOn() . (int) self::turnstileOn() . ':' . md5(implode(',', self::challengeForms()));
   }
 
   /**

@@ -10,7 +10,11 @@ Two guards on signing in, each switched on by the host, never by config:
 - **Cloudflare Turnstile** (`captcha` + `turnstile`) guards the sign-in form
   (`/user/login`) and the password-reset form (`/user/password`) once the
   environment carries `TURNSTILE_KEYS`. It replaces whatever challenge those
-  two forms had.
+  two forms had. With the same keys it also becomes the challenge of the
+  public forms, registration (`user_register_form`) and the contact forms
+  (`contact_message_feedback_form`, `contact_message_personal_form`). Whether
+  each of those is protected at all stays the site's choice: its CAPTCHA point
+  is on or off in `config/sync`.
 
 Every site carries the module (`web/modules/upstream/`). Enabling it adds two
 Key entities and an encryption profile whose values come from the
@@ -35,8 +39,15 @@ config those modules install. The overrides are runtime only
 (`SignInGuardOverrides`), so `config/sync` keeps the contrib's defaults and
 `config:status` stays clean on every environment.
 
-A site with a sign-in form of its own adds a CAPTCHA point for it with
-challenge `turnstile/Turnstile`.
+A site with a public form of its own (its own sign-in, a sign-up) adds a
+CAPTCHA point for it, on, and names the form in `settings.php`:
+
+```php
+$settings['sign_in_guard_turnstile_forms'] = ['mysite_sign_in'];
+```
+
+With `TURNSTILE_KEYS` its challenge is Turnstile; without them it keeps the
+point's own challenge, so a local copy and CI never need a widget.
 
 ## Recovering an account
 
