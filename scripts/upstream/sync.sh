@@ -23,7 +23,9 @@
 # Writes "changed=true|false" and "upstream=<sha>" to $GITHUB_OUTPUT when set.
 # Leaves a merge commit; pushing it is the caller's business.
 set -euo pipefail
-cd "$(dirname "$0")/../.."
+# SYNC_ROOT is set when this script runs from a copy outside the site (the
+# re-exec below, or a first sync run with the upstream's copy by hand).
+cd "${SYNC_ROOT:-$(dirname "$0")/../..}"
 
 MODE="${1:-}"
 URL="${UPSTREAM_URL:-https://github.com/ophiocus/drupal-skeleton.git}"
@@ -81,6 +83,19 @@ else
 fi
 git fetch -q upstream "$REF"
 UP="$(git rev-parse FETCH_HEAD)"
+
+# Run the upstream's own copy of this script, not the site's: a change to how
+# a sync works (a new kind of floor) must apply on the very sync that brings
+# it, not one sync later. Once per run.
+if [ -z "${SYNC_REEXEC:-}" ] && git cat-file -e "$UP:scripts/upstream/sync.sh" 2>/dev/null; then
+  latest="$(mktemp)"
+  git show "$UP:scripts/upstream/sync.sh" > "$latest"
+  if ! cmp -s "$latest" "${BASH_SOURCE[0]}"; then
+    echo "running the upstream's sync.sh (${UP:0:7})"
+    exec env SYNC_REEXEC=1 SYNC_ROOT="$PWD" UPSTREAM_URL="$URL" UPSTREAM_REF="$REF" bash "$latest" "$@"
+  fi
+  rm -f "$latest"
+fi
 out "upstream=$UP"
 
 if [ "$MODE" != "--adopt" ] && git merge-base --is-ancestor "$UP" HEAD 2>/dev/null; then

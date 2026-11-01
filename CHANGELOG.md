@@ -17,6 +17,11 @@ you whether the foundation you cloned is recent enough.
   packages it names are re-resolved where the site's lock has them.
 - `docs/UPSTREAM.md`, "An advisory, end to end": no site patches an advisory by itself, and how to
   set a floor for a package the baseline does not require.
+- `sync.sh` now runs the upstream's own copy of itself (re-executes it after the fetch when it
+  differs), so a change to how a sync works applies on the sync that brings it. Proved needed on
+  the first try: a site's older `sync.sh` cannot raise a `conflict` floor on a package the site
+  requires itself (Commerce), and stops with "resolve by hand". A site whose `sync.sh` predates
+  this runs its first sync with the upstream's copy once (`SYNC_ROOT`, docs/UPSTREAM.md).
 
 ## 2026-10-28 — security: CAPTCHA 2.0.11, symfony/mime 7.4.22
 

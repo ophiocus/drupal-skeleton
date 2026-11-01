@@ -80,6 +80,17 @@ production audit, the full test gate, then a pull request (or, where the
 repository does not let Actions open pull requests, an issue linking the
 branch). Merging the pull request deploys the site the usual way.
 
+The script runs the upstream's own copy of itself: right after fetching, if
+the upstream's `scripts/upstream/sync.sh` differs from the one running, it
+re-executes that one. A change to how a sync works applies on the sync that
+brings it. A site whose `sync.sh` predates this (before 2026-11-01) runs its
+first such sync with the upstream's copy by hand, once:
+
+```bash
+git -C ../drupal-skeleton show origin/master:scripts/upstream/sync.sh > /tmp/sync.sh
+SYNC_ROOT="$PWD" COMPOSER_CMD="ddev composer" bash /tmp/sync.sh
+```
+
 `scripts/upstream/sync.sh --check` fails when `composer.lock` no longer matches
 `upstream-configuration/composer.json`. The test gate runs it, so a site can
 never quietly install a baseline the upstream has moved past.
