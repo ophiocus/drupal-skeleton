@@ -23,6 +23,33 @@ you whether the foundation you cloned is recent enough.
   the first try: a site's older `sync.sh` cannot raise a `conflict` floor on a package the site
   requires itself (Commerce), and stops with "resolve by hand". A site whose `sync.sh` predates
   this runs its first sync with the upstream's copy once (`SYNC_ROOT`, docs/UPSTREAM.md).
+## 2026-11-01 — edge_purge: dead pages stay at the edge until their address may answer
+
+- Core invalidates `4xx-response` on every create and update of any entity with a page, and the
+  queue forwarded it (it even passed while a router rebuild held the queue): every save emptied
+  every cached 404, 403 and 410 at the edge, so each crawler request for an old address went back
+  to the origin as a full render. Measured on one site over 24 h: a third of the readers' HTML
+  misses were 404s and 410s.
+- `4xx-response` is now kept off the edge (`EdgeTags::NOT_AT_EDGE`): out of the `Cache-Tag`
+  header and never queued. A 4xx response carries its own address instead,
+  `edge_purge:path:<path>`, purged by `PathPurger` only when that address may answer
+  differently: an entity with a page created, published or unpublished, or an alias created,
+  changed or deleted (old and new address, every language prefix).
+- A router rebuild now queues nothing at all. An address that starts answering without a save
+  (a new route) goes with `drush edge-purge:path <path>…`.
+
+## 2026-10-30 — edge_purge: clearing the render cache no longer empties the edge
+
+- `drush cache:clear render` (and a theme setting saved) invalidates core's `rendered` tag,
+  which every rendered page carries, and the purge queue forwarded it: one
+  `drush cache:clear render` on production emptied the whole edge. (It was a suspect for the
+  near-empty edge seen after releases, but measured post-deploy steps never queued it; that
+  cause is still open, and the tag names below are how to find it.) The queue now
+  drops `rendered` from ordinary invalidations (`EdgeTags::WHOLE_EDGE`); a purge of every page
+  stays possible on purpose with `drush edge-purge:release --purge-all`.
+- `drush edge-purge:claim` also prints `tag <hash> <name>` lines, so the host's purger can log
+  which tags it purged (it logged counts only, which left a whole-edge purge after a release
+  untraceable). Readers that take only the hash lines are unaffected.
 
 ## 2026-10-28 — security: CAPTCHA 2.0.11, symfony/mime 7.4.22
 

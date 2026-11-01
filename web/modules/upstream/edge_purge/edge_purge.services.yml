@@ -6,6 +6,11 @@ services:
   # without this alias it silently drops the whole command class.
   Drupal\edge_purge\PurgeQueue: '@edge_purge.queue'
 
+  edge_purge.path_purger:
+    class: Drupal\edge_purge\PathPurger
+    arguments: ['@edge_purge.queue', '@config.factory', '@?path_alias.manager']
+  Drupal\edge_purge\PathPurger: '@edge_purge.path_purger'
+
   edge_purge.invalidator:
     class: Drupal\edge_purge\Cache\PurgeQueueInvalidator
     arguments: ['@edge_purge.queue']

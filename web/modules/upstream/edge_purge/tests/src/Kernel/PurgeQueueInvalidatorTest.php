@@ -52,15 +52,47 @@ final class PurgeQueueInvalidatorTest extends KernelTestBase {
   }
 
   /**
-   * A router rebuild ("drush cr") queues nothing a reader could see.
+   * A router rebuild ("drush cr") queues nothing.
    */
-  public function testRouterRebuildQueuesOnlyNotFoundPages(): void {
+  public function testRouterRebuildQueuesNothing(): void {
     $this->container->get('router.builder')->rebuild();
-    $this->assertSame(['4xx-response'], $this->queued());
+    $this->assertSame([], $this->queued());
 
     // The hold ends with the rebuild: the next save is purged again.
     Cache::invalidateTags(['node:2']);
-    $this->assertSame(['4xx-response', 'node:2'], $this->queued());
+    $this->assertSame(['node:2'], $this->queued());
+  }
+
+  /**
+   * Core's "4xx-response", invalidated by every entity save, is never queued.
+   */
+  public function testNotFoundTagNeverQueued(): void {
+    Cache::invalidateTags(['4xx-response', 'node:5']);
+    $this->assertSame(['node:5'], $this->queued());
+  }
+
+  /**
+   * Clearing the render cache queues nothing: "rendered" is on every page.
+   */
+  public function testRenderedNeverQueuedByInvalidation(): void {
+    Cache::invalidateTags(['rendered', 'node:3']);
+    $this->assertSame(['node:3'], $this->queued());
+
+    // A deliberate full purge still goes, by the queue itself.
+    $this->container->get('edge_purge.queue')->add(['rendered']);
+    $this->assertSame(['node:3', 'rendered'], $this->queued());
+  }
+
+  /**
+   * A claim names each hash's tag, for the purger's log.
+   */
+  public function testClaimNamesTags(): void {
+    Cache::invalidateTags(['node:4', 'config:block_list']);
+    $claim = $this->container->get('edge_purge.queue')->claim(10);
+    $this->assertCount(2, $claim['hashes']);
+    $this->assertEqualsCanonicalizing(['node:4', 'config:block_list'], array_values($claim['tags']));
+    $this->assertSame($claim['hashes'], array_keys($claim['tags']));
+    $this->assertGreaterThan(0, $claim['through']);
   }
 
 }

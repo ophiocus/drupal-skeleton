@@ -16,15 +16,11 @@ use Drupal\edge_purge\PurgeQueue;
  *
  * A router rebuild (every "drush cr", every module install) invalidates the
  * tags of every menu and "http_response", which are on every page, without
- * a single page having changed. While one runs (RouterRebuildHold) only
- * "4xx-response" is queued, so a cached 404 for a new route still goes.
+ * a single page having changed. While one runs (RouterRebuildHold) nothing is
+ * queued. A route new in a release that was cached as a 404 at the edge goes
+ * with "drush edge-purge:path <path>".
  */
 final class PurgeQueueInvalidator implements CacheTagsInvalidatorInterface {
-
-  /**
-   * Tags still queued while a router rebuild holds the queue.
-   */
-  public const HOLD_PASSES = ['4xx-response'];
 
   /**
    * Whether a router rebuild is running in this process.
@@ -60,10 +56,7 @@ final class PurgeQueueInvalidator implements CacheTagsInvalidatorInterface {
    * {@inheritdoc}
    */
   public function invalidateTags(array $tags): void {
-    $tags = EdgeTags::purgeable($tags);
-    if (self::$held) {
-      $tags = array_values(array_intersect($tags, self::HOLD_PASSES));
-    }
+    $tags = self::$held ? [] : EdgeTags::purgeable($tags);
     if (!$tags) {
       return;
     }
