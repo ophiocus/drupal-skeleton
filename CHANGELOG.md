@@ -50,6 +50,14 @@ you whether the foundation you cloned is recent enough.
 - `drush edge-purge:claim` also prints `tag <hash> <name>` lines, so the host's purger can log
   which tags it purged (it logged counts only, which left a whole-edge purge after a release
   untraceable). Readers that take only the hash lines are unaffected.
+## 2026-10-30 — managing_admins: never promote an account it did not create
+
+- `managing-admins:converge` used to give the administrator role to any existing account that
+  held a listed e-mail, whoever had opened it. On a site where visitors register, anyone could
+  take a listed e-mail first and be made an administrator by the next deploy. It now promotes
+  only accounts it created (marked in user data, key `managing_admins.managed`), keeps the role
+  on accounts that already hold it (and marks them), and reports any other as
+  `not promoted: an account it did not create`, for a person to check.
 
 ## 2026-10-28 — security: CAPTCHA 2.0.11, symfony/mime 7.4.22
 
