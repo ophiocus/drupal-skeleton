@@ -4586,7 +4586,7 @@
             "dist": {
                 "type": "path",
                 "url": "upstream-configuration",
-                "reference": "a1669d8f7f252c423fbf4fff7627e091271a9d0d"
+                "reference": "c07a0fb1fa7004733541c3300a76d30e05efe63b"
             },
             "require": {
                 "composer/installers": "^2.0",
@@ -4614,6 +4614,7 @@
             },
             "conflict": {
                 "drupal/commerce": "<3.3.13",
+                "drupal/commerce_shipping": "<3.0.6",
                 "symfony/mime": "<7.4.22"
             },
             "type": "metapackage",

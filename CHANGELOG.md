@@ -11,8 +11,9 @@ you whether the foundation you cloned is recent enough.
   re-resolves a site's lock only when the metapackage's requirements change, so that bump reached
   no site; the sites were then patched one by one, which the upstream exists to prevent.
 - `upstream-configuration/composer.json` now carries the floors: `drupal/captcha` `^2.0.11`, and a
-  `conflict` for `symfony/mime <7.4.22` and `drupal/commerce <3.3.13` (Commerce is installed by the
-  shop sites, not the baseline; a conflict installs nothing, it only forbids those versions).
+  `conflict` for `symfony/mime <7.4.22`, `drupal/commerce <3.3.13` and
+  `drupal/commerce_shipping <3.0.6` (the Commerce modules are installed by the shop sites, not the
+  baseline; a conflict installs nothing, it only forbids those versions).
 - `sync.sh` treats a changed `conflict` like a changed requirement: the lock is stale, and the
   packages it names are re-resolved where the site's lock has them.
 - `docs/UPSTREAM.md`, "An advisory, end to end": no site patches an advisory by itself, and how to
