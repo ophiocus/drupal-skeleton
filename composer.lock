@@ -4586,13 +4586,13 @@
             "dist": {
                 "type": "path",
                 "url": "upstream-configuration",
-                "reference": "eddaed2d017adcb1ebbe4ae0718a3ddf7997cf60"
+                "reference": "a1669d8f7f252c423fbf4fff7627e091271a9d0d"
             },
             "require": {
                 "composer/installers": "^2.0",
                 "drupal/adsense": "^1.5",
                 "drupal/adstxt": "^1.5",
-                "drupal/captcha": "^2.0",
+                "drupal/captcha": "^2.0.11",
                 "drupal/core-composer-scaffold": "~11.4.10",
                 "drupal/core-project-message": "~11.4.10",
                 "drupal/core-recommended": "~11.4.10",
@@ -4611,6 +4611,10 @@
                 "drush/drush": "^13.0",
                 "google/auth": "^1.55",
                 "php": ">=8.3"
+            },
+            "conflict": {
+                "drupal/commerce": "<3.3.13",
+                "symfony/mime": "<7.4.22"
             },
             "type": "metapackage",
             "license": [

@@ -31,16 +31,22 @@ REF="${UPSTREAM_REF:-master}"
 COMPOSER_CMD="${COMPOSER_CMD:-composer}"
 out() { [ -n "${GITHUB_OUTPUT:-}" ] && echo "$1" >> "$GITHUB_OUTPUT"; echo "$1"; }
 
-# The lock is fresh when the metapackage it records requires exactly what
-# upstream-configuration/composer.json requires.
+# The lock is fresh when the metapackage it records requires and conflicts
+# with exactly what upstream-configuration/composer.json does. "conflict" is
+# how the upstream sets a security floor for a package it does not require
+# itself (a dependency's dependency, or one only some sites install): a lock
+# recording an older metapackage is stale, so the next sync moves past it.
 lock_fresh() {
   php -r '
-    $want = json_decode(file_get_contents("upstream-configuration/composer.json"), TRUE)["require"] ?? [];
+    $want = json_decode(file_get_contents("upstream-configuration/composer.json"), TRUE);
     $lock = json_decode(file_get_contents("composer.lock"), TRUE);
     foreach ($lock["packages"] ?? [] as $p) {
       if ($p["name"] === "ophiocus/upstream-configuration") {
-        ksort($want); $got = $p["require"] ?? []; ksort($got);
-        exit($got == $want ? 0 : 1);
+        foreach (["require", "conflict"] as $k) {
+          $w = $want[$k] ?? []; ksort($w); $g = $p[$k] ?? []; ksort($g);
+          if ($g != $w) { exit(1); }
+        }
+        exit(0);
       }
     }
     exit(1);'
@@ -112,23 +118,29 @@ for path in "${OWNED[@]}"; do
   fi
 done
 
-# Re-resolve the lock when the upstream's requirements moved (or it was stale).
-# The smallest change that satisfies them, in widening passes: only the
-# packages whose requirement changed; then those with their dependencies; the
+# Re-resolve the lock when the upstream's requirements or floors moved (or it
+# was stale). The smallest change that satisfies them, in widening passes: only
+# the packages whose requirement or conflict changed (a conflict only where
+# this site's lock has the package); then those with their dependencies; the
 # whole baseline only as a last resort. A first version of this script moved
 # eleven packages, drupal/core-dev to a beta among them, for a one-line
 # baseline change. Lock only: what the image installs is the lock.
 if ! lock_fresh; then
   mapfile -t moved < <(php -r '
-    $want = json_decode(file_get_contents("upstream-configuration/composer.json"), TRUE)["require"] ?? [];
-    $had = [];
-    foreach (json_decode(file_get_contents("composer.lock"), TRUE)["packages"] ?? [] as $p) {
-      if ($p["name"] === "ophiocus/upstream-configuration") { $had = $p["require"] ?? []; }
+    $want = json_decode(file_get_contents("upstream-configuration/composer.json"), TRUE);
+    $lock = json_decode(file_get_contents("composer.lock"), TRUE);
+    $had = []; $locked = [];
+    foreach (array_merge($lock["packages"] ?? [], $lock["packages-dev"] ?? []) as $p) {
+      $locked[$p["name"]] = TRUE;
+      if ($p["name"] === "ophiocus/upstream-configuration") { $had = $p; }
     }
-    foreach ($want as $n => $c) {
-      if (($had[$n] ?? NULL) !== $c && str_contains($n, "/")) { echo $n, PHP_EOL; }
+    foreach ($want["require"] ?? [] as $n => $c) {
+      if (($had["require"][$n] ?? NULL) !== $c && str_contains($n, "/")) { echo $n, PHP_EOL; }
+    }
+    foreach ($want["conflict"] ?? [] as $n => $c) {
+      if (($had["conflict"][$n] ?? NULL) !== $c && isset($locked[$n])) { echo $n, PHP_EOL; }
     }')
-  echo "baseline requirements changed: ${moved[*]:-none}"
+  echo "baseline requirements or floors changed: ${moved[*]:-none}"
   upd() { $COMPOSER_CMD update "$@" --no-install --no-scripts --no-interaction || echo "pass did not resolve: $*"; }
   upd ophiocus/upstream-configuration "${moved[@]}"
   lock_fresh || upd ophiocus/upstream-configuration "${moved[@]}" --with-dependencies
