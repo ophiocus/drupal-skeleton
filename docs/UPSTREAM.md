@@ -80,23 +80,46 @@ production audit, the full test gate, then a pull request (or, where the
 repository does not let Actions open pull requests, an issue linking the
 branch). Merging the pull request deploys the site the usual way.
 
+The script runs the upstream's own copy of itself: right after fetching, if
+the upstream's `scripts/upstream/sync.sh` differs from the one running, it
+re-executes that one. A change to how a sync works applies on the sync that
+brings it. A site whose `sync.sh` predates this (before 2026-11-01) runs its
+first such sync with the upstream's copy by hand, once:
+
+```bash
+git -C ../drupal-skeleton show origin/master:scripts/upstream/sync.sh > /tmp/sync.sh
+SYNC_ROOT="$PWD" COMPOSER_CMD="ddev composer" bash /tmp/sync.sh
+```
+
 `scripts/upstream/sync.sh --check` fails when `composer.lock` no longer matches
 `upstream-configuration/composer.json`. The test gate runs it, so a site can
 never quietly install a baseline the upstream has moved past.
 
 ## An advisory, end to end
 
+**The upstream is the only security path.** No site patches an advisory by
+itself: no `composer update` in a site, no security branch or pull request of a
+site's own, no cherry-pick of the upstream's fix. A site whose composer audit
+fails stops and waits for the upstream.
+
 1. The advisory turns the composer-audit gate red, in the upstream and in every
    affected site.
-2. In the upstream: raise the floor in `upstream-configuration/composer.json`,
-   re-resolve the upstream's own lock, push. The upstream's CI goes green.
+2. In the upstream, set the floor in `upstream-configuration/composer.json`:
+   - a package the baseline requires: raise its constraint
+     (`"drupal/captcha": "^2.0.11"`);
+   - any other package a site may lock, a dependency's dependency or a module
+     only some sites install: a `conflict` below the fixed version
+     (`"conflict": {"symfony/mime": "<7.4.22", "drupal/commerce": "<3.3.13"}`).
+     A conflict installs nothing; it only forbids the vulnerable versions
+     wherever the package is.
+
+   Then re-resolve the upstream's own lock and push. The upstream's CI goes green.
+   **A lock-only bump in the upstream reaches no site**: `sync.sh` re-resolves a
+   site's lock only when the metapackage's `require` or `conflict` changed.
 3. In each site: the next upstream sync (or a manual dispatch of
    `upstream-sync.yml`) proposes the merge with the site's own lock
    re-resolved, already audited and tested.
 4. Merge, and the site deploys.
-
-An advisory in a package only one site uses is that site's to resolve, in its
-own `composer.json`. The upstream answers for what it ships.
 
 ## Adopting a site that was copied, not forked
 

@@ -5,6 +5,25 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-11-01 — security floors: the upstream is the only security path
+
+- The 2026-10-28 entry below bumped only this repository's own lock. `scripts/upstream/sync.sh`
+  re-resolves a site's lock only when the metapackage's requirements change, so that bump reached
+  no site; the sites were then patched one by one, which the upstream exists to prevent.
+- `upstream-configuration/composer.json` now carries the floors: `drupal/captcha` `^2.0.11`, and a
+  `conflict` for `symfony/mime <7.4.22`, `drupal/commerce <3.3.13` and
+  `drupal/commerce_shipping <3.0.6` (the Commerce modules are installed by the shop sites, not the
+  baseline; a conflict installs nothing, it only forbids those versions).
+- `sync.sh` treats a changed `conflict` like a changed requirement: the lock is stale, and the
+  packages it names are re-resolved where the site's lock has them.
+- `docs/UPSTREAM.md`, "An advisory, end to end": no site patches an advisory by itself, and how to
+  set a floor for a package the baseline does not require.
+- `sync.sh` now runs the upstream's own copy of itself (re-executes it after the fetch when it
+  differs), so a change to how a sync works applies on the sync that brings it. Proved needed on
+  the first try: a site's older `sync.sh` cannot raise a `conflict` floor on a package the site
+  requires itself (Commerce), and stops with "resolve by hand". A site whose `sync.sh` predates
+  this runs its first sync with the upstream's copy once (`SYNC_ROOT`, docs/UPSTREAM.md).
+
 ## 2026-10-28 — security: CAPTCHA 2.0.11, symfony/mime 7.4.22
 
 - Lock-only bump for the advisories of 2026-10-28: `drupal/captcha` 2.0.10 → 2.0.11
