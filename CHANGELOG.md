@@ -5,6 +5,13 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-11-01 — appointments: the service list builder survives unserialization on PHP 8.3
+
+- `AppointmentServiceListBuilder` declared its `Calendar` as a promoted `readonly` property. Its parent
+  uses `DependencySerializationTrait`, whose `__wakeup()` cannot set a readonly property declared in a
+  child class on PHP < 8.4. A site still pinned to PHP 8.3 (`config.platform.php`) fails phpstan on it
+  and would fail at runtime when the list builder is unserialized. Plain `protected` now.
+
 ## 2026-11-01 — security floors: the upstream is the only security path
 
 - The 2026-10-28 entry below bumped only this repository's own lock. `scripts/upstream/sync.sh`
