@@ -95,9 +95,11 @@ final class PickerEdgeCacheTest extends BrowserTestBase {
     $assert->statusCodeEquals(200);
     $assert->responseHeaderEquals('X-Drupal-Cache', 'MISS');
     $this->assertTrue((bool) preg_match('/\bpublic\b/', (string) $this->getSession()->getResponseHeader('Cache-Control')));
-    $this->assertSame(1800, $this->maxAge('Cache-Control'));
+    // The clock may tick between the slot math and the response: a second
+    // short of the full half hour is the same cache life (CI, 2026-11-03).
+    $this->assertEqualsWithDelta(1800, $this->maxAge('Cache-Control'), 2);
     // The page's own lifetime at the edge, not edge_purge's year.
-    $this->assertSame(1800, $this->maxAge(EdgeTags::CDN_HEADER));
+    $this->assertEqualsWithDelta(1800, $this->maxAge(EdgeTags::CDN_HEADER), 2);
     $expires = strtotime((string) $this->getSession()->getResponseHeader('Expires'));
     $this->assertEqualsWithDelta(time() + 1800, $expires, 5);
     // Tagged for the purge, and the deadline never leaves the site.
