@@ -778,3 +778,29 @@ any upstream module.
   definition. The test covers that order: config first, then the step.
   Appointments: `drush appointments:entity-updates`. The same release rehearses
   the step on a copy of a site's database before any deploy.
+
+### D35 — What Google reads is one upstream feature (amends D19)
+
+**Decision (Carlos, 2026-11-03: "Google's spec is canonical").** Five sites
+researched what Google wants from their kind of business and found the same
+gaps: no JSON-LD, no sitemap, no description or Open Graph, products at
+`/product/N`, no `Sitemap:` line, no name, address and phone on the page, and
+sitemaps that said `http://default`. They are fixed once, upstream
+([GOOGLE_BUSINESS.md](GOOGLE_BUSINESS.md)):
+
+- **`business_schema`**: Organization + LocalBusiness JSON-LD on the front
+  page, Product + Offer on product pages, and a block that shows the same
+  facts. Every field Google lists is filled when the fact exists; an empty
+  fact is left out, never guessed; no review or rating markup ever. Commerce
+  is read through the entity API only, never a dependency.
+- **D19 amended:** the upstream now ships config for metatag, simple_sitemap
+  and pathauto, through two recipes. `google-business` holds what any site
+  can take. `google-business-shop` holds what names Commerce. A recipe
+  cannot create config conditionally, and a module's `config/optional` is
+  not installed while a recipe installs the module (recipes install modules
+  in syncing mode), so the Commerce-shaped config lives in the shop recipe
+  rather than in the module.
+- **The environment names the site:** simple_sitemap's base URL and the
+  `robots.txt` sitemap line come from `APEX` (`settings.prod.php`,
+  `entrypoint.sh`), because the host's cron runs drush without `--uri`, and
+  `robots.txt` is a scaffold file Apache serves before Drupal.
