@@ -23,4 +23,17 @@ for d in /opt/drupal/web/sites/default/files /opt/drupal/private; do
   fi
 done
 
+# robots.txt names the sitemap. The file is core's scaffold, served by Apache
+# before Drupal sees the request, so the line cannot come from config; and
+# the address it needs is the environment's (production, a dev environment,
+# a lab), which no committed file knows. APEX does, so the line is added here
+# at start, once per container: not when robots.txt already names a sitemap
+# (a site's assets/robots-additions.txt may), and not when ROBOTS_SITEMAP is 0
+# (a site that serves no sitemap). docs/GOOGLE_BUSINESS.md.
+ROBOTS=/opt/drupal/web/robots.txt
+if [ -n "${APEX:-}" ] && [ "${ROBOTS_SITEMAP:-1}" != "0" ] && [ -f "$ROBOTS" ] \
+   && ! grep -qi '^Sitemap:' "$ROBOTS"; then
+  printf '\nSitemap: https://%s/sitemap.xml\n' "$APEX" >> "$ROBOTS"
+fi
+
 exec docker-php-entrypoint "$@"
