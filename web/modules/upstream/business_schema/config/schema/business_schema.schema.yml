@@ -1,0 +1,294 @@
+business_schema.day:
+  type: string
+  label: 'Day of the week, as schema.org names it'
+  constraints:
+    Choice:
+      choices:
+        - Monday
+        - Tuesday
+        - Wednesday
+        - Thursday
+        - Friday
+        - Saturday
+        - Sunday
+
+business_schema.time:
+  type: string
+  label: 'Time of day, HH:MM (24 h)'
+  constraints:
+    Regex:
+      pattern: '/^([01][0-9]|2[0-3]):[0-5][0-9]$/'
+
+business_schema.date:
+  type: string
+  label: 'Date, YYYY-MM-DD'
+  constraints:
+    Regex:
+      pattern: '/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/'
+
+business_schema.type_list:
+  type: sequence
+  label: 'schema.org types'
+  sequence:
+    type: string
+    label: 'schema.org type, e.g. Bakery'
+    constraints:
+      Regex:
+        pattern: '/^[A-Z][A-Za-z]+$/'
+
+business_schema.settings:
+  type: config_object
+  label: 'Business schema settings'
+  mapping:
+    types:
+      type: business_schema.type_list
+      label: 'The business''s schema.org types, most specific first (LocalBusiness subtypes, or e.g. VeterinaryCare)'
+    name:
+      type: label
+      label: 'Name (empty: the site name)'
+    alternate_name:
+      type: label
+      label: 'Alternate name'
+    legal_name:
+      type: string
+      label: 'Legal name'
+    description:
+      type: text
+      label: 'Description'
+    url:
+      type: string
+      label: 'URL (empty: the front page)'
+    logo:
+      type: string
+      label: 'Logo: a path relative to the Drupal root, a stream URI or an absolute URL (empty: the default theme''s logo)'
+    images:
+      type: sequence
+      label: 'Photos of the business'
+      sequence:
+        type: string
+        label: 'A path relative to the Drupal root, a stream URI or an absolute URL'
+    telephone:
+      type: string
+      label: 'Telephone, with the country code (+57 …)'
+    email:
+      type: email
+      label: 'Public e-mail address'
+    tax_id:
+      type: string
+      label: 'Tax ID (NIT)'
+    price_range:
+      type: string
+      label: 'Price range, under 100 characters (e.g. $$)'
+    same_as:
+      type: sequence
+      label: 'Profiles of the business elsewhere (social networks, Business Profile)'
+      sequence:
+        type: uri
+        label: 'URL'
+    address:
+      type: mapping
+      label: 'Address, used when the site has no Commerce store with one'
+      mapping:
+        street_address:
+          type: string
+          label: 'Street address'
+        address_locality:
+          type: string
+          label: 'Locality (city)'
+        address_region:
+          type: string
+          label: 'Region (department, state)'
+        postal_code:
+          type: string
+          label: 'Postal code'
+        address_country:
+          type: string
+          label: 'Country, two-letter code'
+          constraints:
+            Regex:
+              pattern: '/^[A-Z]{2}$/'
+    geo:
+      type: mapping
+      label: 'Coordinates, used when the store has no point'
+      mapping:
+        latitude:
+          type: string
+          label: 'Latitude (WGS 84, at least 5 decimals)'
+        longitude:
+          type: string
+          label: 'Longitude (WGS 84, at least 5 decimals)'
+    opening_hours:
+      type: sequence
+      label: 'Regular opening hours'
+      sequence:
+        type: mapping
+        label: 'Days that share the same hours'
+        mapping:
+          days:
+            type: sequence
+            label: 'Days'
+            sequence:
+              type: business_schema.day
+          opens:
+            type: business_schema.time
+            label: 'Opens'
+          closes:
+            type: business_schema.time
+            label: 'Closes'
+    special_hours:
+      type: sequence
+      label: 'Special hours (holidays, seasonal closures)'
+      sequence:
+        type: mapping
+        label: 'A date range with its own hours'
+        mapping:
+          valid_from:
+            type: business_schema.date
+            label: 'From'
+          valid_through:
+            type: business_schema.date
+            label: 'Through'
+          closed:
+            type: boolean
+            label: 'Closed all day'
+          opens:
+            type: business_schema.time
+            label: 'Opens'
+          closes:
+            type: business_schema.time
+            label: 'Closes'
+    serves_cuisine:
+      type: sequence
+      label: 'Cuisine (food establishments only)'
+      sequence:
+        type: label
+        label: 'Cuisine'
+    menu:
+      type: string
+      label: 'Menu: a path or an absolute URL (food establishments only)'
+    area_served:
+      type: sequence
+      label: 'Areas served'
+      sequence:
+        type: label
+        label: 'Place name'
+    departments:
+      type: sequence
+      label: 'Departments'
+      sequence:
+        type: mapping
+        label: 'Department'
+        mapping:
+          types:
+            type: business_schema.type_list
+            label: 'schema.org types'
+          name:
+            type: label
+            label: 'Name ("{business} {department}")'
+          url:
+            type: string
+            label: 'A path or an absolute URL'
+          telephone:
+            type: string
+            label: 'Telephone, when it differs'
+    contact_points:
+      type: sequence
+      label: 'Contact points'
+      sequence:
+        type: mapping
+        label: 'Contact point'
+        mapping:
+          contact_type:
+            type: label
+            label: 'What it is for (e.g. customer service, wholesale)'
+          telephone:
+            type: string
+            label: 'Telephone'
+          email:
+            type: email
+            label: 'E-mail address'
+    return_policy:
+      type: mapping
+      label: 'Return policy, for the whole shop'
+      mapping:
+        category:
+          type: string
+          label: 'Return policy category (empty: none stated)'
+          constraints:
+            Choice:
+              choices:
+                - ''
+                - MerchantReturnFiniteReturnWindow
+                - MerchantReturnNotPermitted
+                - MerchantReturnUnlimitedWindow
+        days:
+          type: integer
+          label: 'Days to return (finite window only)'
+        country:
+          type: string
+          label: 'Country the policy applies to, two-letter code'
+        method:
+          type: string
+          label: 'Return method'
+          constraints:
+            Choice:
+              choices:
+                - ''
+                - ReturnByMail
+                - ReturnInStore
+                - ReturnAtKiosk
+        fees:
+          type: string
+          label: 'Return fees'
+          constraints:
+            Choice:
+              choices:
+                - ''
+                - FreeReturn
+                - ReturnFeesCustomerResponsibility
+                - ReturnShippingFees
+    products:
+      type: mapping
+      label: 'Product pages'
+      mapping:
+        enabled:
+          type: boolean
+          label: 'Mark up product pages'
+        item_condition:
+          type: string
+          label: 'Condition of every item sold (empty: not stated)'
+          constraints:
+            Choice:
+              choices:
+                - ''
+                - NewCondition
+                - UsedCondition
+                - RefurbishedCondition
+                - DamagedCondition
+        default_availability:
+          type: string
+          label: 'Availability of an active variation that no field describes (empty: not stated)'
+          constraints:
+            Choice:
+              choices:
+                - ''
+                - InStock
+                - OutOfStock
+                - PreOrder
+                - BackOrder
+                - LimitedAvailability
+                - OnlineOnly
+                - InStoreOnly
+                - MadeToOrder
+        availability_field:
+          type: string
+          label: 'Variation field that says whether it is available: boolean, a number in stock, or a schema.org availability name'
+        brand_field:
+          type: string
+          label: 'Product field holding the brand (text or reference)'
+        category_field:
+          type: string
+          label: 'Product field holding the category (text or reference)'
+        gtin_field:
+          type: string
+          label: 'Variation field holding the GTIN (barcode)'

@@ -1,0 +1,62 @@
+{#
+/**
+ * @file
+ * The business's name, address, phone and hours (the "Business details" block).
+ *
+ * The same facts the front page's JSON-LD carries, built by the same code.
+ *
+ * Available variables:
+ * - name: The business's name.
+ * - address: Address lines (street; postal code, locality, region; country).
+ * - telephone: NULL, or display (as written) and href (a tel: link).
+ * - email: The public e-mail address, or empty.
+ * - hours: Lines of days and time.
+ * - special_hours: Lines of dates and time (or "Closed").
+ * - map_url: A link to a map of the location, or empty.
+ */
+#}
+<div class="business-details">
+  {% if name %}
+    <p class="business-details__name">{{ name }}</p>
+  {% endif %}
+  {% if address %}
+    <address class="business-details__address">
+      {% for line in address %}
+        {{ line }}{% if not loop.last %}<br>{% endif %}
+      {% endfor %}
+    </address>
+  {% endif %}
+  {% if telephone or email %}
+    <p class="business-details__contact">
+      {% if telephone %}
+        <span class="business-details__label">{{ 'Phone'|t }}:</span>
+        <a href="{{ telephone.href }}" class="business-details__telephone">{{ telephone.display }}</a>
+      {% endif %}
+      {% if telephone and email %}<br>{% endif %}
+      {% if email %}
+        <span class="business-details__label">{{ 'E-mail'|t }}:</span>
+        <a href="mailto:{{ email }}" class="business-details__email">{{ email }}</a>
+      {% endif %}
+    </p>
+  {% endif %}
+  {% if hours or special_hours %}
+    <div class="business-details__hours">
+      <p class="business-details__label">{{ 'Opening hours'|t }}</p>
+      <dl>
+        {% for line in hours %}
+          <dt>{{ line.days }}</dt>
+          <dd>{{ line.time }}</dd>
+        {% endfor %}
+        {% for line in special_hours %}
+          <dt>{{ line.dates }}</dt>
+          <dd>{{ line.time }}</dd>
+        {% endfor %}
+      </dl>
+    </div>
+  {% endif %}
+  {% if map_url %}
+    <p class="business-details__map">
+      <a href="{{ map_url }}" rel="noopener" target="_blank">{{ 'See on the map'|t }}</a>
+    </p>
+  {% endif %}
+</div>

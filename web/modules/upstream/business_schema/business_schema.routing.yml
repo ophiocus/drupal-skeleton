@@ -1,0 +1,7 @@
+business_schema.settings:
+  path: '/admin/config/search/business-schema'
+  defaults:
+    _form: '\Drupal\business_schema\Form\SettingsForm'
+    _title: 'Business schema'
+  requirements:
+    _permission: 'administer business schema'
