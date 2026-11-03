@@ -1,0 +1,16 @@
+langcode: es
+status: true
+dependencies:
+  enforced:
+    module:
+      - commerce_product
+      - metatag_open_graph
+id: commerce_product
+label: 'Commerce product'
+tags:
+  description: '[commerce_product:body:value]'
+  og_type: product
+  og_title: '[commerce_product:title]'
+  og_description: '[commerce_product:body:value]'
+  og_url: '[commerce_product:url]'
+  og_image: '[commerce_product:field_image:entity:url]'

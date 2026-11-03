@@ -1,0 +1,44 @@
+name: 'Google business'
+description: 'What Google reads from a local business (docs/GOOGLE_BUSINESS.md): business_schema (Organization and LocalBusiness JSON-LD, the Business details block), a sitemap, and meta descriptions with Open Graph. A shop applies google-business-shop instead, which includes this one. The site then sets its own facts in business_schema.settings. Apply on a local copy, then export: drush recipe ../recipes/google-business'
+type: Site
+install:
+  - token
+  - pathauto
+  - metatag
+  - metatag_open_graph
+  - simple_sitemap
+  - business_schema
+config:
+  # Only what the site lacks is created; a site that already configured any
+  # of it keeps its own (docs/INSTALL_PROFILES.md, "Recipes").
+  strict: false
+  # A recipe installs modules without their configuration entities and
+  # creates only those it imports: metatag's defaults, and simple_sitemap's
+  # sitemap and its types.
+  import:
+    metatag: '*'
+    simple_sitemap: '*'
+  actions:
+    # Every page: a description (the slogan, until a more specific default
+    # applies) and the Open Graph basics. Empty tokens print nothing.
+    metatag.metatag_defaults.global:
+      setProperties:
+        tags.description: '[site:slogan]'
+        tags.og_site_name: '[site:name]'
+        tags.og_title: '[current-page:title]'
+        tags.og_url: '[current-page:url]'
+    # The front page describes the site itself. A site with a better
+    # sentence than its slogan writes it in its own config/sync.
+    metatag.metatag_defaults.front:
+      setProperties:
+        tags.description: '[site:slogan]'
+        tags.og_type: website
+        tags.og_title: '[site:name]'
+        tags.og_description: '[site:slogan]'
+        tags.og_url: '[site:url]'
+    # Category pages: their own name and description.
+    metatag.metatag_defaults.taxonomy_term:
+      setProperties:
+        tags.og_title: '[term:name]'
+        tags.og_description: '[term:description]'
+        tags.og_url: '[term:url]'

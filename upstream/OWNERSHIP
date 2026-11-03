@@ -18,6 +18,8 @@ web/profiles/upstream/
 # Recipes that switch an upstream feature on (PROTOCOL D33, D23).
 recipes/appointments/
 recipes/maper-map/
+recipes/google-business/
+recipes/google-business-shop/
 scripts/ci/
 scripts/upstream/
 .github/workflows/build-and-push.yml
@@ -37,3 +39,4 @@ phpunit.xml.dist
 docs/UPSTREAM.md
 docs/DEPLOY.md
 docs/INSTALL_PROFILES.md
+docs/GOOGLE_BUSINESS.md
