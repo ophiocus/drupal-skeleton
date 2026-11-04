@@ -244,6 +244,18 @@ if ($maperContact) {
   $config['maper.settings']['contact'] = $maperContact;
 }
 
+// --- Sitemap: the site's own address -----------------------------------------
+// simple_sitemap builds its XML on cron, and the host runs `drush cron` with
+// no --uri. Drush then knows the site only as "http://default", and with no
+// base URL of its own simple_sitemap writes that into every <loc>: a sitemap
+// Google cannot use. The public name is APEX (already in .env for the
+// router), so the sitemap takes https://APEX whatever runs its cron. A site
+// whose environment has no APEX sets the same base_url to its own address in
+// deploy/settings.site.php. docs/GOOGLE_BUSINESS.md.
+if (getenv('APEX')) {
+  $config['simple_sitemap.settings']['base_url'] = 'https://' . getenv('APEX');
+}
+
 // --- Visits report (ga4_report) ---------------------------------------------
 // Three sources, each reading its credentials file by PATH. The files live in
 // ./secrets/ beside the compose file (mounted read-only at /opt/drupal/secrets)

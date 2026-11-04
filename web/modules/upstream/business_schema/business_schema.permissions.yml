@@ -1,0 +1,4 @@
+administer business schema:
+  title: 'Administer business schema'
+  description: 'Set the facts the site tells Google about the business: its types, phone, hours, address and return policy.'
+  restrict access: true

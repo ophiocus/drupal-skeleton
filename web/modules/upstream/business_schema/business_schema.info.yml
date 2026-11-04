@@ -1,0 +1,6 @@
+name: 'Business schema'
+type: module
+description: 'Tells Google what the business is, in one place: Organization and LocalBusiness JSON-LD on the front page, Product and Offer JSON-LD on product pages, and a "Business details" block that shows the same name, address, phone and hours to people. The facts are configuration; Commerce, when present, supplies the address and the point.'
+core_version_requirement: ^11.3
+package: SEO
+configure: business_schema.settings

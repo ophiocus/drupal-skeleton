@@ -5,6 +5,23 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-11-03 — business_schema and the Google recipes (PROTOCOL D35)
+
+- New upstream module `business_schema`. On the front page it prints Organization and LocalBusiness
+  JSON-LD: types, address, point, hours, special hours, departments and the return policy. On
+  Commerce product pages it prints Product and Offer. Its **Business details** block shows the same
+  name, address, phone and hours. Address and point come from the default Commerce store when there
+  is one. Empty facts are left out; no review or rating markup.
+- `recipes/google-business` (any site) and `recipes/google-business-shop` (a Commerce shop). They
+  bring the sitemap, meta descriptions and Open Graph, `/producto/<title>` and `/<vocabulary>/<term>`
+  URLs, and products in the sitemap.
+- `deploy/settings.prod.php`: simple_sitemap's base URL is `https://<APEX>`. Sitemaps built by the
+  host's cron said `http://default`.
+- `deploy/entrypoint.sh`: `robots.txt` gets `Sitemap: https://<APEX>/sitemap.xml` at start, unless
+  it names one already or `ROBOTS_SITEMAP=0`.
+- `docs/GOOGLE_BUSINESS.md`: what Google asks, what the upstream gives, what each site supplies,
+  graduation. Upstream-owned.
+
 ## 2026-11-01 — sign_in_guard: Turnstile on the public forms too
 
 - With `TURNSTILE_KEYS`, Turnstile was the challenge of the sign-in and password-reset forms only;

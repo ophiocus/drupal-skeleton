@@ -1,0 +1,44 @@
+types:
+  - LocalBusiness
+name: ''
+alternate_name: ''
+legal_name: ''
+description: ''
+url: ''
+logo: ''
+images: []
+telephone: ''
+email: ''
+tax_id: ''
+price_range: ''
+same_as: []
+address:
+  street_address: ''
+  address_locality: ''
+  address_region: ''
+  postal_code: ''
+  address_country: ''
+geo:
+  latitude: ''
+  longitude: ''
+opening_hours: []
+special_hours: []
+serves_cuisine: []
+menu: ''
+area_served: []
+departments: []
+contact_points: []
+return_policy:
+  category: ''
+  days: 0
+  country: ''
+  method: ''
+  fees: ''
+products:
+  enabled: true
+  item_condition: ''
+  default_availability: InStock
+  availability_field: ''
+  brand_field: field_brand
+  category_field: ''
+  gtin_field: ''

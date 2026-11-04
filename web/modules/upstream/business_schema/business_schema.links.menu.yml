@@ -1,0 +1,5 @@
+business_schema.settings:
+  title: 'Business schema'
+  description: 'The facts the site tells Google about the business: types, phone, hours, address, return policy.'
+  route_name: business_schema.settings
+  parent: system.admin_config_search

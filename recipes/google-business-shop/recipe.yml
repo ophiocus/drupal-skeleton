@@ -1,0 +1,14 @@
+name: 'Google business: shop'
+description: 'google-business, plus what a Commerce shop needs for merchant listings (docs/GOOGLE_BUSINESS.md): readable product and category URLs (/producto/<title>, /<vocabulary>/<term>), product meta tags with Open Graph, and every product in the sitemap with its images. Product JSON-LD comes from business_schema itself. Needs Commerce in the codebase. Apply on a local copy, then export: drush recipe ../recipes/google-business-shop'
+type: Site
+recipes:
+  - google-business
+install:
+  # Already installed on a shop. Listed so the recipe stops on a site
+  # without Commerce instead of creating config for an entity type it lacks.
+  - commerce_product
+  - taxonomy
+config:
+  # The files in config/ are created only where the site has none of its
+  # own: a shop that already chose its product URL or tags keeps them.
+  strict: false
