@@ -94,7 +94,7 @@ buy any of it. What counts:
 | `recipes/google-business` | Installs business_schema, simple_sitemap, metatag (+ Open Graph), pathauto and token. Creates the sitemap. Gives global, front-page and category pages a description and Open Graph tags. |
 | `recipes/google-business-shop` | `google-business`, plus, for a Commerce shop: `/producto/<title>` and `/<vocabulary>/<term>` URL patterns, product meta tags (description from the body, Open Graph title, description, image, `og:type` product, URL), and every product in the sitemap with its images. It stops on a site without Commerce. |
 | `deploy/settings.prod.php` | The sitemap's base URL is `https://<APEX>`. The host runs `drush cron` without `--uri`, and without this every `<loc>` read `http://default`. |
-| `deploy/entrypoint.sh` | At container start, `robots.txt` gets `Sitemap: https://<APEX>/sitemap.xml`, unless it already names a sitemap or `ROBOTS_SITEMAP=0`. |
+| `deploy/entrypoint.sh` | At container start, `robots.txt` gets `Sitemap: https://<APEX>/sitemap.xml`, unless it already names a sitemap or `ROBOTS_SITEMAP=0`. It also gets `Allow: /core/*.woff2`, `*.woff` and `*.ttf` next to core's own image lines: core disallows `/core/` and allows its CSS, JS and images back, but not its fonts, so Google reported a core theme's fonts as blocked resources. |
 
 **Why robots.txt is written at start.** `robots.txt` is core's scaffold file,
 served by Apache before Drupal sees the request. So no module or config
@@ -201,6 +201,7 @@ reaches Google. The day the business moves to its own domain:
    ```bash
    curl -sI https://example.com/ | grep -i x-robots-tag     # nothing
    curl -s https://example.com/robots.txt | grep -i sitemap
+   curl -s https://example.com/robots.txt | grep -c 'Allow: /core/\*\.woff'   # 2 (woff2, woff)
    curl -s https://example.com/sitemap.xml | grep -c '<loc>https://example.com'
    curl -s https://example.com/ | grep -o 'application/ld+json'
    ```
