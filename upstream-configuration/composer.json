@@ -31,6 +31,13 @@
     "conflict": {
         "drupal/commerce": "<3.3.13",
         "drupal/commerce_shipping": "<3.0.6",
-        "symfony/mime": "<7.4.22"
+        "symfony/filesystem": "<7.4.23",
+        "symfony/http-foundation": "<7.4.23",
+        "symfony/http-kernel": "<7.4.23",
+        "symfony/mime": "<7.4.22",
+        "symfony/routing": "<7.4.23",
+        "symfony/serializer": "<7.4.23",
+        "symfony/validator": "<7.4.23",
+        "symfony/yaml": "<7.4.23"
     }
 }
