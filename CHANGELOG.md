@@ -5,6 +5,18 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-11-07 — Drupal core 11.4.12; database health check hourly
+
+- `upstream-configuration/composer.json`: the core floor is `~11.4.12` (bug-fix release of
+  2026-11-06), for `core-recommended`, `core-composer-scaffold` and `core-project-message`. The
+  skeleton lock also takes metatag 2.2.6, phpstan 2.3.5 and symfony/lock 7.4.23. A site picks it up
+  through its upstream sync. 11.5 and 12.0 are still in beta.
+- `deploy/docker-compose.yaml`: the MariaDB health check runs every hour instead of every 10 s.
+  Each check is a `docker exec`; with ten sites on one host, ten-second checks kept the Docker
+  daemon busy. `start_period: 60s` and `start_interval: 5s` (Docker 25 or later) keep start-up
+  fast, so `depends_on: service_healthy` still clears in seconds. The host copy in
+  `/srv/tecnocratica/sites/<apex>/` is placed by hand: edit it there as well.
+
 ## 2026-11-03 — business_schema and the Google recipes (PROTOCOL D35)
 
 - New upstream module `business_schema`. On the front page it prints Organization and LocalBusiness
