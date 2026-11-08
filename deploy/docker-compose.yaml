@@ -56,10 +56,14 @@ services:
       # $$ escapes compose interpolation — the shell inside the container
       # expands MARIADB_ROOT_PASSWORD from its own environment.
       test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p\"$$MARIADB_ROOT_PASSWORD\" --silent"]
-      interval: 10s
+      # Hourly in steady state (each check is a docker exec: ten sites at
+      # 10s cost about a core on the host). start_interval keeps start-up
+      # fast, so depends_on service_healthy still clears in seconds.
+      interval: 1h
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
 
 networks:
   # The reverse proxy's shared network, created once per host
