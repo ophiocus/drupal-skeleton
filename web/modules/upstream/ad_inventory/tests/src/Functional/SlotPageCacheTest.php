@@ -16,8 +16,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Banner pages stay one cached page for every reader.
  *
  * The page cache is never traded: two anonymous
- * requests give a HIT and no cookie; the creative waits inside <template>
- * behind the "turned off" notice; counting needs no session.
+ * requests give a HIT and no cookie; the creative and the "turned off" notice
+ * wait inside <template>, so the page carries no text of ours until the
+ * browser reads the reader's choice; counting needs no session.
  */
 #[Group('ad_inventory')]
 #[RunTestsInSeparateProcesses]
@@ -80,9 +81,12 @@ final class SlotPageCacheTest extends BrowserTestBase {
 
     $html = $this->getSession()->getPage()->getContent();
     $this->assertStringContainsString('data-ad-slot="test_end"', $html);
-    $this->assertStringContainsString('Turned off by your cookie choice', $html);
     [$before, $after] = explode('<template', $html, 2) + [1 => ''];
     $this->assertStringNotContainsString('<img', $before, 'No image before the reader consents.');
+    $this->assertStringNotContainsString('Turned off by your cookie choice', $before, 'No notice in the page before the reader chooses.');
+    $this->assertStringNotContainsString('>Sponsored Links', $before, 'No label in the page before the space shows something.');
+    $this->assertStringContainsString('data-ad-label="Sponsored Links"', $before);
+    $this->assertStringContainsString('Turned off by your cookie choice', $after);
     $this->assertStringContainsString('<img', $after);
     $this->assertStringContainsString('rel="sponsored noopener"', $after);
   }

@@ -5,6 +5,14 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-11-08 — ad_inventory: no text in the HTML before a reader's choice
+
+- A banner space printed its label and its "turned off" notice in every page's HTML, for readers
+  and crawlers alike: a quarter of the words on a thin page. The HTML now carries an empty space
+  that keeps its size; `ad-inventory.js` adds the label with the creative on a grant, or the notice
+  on a refusal, and adds nothing while the reader has not answered. Still one cached page for
+  everyone. The dashed border belongs to the refused state only.
+
 ## 2026-11-07 — Drupal core 11.4.12; database health check hourly
 
 - `upstream-configuration/composer.json`: the core floor is `~11.4.12` (bug-fix release of
