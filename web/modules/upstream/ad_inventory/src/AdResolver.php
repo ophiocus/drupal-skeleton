@@ -25,15 +25,10 @@ use Drupal\Core\Session\AccountInterface;
  * which is a role-based difference: anonymous readers all share one page.
  *
  * Cache: every page carrying a space depends on the space's tag (bookings,
- * creatives and providers invalidate it), on the day (cron renews it when a
- * booking starts or ends) and on the page's own settings.
+ * creatives and providers invalidate it; so does cron, when a booking of the
+ * space starts or ends: see Boundaries) and on the page's own settings.
  */
 final class AdResolver {
-
-  /**
-   * The tag cron invalidates when a booking's first or last day passes.
-   */
-  public const DAY_TAG = 'ad_inventory_day';
 
   /**
    * House banners printed per space for the browser's random pick.
@@ -67,7 +62,6 @@ final class AdResolver {
     $cacheability
       ->addCacheTags([
         AdSlot::tag((string) $slot->id()),
-        self::DAY_TAG,
         'ad_booking_list',
         'ad_creative_list',
         'config:ad_provider_list',

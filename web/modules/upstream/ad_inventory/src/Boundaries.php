@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\ad_inventory;
 
 use Drupal\ad_inventory\Entity\AdBooking;
+use Drupal\ad_inventory\Entity\AdSlot;
 use Drupal\ad_inventory\Event\AdBookingValidateEvent;
 use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -19,6 +20,13 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  * booking that starts tomorrow therefore needs tomorrow's first cron run to
  * renew the pages of its spaces. That run also asks the site, through the
  * validate event, whether each running booking may go on.
+ *
+ * ONLY THE SPACES THAT CHANGE. A date alone changes nothing on a page: what
+ * fills a space depends on the day only through a booking's first and last
+ * day. A tag shared by every space, invalidated every day, emptied the edge
+ * cache of every page with a space each midnight, on a site with no bookings
+ * at all (oidoenvivo, 2026-11-09: 114 of 147 sampled pages had no other reason
+ * to go).
  */
 final class Boundaries {
 
@@ -39,6 +47,10 @@ final class Boundaries {
   /**
    * Runs once per site day; returns the bookings it stopped.
    *
+   * @param bool $force
+   *   Run even if today was handled, and renew the spaces of every booking
+   *   that is not stopped, whatever its dates.
+   *
    * @return int[]
    *   Ids of stopped bookings.
    */
@@ -49,10 +61,20 @@ final class Boundaries {
       return [];
     }
     $stopped = [];
+    $tags = [];
     $storage = $this->entityTypeManager->getStorage('ad_booking');
-    $ids = $storage->getQuery()->accessCheck(FALSE)->condition('state', AdBooking::APPROVED)->execute();
+    // Drafts count: staff who preview them see them on their dates.
+    $ids = $storage->getQuery()->accessCheck(FALSE)->condition('state', AdBooking::STOPPED, '<>')->execute();
     foreach ($storage->loadMultiple($ids) as $booking) {
-      if (!$booking instanceof AdBooking || $booking->endDay() < $today) {
+      if (!$booking instanceof AdBooking) {
+        continue;
+      }
+      if ($force || self::turned($booking, $last, $today)) {
+        foreach ($booking->slots() as $slot) {
+          $tags[] = AdSlot::tag($slot);
+        }
+      }
+      if ($booking->state() !== AdBooking::APPROVED || $booking->endDay() < $today) {
         continue;
       }
       $event = new AdBookingValidateEvent($booking, AdBookingValidateEvent::DAILY);
@@ -66,11 +88,27 @@ final class Boundaries {
         ]);
       }
     }
-    // Every page with a space depends on this tag: bookings that began or
-    // ended since the last run show or leave at the next render.
-    $this->invalidator->invalidateTags([AdResolver::DAY_TAG]);
+    if ($tags !== []) {
+      $this->invalidator->invalidateTags(array_values(array_unique($tags)));
+    }
     $this->state->set(self::STATE, $today);
     return $stopped;
+  }
+
+  /**
+   * Whether a booking began or left since the last day handled.
+   *
+   * It began on its start day and left on the day after its end day. Cron may
+   * have skipped days, so this looks at all of them. With no last day on
+   * record, nothing can be ruled out.
+   */
+  private static function turned(AdBooking $booking, string $last, string $today): bool {
+    if ($last === '') {
+      return TRUE;
+    }
+    $start = $booking->startDay();
+    $end = $booking->endDay();
+    return ($last < $start && $start <= $today) || ($last <= $end && $end < $today);
   }
 
 }
