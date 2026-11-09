@@ -22,7 +22,9 @@
   margin-inline: auto;
 }
 
+/* min-height: the space is reserved for the label too, before it has text. */
 .ad-inventory__label {
+  min-height: 1.2em;
   margin: 0;
   font-size: 0.6875rem;
   line-height: 1.2;
@@ -46,11 +48,10 @@
   max-width: calc(var(--ad-dw) * 1px);
   aspect-ratio: var(--ad-dw) / var(--ad-dh);
   overflow: hidden;
-  border: 1px dashed var(--ad-line);
 }
 
-.ad-inventory--filled .ad-inventory__box {
-  border-color: transparent;
+.ad-inventory--refused .ad-inventory__box {
+  border: 1px dashed var(--ad-line);
 }
 
 .ad-inventory__blocked {

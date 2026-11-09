@@ -2,12 +2,13 @@
  * @file
  * The browser half of a banner space.
  *
- * The page arrives the same for everyone: each space shows the "turned off"
- * notice, and its creative waits inert in a <template>. This file swaps the
- * creative in only once the reader's advertising consent is granted, read
- * from the site's own consent signal (a global object and a DOM event,
- * named in the module's settings). Unanswered means no. Nothing is fetched
- * before that: no image, no provider script, no count.
+ * The page arrives the same for everyone: each space is empty, with no text,
+ * and its creative and its "turned off" notice wait inert in <template>s. This
+ * file reads the site's own consent signal (a global object and a DOM event,
+ * named in the module's settings). Granted: it adds the label and swaps the
+ * creative in. Refused: it adds the label and the notice, with the link that
+ * reopens the choice. Unanswered means no, and the space stays empty. Nothing
+ * is fetched before a grant: no image, no provider script, no count.
  *
  * After the swap a space counts as seen when at least half of it stays on
  * screen for one second. Every space seen is sent once, in one beacon, when
@@ -27,6 +28,28 @@
   function granted() {
     const signal = window[consent.global || 'adConsent'];
     return !!(signal && signal[consent.category || 'ads'] === true);
+  }
+
+  /**
+   * Whether the reader refused it, as opposed to not having answered.
+   */
+  function refused() {
+    const signal = window[consent.global || 'adConsent'];
+    return !!(signal && signal[consent.category || 'ads'] === false);
+  }
+
+  /**
+   * Puts the label on a space, once it shows something.
+   */
+  function labelled(space) {
+    const text = space.dataset.adLabel;
+    const line = space.querySelector('.ad-inventory__label');
+    if (space.dataset.adLabelled || !text || !line) {
+      return;
+    }
+    space.dataset.adLabelled = '1';
+    line.prepend(document.createTextNode(line.childElementCount ? `${text} ` : text));
+    space.setAttribute('aria-label', text);
   }
 
   /**
@@ -108,8 +131,31 @@
     space.dataset.adFilled = '1';
     box.replaceChildren(template.content.cloneNode(true));
     activate(box);
+    labelled(space);
+    space.classList.remove('ad-inventory--refused');
     space.classList.add('ad-inventory--filled');
     watch(space);
+  }
+
+  /**
+   * Shows a space's "turned off" notice. A space already filled stays filled.
+   */
+  function notice(space) {
+    const template = space.querySelector('template.ad-inventory__notice');
+    const box = space.querySelector('.ad-inventory__box');
+    if (space.dataset.adFilled || !template || !box || box.childElementCount) {
+      return;
+    }
+    box.replaceChildren(template.content.cloneNode(true));
+    labelled(space);
+    space.classList.add('ad-inventory--refused');
+  }
+
+  /**
+   * Shows the notice in every space on the page.
+   */
+  function noticeAll() {
+    document.querySelectorAll('.ad-inventory[data-ad-slot]').forEach(notice);
   }
 
   /**
@@ -141,6 +187,9 @@
       if (granted()) {
         fillAll();
       }
+      else if (refused()) {
+        noticeAll();
+      }
     },
   };
 
@@ -148,6 +197,9 @@
     const choice = event.detail || window[consent.global || 'adConsent'] || {};
     if (choice[consent.category || 'ads'] === true) {
       fillAll();
+    }
+    else if (choice[consent.category || 'ads'] === false) {
+      noticeAll();
     }
   });
   window.addEventListener('pagehide', send);

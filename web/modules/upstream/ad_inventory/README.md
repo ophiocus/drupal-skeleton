@@ -118,12 +118,20 @@ a space off on one page or choose another allowed format.
 
 ## Consent
 
-The page always prints the label and a notice: "Turned off by your cookie
-choice" plus a link that reopens the site's cookie settings. The creative (or
-the provider's unit) waits inert inside a `<template>`. `js/ad-inventory.js`
-swaps it in when `window[<global>][<category>] === true`, then or after the
-`<event>` DOM event. Without that answer, no image, script or count is
-requested.
+The page carries no text of the module's: every reader, and every crawler,
+gets the same cached HTML with an empty space that keeps its size. The label,
+the notice and the creative reach the page only through the browser, which
+reads the reader's choice:
+
+| The reader | The space shows |
+|---|---|
+| has not answered, or has no JavaScript | nothing |
+| refused | the label and a notice: "Turned off by your cookie choice", with a link that reopens the site's cookie settings |
+| granted | the label and the creative; only then do its image and any provider script load |
+
+`js/ad-inventory.js` reads `window[<global>][<category>]` when the page loads and
+again on the `<event>` DOM event: `true` is granted, `false` refused, anything
+else unanswered.
 
 The settings name the site's own signal: `consent.global` (default
 `adConsent`), `consent.category` (`ads`), `consent.event` (`ad:consent`) and
@@ -193,7 +201,7 @@ runs the day's turn on demand.
 |---|---|
 | A space never appears | Nothing approved fills it: the booking's or creative's state is draft, the creative lacks a rendition for one of the space's two formats, the booking's days don't include today (site time zone), or its scope key isn't on this page. Check as a user with `preview ad drafts` |
 | No space appears anywhere, though the resolver finds a fill | The formats are gone: a config import deletes what the sync folder lacks, the module's installed formats and `image.style.ad_inventory_*` included. Export them (`drush cex`) before the first import on a site that manages config |
-| The space shows "turned off" for everyone | The consent signal isn't reaching the script: check `consent.global` / `consent.category` against the site's consent tool, in the browser console |
+| A reader who accepted sees an empty space | The consent signal isn't reaching the script: check `consent.global` / `consent.category` against the site's consent tool, in the browser console |
 | `/ads.txt` lists exchanges nobody signed with | adstxt was installed before `ad_inventory`, or its sample was imported in config. Empty `adstxt.settings:content` |
 | The mail image is `private` | `system.performance:cache.page.max_age` is 0 |
 | Counts stay at zero | The beacon fires only after consent and on page hide; `/ad/v` must not be blocked by the edge or a firewall rule |
