@@ -172,19 +172,21 @@ Bookings are kept by day in the site time zone. Cron
 
 - It asks every running booking whether it may continue (the validate event
   below) and stops the ones refused.
-- It invalidates `ad_inventory_day`, so bookings that start or end that day
-  show or leave at the next render.
+- It invalidates `ad_inventory_slot:<id>` for the spaces of each booking that
+  began or left since its last run, so those bookings show or leave at the next
+  render. A day when no booking starts or ends invalidates nothing, and a
+  skipped cron is caught up on the next run.
 
 Every rendered space carries:
 
-- the tags `ad_inventory_slot:<id>`, `ad_inventory_day`, `ad_booking_list`,
-  `ad_creative_list`, `config:ad_provider_list` and
-  `ad_override:<type>:<id>`;
+- the tags `ad_inventory_slot:<id>`, `ad_booking_list`, `ad_creative_list`,
+  `config:ad_provider_list` and `ad_override:<type>:<id>`;
 - the context `user.permissions`.
 
 Saving a booking, creative or space invalidates the tags of the spaces it
 touches. `drush ev "\Drupal::service('ad_inventory.boundaries')->run(TRUE)"`
-runs the day's turn on demand.
+runs the day's turn on demand and renews the spaces of every booking that is
+not stopped, whatever its dates.
 
 ## Extending
 

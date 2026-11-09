@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\ad_inventory\Kernel;
 
 use Drupal\ad_inventory\AdResolver;
+use Drupal\ad_inventory\Boundaries;
 use Drupal\ad_inventory\Entity\AdBooking;
 use Drupal\ad_inventory\Entity\AdCreative;
 use Drupal\ad_inventory\Entity\AdSlot;
@@ -12,6 +13,7 @@ use Drupal\ad_inventory\Event\AdBookingValidateEvent;
 use Drupal\ad_inventory\Fill;
 use Drupal\ad_inventory\Scope\AdScope;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\KernelTests\KernelTestBase;
@@ -20,6 +22,7 @@ use Drupal\Tests\media\Traits\MediaTypeCreationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Psr\Log\NullLogger;
 
 /**
  * What fills a space: booking, provider, house, or nothing at all.
@@ -205,8 +208,105 @@ final class ResolverTest extends KernelTestBase {
     $this->fill($this->reader, [], $cacheability);
     $this->assertContains('user.permissions', $cacheability->getCacheContexts());
     $this->assertContains(AdSlot::tag('test_end'), $cacheability->getCacheTags());
-    $this->assertContains(AdResolver::DAY_TAG, $cacheability->getCacheTags());
+    $this->assertNotContains('ad_inventory_day', $cacheability->getCacheTags(), 'A tag shared by every space, invalidated daily, empties the edge every midnight.');
     $this->assertSame(-1, $cacheability->getCacheMaxAge());
+  }
+
+  /**
+   * Runs the day's turn from a given last day; returns the tags it invalidated.
+   *
+   * @return string[]
+   *   Invalidated tags, sorted.
+   */
+  private function turn(?string $last, bool $force = FALSE): array {
+    if ($last === NULL) {
+      $this->container->get('state')->delete(Boundaries::STATE);
+    }
+    else {
+      $this->container->get('state')->set(Boundaries::STATE, $last);
+    }
+    $spy = new class() implements CacheTagsInvalidatorInterface {
+
+      /**
+       * The tags invalidated.
+       *
+       * @var string[]
+       */
+      public array $tags = [];
+
+      /**
+       * {@inheritdoc}
+       */
+      public function invalidateTags(array $tags): void {
+        $this->tags = array_merge($this->tags, $tags);
+      }
+
+    };
+    (new Boundaries(
+      $this->container->get('entity_type.manager'),
+      $this->container->get('ad_inventory.site_day'),
+      $this->container->get('state'),
+      $spy,
+      $this->container->get('event_dispatcher'),
+      new NullLogger(),
+    ))->run($force);
+    sort($spy->tags);
+    return $spy->tags;
+  }
+
+  /**
+   * The day's turn renews the spaces of bookings that began or left, only.
+   */
+  public function testDayTurnRenewsOnlyWhatChanged(): void {
+    $creative = $this->createCreative(['leaderboard', 'rectangle'], ['state' => AdCreative::APPROVED]);
+    $this->createBooking($creative, ['running'], $this->day(-5), $this->day(5));
+    $this->createBooking($creative, ['future'], $this->day(1), $this->day(5));
+    $this->createBooking($creative, ['gone'], $this->day(-9), $this->day(-2));
+    $this->createBooking($creative, ['stopped'], $this->day(0), $this->day(3), AdBooking::STOPPED);
+    $this->createBooking($creative, ['begins'], $this->day(0), $this->day(3));
+    $this->createBooking($creative, ['ended'], $this->day(-3), $this->day(-1));
+    $this->createBooking($creative, ['last_day_today'], $this->day(-3), $this->day(0));
+    $this->createBooking($creative, ['draft'], $this->day(0), $this->day(3), AdBooking::DRAFT);
+
+    $this->assertSame(
+      [AdSlot::tag('begins'), AdSlot::tag('draft'), AdSlot::tag('ended')],
+      $this->turn($this->day(-1)),
+    );
+    $this->assertSame($this->day(0), $this->container->get('state')->get(Boundaries::STATE));
+  }
+
+  /**
+   * A day when no booking starts or ends invalidates nothing.
+   */
+  public function testQuietDayTurnInvalidatesNothing(): void {
+    $this->assertSame([], $this->turn($this->day(-1)), 'No bookings at all.');
+    $this->assertSame($this->day(0), $this->container->get('state')->get(Boundaries::STATE));
+
+    $creative = $this->createCreative(['leaderboard', 'rectangle'], ['state' => AdCreative::APPROVED]);
+    $this->createBooking($creative, ['running'], $this->day(-5), $this->day(5));
+    $this->assertSame([], $this->turn($this->day(-1)), 'A booking in mid-run.');
+
+    $this->createBooking($creative, ['begins'], $this->day(0), $this->day(3));
+    $this->assertSame([], $this->turn($this->day(0)), 'Today was already handled.');
+  }
+
+  /**
+   * Days cron skipped are caught up; with no last day, nothing is ruled out.
+   */
+  public function testDayTurnCatchesUpAndForces(): void {
+    $creative = $this->createCreative(['leaderboard', 'rectangle'], ['state' => AdCreative::APPROVED]);
+    $this->createBooking($creative, ['began_while_away'], $this->day(-1), $this->day(5));
+    $this->createBooking($creative, ['left_while_away'], $this->day(-9), $this->day(-2));
+    $this->createBooking($creative, ['left_before'], $this->day(-9), $this->day(-4));
+    $this->createBooking($creative, ['stopped'], $this->day(-1), $this->day(5), AdBooking::STOPPED);
+
+    $this->assertSame(
+      [AdSlot::tag('began_while_away'), AdSlot::tag('left_while_away')],
+      $this->turn($this->day(-3)),
+    );
+    $everyBooking = [AdSlot::tag('began_while_away'), AdSlot::tag('left_before'), AdSlot::tag('left_while_away')];
+    $this->assertSame($everyBooking, $this->turn(NULL), 'Never run.');
+    $this->assertSame($everyBooking, $this->turn($this->day(0), TRUE), 'Forced, today already handled.');
   }
 
   /**
