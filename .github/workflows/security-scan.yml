@@ -1,14 +1,24 @@
-# Weekly OWASP ZAP baseline scan of the live site: a spider plus ZAP's passive
-# rules, so it reads pages and sends no attack. The report is this run's
-# artifact (zap_scan) and its summary; the run never fails and opens no issue.
-# The target is the repository variable SITE_URL; without it the job is
-# skipped (a fresh copy of the upstream has no site yet).
+# The one weekly security check: two readings of what nobody changed, in one
+# job, so one runner and one bill a week.
+#   - composer audit of composer.lock, production deps. Advisories are
+#     published against code that was clean when it merged. A finding fails
+#     the run, and a failed scheduled run notifies the repository owner.
+#   - OWASP ZAP baseline of the live site: a spider plus ZAP's passive rules,
+#     so it reads pages and sends no attack. The report is this run's artifact
+#     (zap_scan) and its summary; it never fails the run and opens no issue.
+#     The target is the repository variable SITE_URL; without it the step is
+#     skipped (a fresh copy of the upstream has no site yet).
+#
+# A change to the lock is audited by the build, before its image
+# (build-and-push.yml), and an upstream sync audits before it proposes. No
+# workflow exists only to audit (docs/DEPLOY.md, "Actions minutes").
 #
 # Owned by the upstream (upstream/OWNERSHIP): sites get it through the sync.
 name: Security scan
 
 on:
   schedule:
+    # Weekly, Monday 06:17 UTC. Off the hour to avoid the cron thundering herd.
     - cron: '17 6 * * 1'
   workflow_dispatch:
 
@@ -16,15 +26,26 @@ permissions:
   contents: read
 
 jobs:
-  zap-baseline:
-    if: vars.SITE_URL != ''
-    runs-on: ubuntu-latest
+  weekly:
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
+      - uses: actions/checkout@v7
+
       - name: ZAP baseline
+        if: vars.SITE_URL != ''
         uses: zaproxy/action-baseline@v0.15.0
         with:
           target: ${{ vars.SITE_URL }}
           allow_issue_writing: false
           fail_action: false
           cmd_options: '-a'
+
+      # --locked   : audit composer.lock alone; no install, no PHP extension
+      #              setup, the runner's composer suffices.
+      # --no-dev   : test tooling never reaches the runtime image.
+      # --abandoned=report : abandoned packages warn, they do not fail.
+      # Runs even if the scan step errored: the audit is the part that fails.
+      - name: Composer audit (production deps)
+        if: ${{ !cancelled() }}
+        run: composer audit --no-dev --abandoned=report --format=plain --locked

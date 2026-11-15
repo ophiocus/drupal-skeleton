@@ -9,9 +9,15 @@ name: Upstream sync
 # upstream raises a floor in upstream-configuration/composer.json, and each
 # site's next sync re-resolves its own lock against it.
 #
-# A pull request opened with GITHUB_TOKEN does not trigger other workflows, so
-# its checks would stay empty. The test gate therefore runs here, on the synced
-# branch, and the PR links the run.
+# The test gate runs once per synced commit, in one of two places:
+#   - without UPSTREAM_SYNC_TOKEN, here, on the synced branch, before the PR
+#     is proposed. A pull request opened with GITHUB_TOKEN triggers no other
+#     workflow, so its checks would stay empty; the PR links this run.
+#   - with UPSTREAM_SYNC_TOKEN, as the PR's own check: pushing the branch and
+#     opening the PR with that token start test-gate.yml on the PR, so running
+#     it here as well would test the same commit twice.
+# Either way build-and-push.yml's `reuse` job finds the passing run when the
+# PR merges ("test / test" here, "test" on the PR) and does not run it again.
 
 on:
   schedule:
@@ -39,7 +45,19 @@ jobs:
       changed: ${{ steps.sync.outputs.changed }}
       upstream: ${{ steps.sync.outputs.upstream }}
       sha: ${{ steps.push.outputs.sha }}
+      pr_gate: ${{ steps.token.outputs.pr_gate }}
     steps:
+      # Secrets cannot be read in a job's `if:`, so whether the PR will run
+      # the gate itself travels as an output.
+      - name: Where the gate runs
+        id: token
+        env:
+          SYNC_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
+        run: |
+          if [ -n "$SYNC_TOKEN" ]; then pr_gate=true; else pr_gate=false; fi
+          echo "pr_gate=$pr_gate" >> "$GITHUB_OUTPUT"
+          echo "the pull request runs the test gate itself: $pr_gate"
+
       # The built-in token cannot push a change under .github/workflows/ (GitHub
       # refuses it without the `workflows` permission, which that token never
       # has), and a sync that carries a workflow change then fails. A
@@ -80,14 +98,16 @@ jobs:
 
   test:
     needs: sync
-    if: needs.sync.outputs.changed == 'true'
+    if: needs.sync.outputs.changed == 'true' && needs.sync.outputs.pr_gate != 'true'
     uses: ./.github/workflows/test-gate.yml
     with:
       ref: ${{ needs.sync.outputs.sha }}
 
   propose:
     needs: [sync, test]
-    if: needs.sync.outputs.changed == 'true'
+    # `test` is skipped when the PR runs the gate itself; a failed gate here
+    # still stops the proposal.
+    if: ${{ !cancelled() && needs.sync.result == 'success' && needs.sync.outputs.changed == 'true' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     runs-on: ubuntu-24.04
     env:
       # The same token opens the pull request, so the pull request's own
@@ -96,6 +116,7 @@ jobs:
       GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
       UP: ${{ needs.sync.outputs.upstream }}
       SHA: ${{ needs.sync.outputs.sha }}
+      PR_GATE: ${{ needs.sync.outputs.pr_gate }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -109,7 +130,12 @@ jobs:
           title="Upstream sync to ${UP:0:7}"
           { git log -1 --format=%B "$SHA"
             echo
-            echo "Test gate and audit passed on this branch: $run"
+            if [ "$PR_GATE" = true ]; then
+              echo "Audit passed on this branch: $run"
+              echo "The test gate runs as this pull request's check: merge when it is green."
+            else
+              echo "Test gate and audit passed on this branch: $run"
+            fi
             echo
             echo "Merging deploys this site (push to master)."
           } > "$RUNNER_TEMP/body.md"

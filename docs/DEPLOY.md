@@ -27,8 +27,11 @@ config/sync/                  audit gate (composer.lock)          deploy-prod / 
 | `deploy/entrypoint.sh` | Container entrypoint: re-asserts `www-data` ownership of the two bind-mounted writable paths on every start (Docker creates missing host dirs as `root` on first boot), then hands off to the base image's entrypoint. Removes the manual `chown 33:33` from first deploy. | No. |
 | `deploy/docker-compose.yaml` | The host-side stack: `drupal` + `db` (MariaDB 11.4), Traefik labels, edge network, bind-mounted state. Fully interpolated from `.env`. | No. |
 | `deploy/.env.example` | Every key the stack and the image read. Copy to `.env` on the host and fill in. | On the host, not in git. |
-| `.github/workflows/build-and-push.yml` | audit → build → push → deploy → health gate. Deploy/health steps self-skip until the repo variables exist. | No. |
-| `.github/workflows/composer-audit.yml` | The standalone floor: same audit on PR + weekly schedule (catches advisories published after merge). | No. |
+| `.github/workflows/build-and-push.yml` | On a push to `master` or `dev/**`: test gate (or its reuse from the PR) → audit → build → push → deploy → health gate. Deploy/health steps self-skip until the repo variables exist. | No. |
+| `.github/workflows/test-gate.yml` | `scripts/ci/tests.sh` on every pull request, and as the gate that `build-and-push.yml` and `upstream-sync.yml` call. | No. |
+| `.github/workflows/upstream-sync.yml` | Weekly (Monday 07:23 UTC) and by hand: takes the upstream, audits, gates once, proposes a PR (docs/UPSTREAM.md). | No. |
+| `.github/workflows/security-scan.yml` | The one weekly security check (Monday 06:17 UTC): `composer audit` of the lock, which fails the run on an advisory published after merge, and a passive OWASP ZAP baseline of `SITE_URL`, report only. | No. |
+| `deploy/known_hosts` | The deploy host's SSH keys, pinned (§2). The site's own file: the upstream ships none. Not in the image. | Once per property, and when the host is rebuilt. |
 | `config/sync/` | Exported config, the deploy source of truth (`drush deploy` imports it). | Yes — that is the point. |
 
 `web/sites/default/` is gitignored on purpose; the image never depends on
@@ -43,6 +46,17 @@ GitHub → repo → *Settings → Secrets and variables → Actions*:
 | variable | `PROD_URL` | `https://example.com` | enables the post-deploy health gate |
 | variable | `DEPLOY_HOST` | `deployuser@host` | enables the deploy steps |
 | secret | `VPS_DEPLOY_KEY` | private key accepted by `DEPLOY_HOST` | SSH auth for deploy |
+| file or variable | `deploy/known_hosts`, or variable `DEPLOY_KNOWN_HOSTS` | the host's `known_hosts` lines | the deploy checks the host's key (`StrictHostKeyChecking=yes`) |
+
+**Pin the deploy host's key.** A fresh runner has no `known_hosts`, so without
+a pin the deploy trusts whichever key answers first; it still runs, with a
+warning in the run. Read the keys with `ssh-keyscan -t ed25519,rsa <host>`,
+compare their fingerprints (`ssh-keygen -lf <file>`) with a `known_hosts` that
+already trusts the host, and commit the lines as `deploy/known_hosts` (the
+variable wins when both exist). The key is public, but the line names the
+host's address, which the CDN otherwise keeps out of sight: it belongs in the
+site's private repository, never in the upstream. A host rebuilt with new keys
+fails the next deploy at the SSH step until the file is renewed.
 
 Everything else the workflow needs has a default that reproduces the
 previously-hardcoded behaviour, so a property that sets none of these runs
@@ -155,12 +169,28 @@ they can without giving up a gate:
 - **The test gate runs once per change.** It runs on the PR. After the merge,
   `build-and-push.yml`'s `reuse` job checks two things: that the pushed commit
   is that PR's merge, and that its tree is identical to the PR head where
-  the gate passed. If both hold, the gate does not run again. A direct push,
-  a PR branch that was behind master, or a manual run gets the full gate.
-  Keep PR branches up to date with master before merging, so the tree
+  the gate passed (as the PR's check `test`, or as `test / test` when another
+  workflow called it). If both hold, the gate does not run again. A direct
+  push, a PR branch that was behind master, or a manual run gets the full
+  gate. Keep PR branches up to date with master before merging, so the tree
   matches.
-- **The audit workflow runs only when `composer.json` or `composer.lock`
-  changes**, plus weekly. The build still audits the lock before every image.
+- **A newer push to a PR cancels its gate in progress.** Only on pull
+  requests: a gate that a deploy or a sync called is never cancelled.
+- **An upstream sync is gated once.** Without `UPSTREAM_SYNC_TOKEN` the sync
+  workflow gates its branch and the PR it opens carries no checks; with the
+  token the PR's own check is the gate and the sync does not run it too.
+  Either way the merge reuses it. With the token, a red gate shows on the PR
+  only: the "Upstream sync needs a human" issue covers the sync and its audit.
+- **No paths filter on the gate.** The upstream requires `test` on master,
+  and a filtered-out required check never reports, so a docs-only PR would
+  wait forever. A docs-only change costs one gate, on its PR.
+- **The gate tests only the upstream extensions the site enables**
+  (`config/sync/core.extension.yml`); the upstream, which has no such file,
+  tests them all. Coding standards and static analysis still cover every one.
+- **One audit per push, one schedule for security.** The build audits the
+  lock before every image; nothing else audits a push or a PR.
+  `security-scan.yml` is the one weekly security run (the lock's audit and the
+  ZAP baseline, one job); `upstream-sync.yml` is the only other schedule.
 - **Batch.** One PR, one deploy per site. Every push to master is a build
   and a deploy.
 - **A self-hosted runner costs no minutes.** The jobs are plain Ubuntu jobs,
@@ -270,7 +300,7 @@ property needs for it, layer by layer:
 | One host | `www` answers a 301 to the apex at the edge (a redirect rule, path and query kept) | a second host is a second copy of every page at the edge and in Drupal's page cache |
 | Page max-age | `DRUPAL_PAGE_MAX_AGE` 3600; 86400 once purging works | bounds what browsers keep |
 | CDN lifetime | `EDGE_PURGE_CDN_MAX_AGE` (default 30 days, sent as `Cloudflare-CDN-Cache-Control` on tagged pages that set none of their own; a page the clock changes, like the booking page, sends its own shorter one, PROTOCOL D34) | the edge keeps a page until a save purges it, instead of re-asking the origin every max-age |
-| Purge on save | enable `edge_purge` (`edge_purge: 0` in `core.extension.yml`, from `web/modules/upstream`), run `scripts/edge-purge-drain.sh` every minute from the host's cron | each saved page leaves the edge within a minute, by tag only; Drupal never holds the CDN token |
+| Purge on save | enable `edge_purge` (`edge_purge: 0` in `core.extension.yml`, from `web/modules/upstream`), run a drainer every minute from the host's cron: the upstream repository's `scripts/edge-purge-drain.sh` is the reference one (sites do not carry it; copy it to the host), or the platform's own | each saved page leaves the edge within a minute, by tag only; Drupal never holds the CDN token |
 | Deploy | in place of `drush deploy`'s cache rebuild: `drush edge-purge:rebuild` before and after `config:import`, then `drush edge-purge:release` | a deploy that changed no file that builds pages keeps every finished page, at the edge and in Drupal; one that did is verified page by page (below) |
 | Verify on release | when `edge-purge:release` says render code changed: for every page the CDN holds, compare its `X-Edge-Hash` with a fresh render's (asked inside the container, from 127.0.0.1) and purge by URL only the pages that differ, then fetch them again | never a hostname purge: only the pages whose HTML changed leave the edge |
 | Warm | after anything purged: follow the sitemap and every same-site link the pages carry (not search, accounts, forms or query strings other than `?page=N`), pacing by the host's CPU | a purged page waits for a reader otherwise; Tiered Cache carries one warm to every PoP |

@@ -18,7 +18,7 @@ upstream's or the site's, never both.
 |---|---|
 | `upstream-configuration/composer.json`: core and the shared contrib baseline | root `composer.json`: the site's own packages; `composer.lock` (re-resolved by a sync, never replaced) |
 | `Dockerfile`, `.dockerignore`, `deploy/entrypoint.sh`, `deploy/settings.prod.php`, `deploy/docker-compose.yaml`, `deploy/.env.example` | `deploy/settings.site.php`: settings that are this site's alone |
-| `.github/workflows/build-and-push.yml`, `composer-audit.yml`, `test-gate.yml`, `upstream-sync.yml` | `config/`: the site's configuration |
+| `.github/workflows/build-and-push.yml`, `security-scan.yml`, `test-gate.yml`, `upstream-sync.yml` (and the retired `composer-audit.yml`, listed so a sync deletes it) | `config/`: the site's configuration; `deploy/known_hosts`: the deploy host's pinned keys |
 | `scripts/ci/`, `scripts/upstream/`, `phpcs.xml.dist`, `phpstan.neon`, `phpunit.xml.dist` | `web/modules/custom/`, `web/themes/custom/`: the site's code |
 | `docs/UPSTREAM.md`, `docs/DEPLOY.md`, `docs/INSTALL_PROFILES.md`, `docs/GOOGLE_BUSINESS.md` | `.ddev/`, `README.md`, `CHANGELOG.md`, its other docs and seeds |
 | `web/modules/upstream/`: modules every site carries and enables as it chooses | `recipes/` other than the upstream's: the site's own recipes |
@@ -83,7 +83,10 @@ one merge commit; pushing it is a deploy, so that stays a person's decision.
 In CI the same script runs weekly in `upstream-sync.yml`: sync on a branch,
 production audit, the full test gate, then a pull request (or, where the
 repository does not let Actions open pull requests, an issue linking the
-branch). Merging the pull request deploys the site the usual way.
+branch). With the `UPSTREAM_SYNC_TOKEN` secret set, the pull request runs the
+test gate as its own check and the workflow does not run it a second time.
+Merging the pull request deploys the site the usual way, and the deploy reuses
+that gate rather than running it again.
 
 The script runs the upstream's own copy of itself: right after fetching, if
 the upstream's `scripts/upstream/sync.sh` differs from the one running, it
@@ -107,8 +110,9 @@ itself: no `composer update` in a site, no security branch or pull request of a
 site's own, no cherry-pick of the upstream's fix. A site whose composer audit
 fails stops and waits for the upstream.
 
-1. The advisory turns the composer-audit gate red, in the upstream and in every
-   affected site.
+1. The advisory turns the composer audit red, in the upstream and in every
+   affected site: the weekly `security-scan.yml` run, and the build's audit on
+   the next push.
 2. In the upstream, set the floor in `upstream-configuration/composer.json`:
    - a package the baseline requires: raise its constraint
      (`"drupal/captcha": "^2.0.11"`);
