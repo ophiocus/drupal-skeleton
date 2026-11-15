@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace Drupal\ad_inventory\Form;
 
+use Drupal\ad_inventory\Coverage\Coverage;
+use Drupal\ad_inventory\Coverage\CoverageCalculator;
+use Drupal\ad_inventory\Coverage\CoverageResult;
+use Drupal\ad_inventory\Coverage\CoverageStore;
 use Drupal\ad_inventory\Entity\AdBooking;
 use Drupal\ad_inventory\Entity\AdCreative;
 use Drupal\ad_inventory\Event\AdBookingValidateEvent;
 use Drupal\ad_inventory\Scope\ScopeCollector;
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -18,9 +23,14 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  * Books a creative in spaces, for some days, on some pages.
  *
  * Approval needs a creative that is approved and carries every format the
- * spaces use, no other exclusive booking over the same spaces, scope and
- * days, and the site's consent (the validate event), for example a show's
- * registration code matched in a register.
+ * spaces use, pages still free in those spaces and days, and the site's
+ * consent (the validate event), for example a show's registration code
+ * matched in a register.
+ *
+ * Approving locks the pages: the booking covers every page of its scope that
+ * no other exclusive booking holds in its spaces and days. A booking whose
+ * pages are all held can't be approved; when other bookings hold some, the
+ * form lists them and asks staff to confirm before saving (Coverage).
  */
 final class AdBookingForm extends EntityForm {
 
@@ -35,12 +45,24 @@ final class AdBookingForm extends EntityForm {
   protected EventDispatcherInterface $dispatcher;
 
   /**
+   * What a booking would lock.
+   */
+  protected CoverageCalculator $coverage;
+
+  /**
+   * What approved bookings locked.
+   */
+  protected CoverageStore $coverageStore;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
     $instance = parent::create($container);
     $instance->scopes = $container->get('ad_inventory.scopes');
     $instance->dispatcher = $container->get('event_dispatcher');
+    $instance->coverage = $container->get('ad_inventory.coverage');
+    $instance->coverageStore = $container->get('ad_inventory.coverage_store');
     return $instance;
   }
 
@@ -60,9 +82,11 @@ final class AdBookingForm extends EntityForm {
     ];
     $form['creative'] = [
       '#type' => 'entity_autocomplete',
-      '#title' => $this->t('Creative'),
+      '#title' => $this->t('Creatives'),
+      '#description' => $this->t('One or more, separated by commas, in order. They take turns in the space: the one with the fewest views this week shows next.'),
       '#target_type' => 'ad_creative',
-      '#default_value' => $booking->creative(),
+      '#tags' => TRUE,
+      '#default_value' => $booking->creatives(),
       '#required' => TRUE,
     ];
     $slots = [];
@@ -101,6 +125,25 @@ final class AdBookingForm extends EntityForm {
       '#title' => $this->t('Exclusive: no other booking in these spaces and pages on these days'),
       '#default_value' => $booking->isNew() ? TRUE : (bool) $booking->get('exclusive')->value,
     ];
+    $form['coverage_seen'] = [
+      '#type' => 'hidden',
+      '#default_value' => '',
+    ];
+    $form['coverage_confirm'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Confirm the pages this booking covers'),
+      '#description' => $this->t('Asked when other bookings already hold some pages of its scope: the booking then covers only the pages still free, and locks them.'),
+      '#default_value' => FALSE,
+    ];
+    $coverage = $booking->isNew() ? NULL : $this->coverageStore->get($booking);
+    if ($coverage !== NULL && !$coverage->isWhole() && $booking->state() === AdBooking::APPROVED) {
+      $form['coverage_now'] = [
+        '#type' => 'item',
+        '#title' => $this->t('Pages it locked'),
+        '#markup' => $this->describe($coverage),
+        '#weight' => -1,
+      ];
+    }
     $form['reference'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Reference code'),
@@ -144,34 +187,43 @@ final class AdBookingForm extends EntityForm {
     if ($form_state->getValue('state') !== AdBooking::APPROVED) {
       return;
     }
-    $creative = $this->entityTypeManager->getStorage('ad_creative')->load((int) $form_state->getValue('creative'));
+    $creatives = $this->entityTypeManager->getStorage('ad_creative')->loadMultiple(self::creativeIds($form_state->getValue('creative')));
     $slot_ids = array_values(array_filter((array) $form_state->getValue('slots')));
-    if (!$creative instanceof AdCreative) {
+    if ($creatives === []) {
       return;
     }
-    if (!$creative->isApproved()) {
-      $form_state->setErrorByName('creative', $this->t('Approve the creative first.'));
-    }
-    foreach ($this->entityTypeManager->getStorage('ad_slot')->loadMultiple($slot_ids) as $slot) {
-      /** @var \Drupal\ad_inventory\Entity\AdSlot $slot */
-      $missing = $creative->missing($slot->formats());
-      if ($missing !== []) {
-        $form_state->setErrorByName('slots', $this->t('%slot needs the creative in @formats.', [
-          '%slot' => $slot->label(),
-          '@formats' => implode(', ', $missing),
-        ]));
+    $slots = $this->entityTypeManager->getStorage('ad_slot')->loadMultiple($slot_ids);
+    foreach ($creatives as $creative) {
+      if (!$creative instanceof AdCreative) {
+        continue;
       }
-      if (!$slot->allowsKind($creative->kind())) {
-        $form_state->setErrorByName('slots', $this->t('%slot does not take @kind creatives.', [
-          '%slot' => $slot->label(),
-          '@kind' => $creative->kind(),
-        ]));
+      if (!$creative->isApproved()) {
+        $form_state->setErrorByName('creative', $this->t('Approve the creative %creative first.', ['%creative' => $creative->label()]));
+      }
+      foreach ($slots as $slot) {
+        /** @var \Drupal\ad_inventory\Entity\AdSlot $slot */
+        $missing = $creative->missing($slot->formats());
+        if ($missing !== []) {
+          $form_state->setErrorByName('slots', $this->t('%slot needs the creative %creative in @formats.', [
+            '%slot' => $slot->label(),
+            '%creative' => $creative->label(),
+            '@formats' => implode(', ', $missing),
+          ]));
+        }
+        if (!$slot->allowsKind($creative->kind())) {
+          $form_state->setErrorByName('slots', $this->t('%slot does not take @kind creatives.', [
+            '%slot' => $slot->label(),
+            '@kind' => $creative->kind(),
+          ]));
+        }
       }
     }
-    $this->checkOverlap($form_state, $slot_ids, (string) $form_state->getValue('scope'), $start, $end);
-
     $probe = clone $this->entity;
     $this->copyFormValuesToEntity($probe, $form, $form_state);
+    $result = $this->coverage->calculate($probe);
+    $lines = $result->refused() ? [] : $this->coverage->summary($probe, $result->coverage);
+    $this->checkCoverage($form, $form_state, $result, $lines);
+
     $event = new AdBookingValidateEvent($probe, AdBookingValidateEvent::SAVE);
     $this->dispatcher->dispatch($event, AdBookingValidateEvent::NAME);
     foreach ($event->errors() as $error) {
@@ -180,39 +232,75 @@ final class AdBookingForm extends EntityForm {
   }
 
   /**
-   * Refuses an exclusive overlap with another approved booking.
+   * Refuses a booking with no free page; asks to confirm a partial one.
    *
+   * @param array $form
+   *   The form, whose fingerprint field gets what was shown.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
-   * @param string[] $slot_ids
-   *   Spaces.
-   * @param string $scope
-   *   Scope key.
-   * @param string $start
-   *   First day.
-   * @param string $end
-   *   Last day.
+   * @param \Drupal\ad_inventory\Coverage\CoverageResult $result
+   *   What the booking would lock now.
+   * @param string[] $lines
+   *   The site's lines about it (pages, volume, price): with any, staff
+   *   confirm even a whole coverage.
    */
-  private function checkOverlap(FormStateInterface $form_state, array $slot_ids, string $scope, string $start, string $end): void {
-    $storage = $this->entityTypeManager->getStorage('ad_booking');
-    $ids = $storage->getQuery()->accessCheck(FALSE)->condition('state', AdBooking::APPROVED)->execute();
-    foreach ($storage->loadMultiple($ids) as $other) {
-      if (!$other instanceof AdBooking || $other->id() === $this->entity->id()) {
-        continue;
-      }
-      $exclusive = $form_state->getValue('exclusive') || (bool) $other->get('exclusive')->value;
-      $same_pages = $other->scope() === $scope || $other->scope() === '' || $scope === '';
-      $days = $other->startDay() <= $end && $start <= $other->endDay();
-      $shared = array_intersect($slot_ids, $other->slots());
-      if ($exclusive && $same_pages && $days && $shared !== []) {
-        $form_state->setErrorByName('slots', $this->t('%other already holds @slots from @a to @b.', [
-          '%other' => $other->label(),
-          '@slots' => implode(', ', $shared),
-          '@a' => $other->startDay(),
-          '@b' => $other->endDay(),
-        ]));
-      }
+  private function checkCoverage(array &$form, FormStateInterface $form_state, CoverageResult $result, array $lines): void {
+    foreach ($result->holders as $other) {
+      $form_state->setErrorByName('scope', $this->t('%other already holds every page of this booking in these spaces from @a to @b.', [
+        '%other' => $other->label(),
+        '@a' => $other->startDay(),
+        '@b' => $other->endDay(),
+      ]));
     }
+    if ($result->refused()) {
+      return;
+    }
+    $form_state->set('ad_coverage', $result->coverage);
+    if ($result->coverage->isWhole() && $lines === []) {
+      return;
+    }
+    // What was calculated is shown, and only that is saved: a booking saved
+    // in between changes the fingerprint and the list is shown again.
+    $fingerprint = $result->fingerprint($lines);
+    $form['coverage_seen']['#value'] = $fingerprint;
+    if ($form_state->getValue('coverage_confirm') && $form_state->getValue('coverage_seen') === $fingerprint) {
+      return;
+    }
+    $message = $result->coverage->isWhole()
+      ? $this->t('This booking would cover @pages.', ['@pages' => $this->describe($result->coverage, $result)])
+      : $this->t('Other bookings already hold some of these pages. This booking would cover @pages.', ['@pages' => $this->describe($result->coverage, $result)]);
+    $form_state->setErrorByName('coverage_confirm', $this->t('@message @lines Tick «Confirm the pages this booking covers» and save again.', [
+      '@message' => $message,
+      '@lines' => $lines === [] ? '' : implode(' ', $lines),
+    ]));
+  }
+
+  /**
+   * A coverage in words: its scope, what it is limited to, what it leaves.
+   */
+  private function describe(Coverage $coverage, ?CoverageResult $result = NULL): string {
+    $holder = [];
+    foreach ($result?->taken ?? [] as $item) {
+      $holder[$item['key']] = (string) $item['booking']->label();
+    }
+    $words = $this->scopes->label($coverage->scope);
+    if ($coverage->only !== []) {
+      $words = (string) $this->t('@scope, only @keys', [
+        '@scope' => $words,
+        '@keys' => implode(', ', array_map($this->scopes->label(...), $coverage->only)),
+      ]);
+    }
+    if ($coverage->exclude !== []) {
+      $left = [];
+      foreach ($coverage->exclude as $key) {
+        $label = $this->scopes->label($key);
+        $left[] = isset($holder[$key])
+          ? (string) $this->t('@key (held by @booking)', ['@key' => $label, '@booking' => $holder[$key]])
+          : $label;
+      }
+      $words = (string) $this->t('@scope, except @keys', ['@scope' => $words, '@keys' => implode('; ', $left)]);
+    }
+    return $words;
   }
 
   /**
@@ -223,7 +311,7 @@ final class AdBookingForm extends EntityForm {
     foreach (['label', 'scope', 'start_day', 'end_day', 'reference', 'state', 'notes'] as $field) {
       $entity->set($field, trim((string) $form_state->getValue($field)));
     }
-    $entity->set('creative', (int) $form_state->getValue('creative') ?: NULL);
+    $entity->setCreatives(self::creativeIds($form_state->getValue('creative')));
     $entity->setSlots(array_values(array_filter((array) $form_state->getValue('slots'))));
     $entity->set('exclusive', (bool) $form_state->getValue('exclusive'));
     if ($form_state->getValue('state') !== AdBooking::STOPPED) {
@@ -232,10 +320,39 @@ final class AdBookingForm extends EntityForm {
   }
 
   /**
+   * Creative ids from the autocomplete's value, in order.
+   *
+   * @return int[]
+   *   Ids.
+   */
+  private static function creativeIds(mixed $value): array {
+    $ids = [];
+    foreach (is_array($value) ? $value : [$value] as $item) {
+      $id = (int) (is_array($item) ? ($item['target_id'] ?? 0) : $item);
+      if ($id > 0 && !in_array($id, $ids, TRUE)) {
+        $ids[] = $id;
+      }
+    }
+    return $ids;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function save(array $form, FormStateInterface $form_state): int {
     $result = parent::save($form, $form_state);
+    /** @var \Drupal\ad_inventory\Entity\AdBooking $booking */
+    $booking = $this->entity;
+    $coverage = $form_state->get('ad_coverage');
+    if ($booking->state() === AdBooking::APPROVED && $coverage instanceof Coverage) {
+      $this->coverageStore->set($booking, $coverage);
+    }
+    else {
+      $this->coverageStore->delete((string) $booking->id());
+    }
+    // The booking's own save evicted its pages before the coverage was
+    // stored; evict them again so no page keeps the old reading.
+    Cache::invalidateTags($booking->getCacheTagsToInvalidate());
     $this->messenger()->addStatus($this->t('Saved the booking %label.', ['%label' => $this->entity->label()]));
     $form_state->setRedirectUrl($this->entity->toUrl('collection'));
     return $result;

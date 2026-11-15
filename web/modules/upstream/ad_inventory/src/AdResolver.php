@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\ad_inventory;
 
+use Drupal\ad_inventory\Coverage\CoverageStore;
 use Drupal\ad_inventory\Entity\AdBooking;
 use Drupal\ad_inventory\Entity\AdCreative;
 use Drupal\ad_inventory\Entity\AdFormat;
@@ -18,11 +19,13 @@ use Drupal\Core\Session\AccountInterface;
 /**
  * Decides what fills a space on a page, or that nothing does.
  *
- * In order: a booking in force for the space and the page's scope, then the
- * providers in their order, then the house banners (the browser shows one of
- * them at random). With none of them approved
- * the space is not printed at all. Staff who preview drafts also get drafts,
- * which is a role-based difference: anonymous readers all share one page.
+ * In order: the bookings in force for the space and the page's scope (one
+ * exclusive booking alone, or every booking that shares the space, each with
+ * its creatives: the browser asks the site which goes next, see Rotation),
+ * then the providers in their order, then the house banners (the browser
+ * shows one of them at random). With none of them approved the space is not
+ * printed at all. Staff who preview drafts also get drafts, which is a
+ * role-based difference: anonymous readers all share one page.
  *
  * Cache: every page carrying a space depends on the space's tag (bookings,
  * creatives and providers invalidate it; so does cron, when a booking of the
@@ -34,6 +37,11 @@ final class AdResolver {
    * House banners printed per space for the browser's random pick.
    */
   public const HOUSE_POOL = 8;
+
+  /**
+   * Placements printed per space at most (a site caps its sales lower).
+   */
+  public const ROSTER_MAX = 12;
 
   /**
    * Bookings loaded this request.
@@ -53,17 +61,20 @@ final class AdResolver {
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly SiteDay $siteDay,
     private readonly OverrideStore $overrides,
+    private readonly ?CoverageStore $coverage = NULL,
   ) {}
 
   /**
    * What fills a space on a page, or NULL.
    */
   public function resolve(AdSlot $slot, AdScope $scope, AccountInterface $account, CacheableMetadata $cacheability): ?Fill {
+    // The space's own tag, not the booking and creative lists: a booking
+    // renews the spaces it holds, a creative the spaces of its bookings, and
+    // the day's turn the spaces whose bookings began or ended. A save in one
+    // space no longer empties every page that has a space.
     $cacheability
       ->addCacheTags([
         AdSlot::tag((string) $slot->id()),
-        'ad_booking_list',
-        'ad_creative_list',
         'config:ad_provider_list',
       ])
       ->addCacheContexts(['user.permissions'])
@@ -89,11 +100,19 @@ final class AdResolver {
     $formats = array_values(array_unique([$desktop, $phone]));
 
     if ($slot->accepts(Fill::BOOKING)) {
-      $booking = $this->booking($slot, $scope, $preview, $formats);
-      if ($booking !== NULL) {
-        $draft = $booking->state() !== AdBooking::APPROVED || !$booking->creative()?->isApproved();
-        $cacheability->addCacheableDependency($booking)->addCacheableDependency($booking->creative());
-        return new Fill(Fill::BOOKING, $desktop, $phone, $draft, $booking->creative(), $booking);
+      $placements = $this->placements($slot, $scope, $preview, $formats);
+      if ($placements !== []) {
+        $draft = FALSE;
+        foreach ($placements as $placement) {
+          $cacheability->addCacheableDependency($placement->booking);
+          $draft = $draft || $placement->booking->state() !== AdBooking::APPROVED;
+          foreach ($placement->creatives as $creative) {
+            $cacheability->addCacheableDependency($creative);
+            $draft = $draft || !$creative->isApproved();
+          }
+        }
+        $first = $placements[0];
+        return new Fill(Fill::BOOKING, $desktop, $phone, $draft, $first->creatives[0], $first->booking, placements: $placements);
       }
     }
     if ($slot->accepts(Fill::PROVIDER) && !$account->hasPermission('bypass advertising')) {
@@ -109,6 +128,9 @@ final class AdResolver {
       }
     }
     if ($slot->accepts(Fill::HOUSE)) {
+      // A new or changed house banner renews this page (and only pages that
+      // got this far).
+      $cacheability->addCacheTags([AdCreative::HOUSE_TAG]);
       // Every house banner that fits goes to the page; the browser shows one
       // at random, so the page stays the same for every reader.
       $pool = [];
@@ -130,7 +152,14 @@ final class AdResolver {
   }
 
   /**
-   * The booking in force for a space and scope, scoped bookings first.
+   * The placements a space shows on a page today: its roster.
+   *
+   * Every booking in force for the space and the page competes by rank: an
+   * approved booking beats a draft, a scoped one beats one for every page.
+   * At the winning rank an exclusive booking (a sponsorship) stands alone,
+   * the earliest booked if there were ever two; otherwise every booking
+   * there shares the space and the browser asks which goes next (outer
+   * rotation, fewest views first). A site caps how many share a space.
    *
    * @param \Drupal\ad_inventory\Entity\AdSlot $slot
    *   The space.
@@ -139,34 +168,55 @@ final class AdResolver {
    * @param bool $preview
    *   Whether drafts count (staff previewing them).
    * @param string[] $formats
-   *   Formats the creative must carry.
+   *   Formats a creative must carry.
+   *
+   * @return \Drupal\ad_inventory\Placement[]
+   *   Placements, earliest booked first; empty when none.
    */
-  private function booking(AdSlot $slot, AdScope $scope, bool $preview, array $formats): ?AdBooking {
+  private function placements(AdSlot $slot, AdScope $scope, bool $preview, array $formats): array {
     $today = $this->siteDay->today();
-    $best = NULL;
+    $ranked = [];
     foreach ($this->bookings() as $booking) {
       $state = $booking->state();
       if ($state === AdBooking::STOPPED || ($state === AdBooking::DRAFT && !$preview)) {
         continue;
       }
-      $creative = $booking->creative();
-      if ($creative === NULL || (!$creative->isApproved() && !$preview)) {
+      if (!in_array((string) $slot->id(), $booking->slots(), TRUE) || !$booking->covers($today) || !$this->reaches($booking, $scope)) {
         continue;
       }
-      if (!in_array((string) $slot->id(), $booking->slots(), TRUE) || !$booking->covers($today) || !$scope->matches($booking->scope())) {
+      $creatives = array_values(array_filter(
+        $booking->creatives(),
+        static fn (AdCreative $c): bool => ($preview || $c->isApproved()) && $slot->allowsKind($c->kind()) && $c->missing($formats) === [],
+      ));
+      if ($creatives === []) {
         continue;
       }
-      if (!$slot->allowsKind($creative->kind()) || $creative->missing($formats) !== []) {
-        continue;
-      }
-      // An approved booking beats a draft; a scoped one beats one for every
-      // page; then the earliest booked.
-      $rank = [$state === AdBooking::APPROVED ? 0 : 1, $booking->scope() !== '' ? 0 : 1, (int) $booking->id()];
-      if ($best === NULL || $rank < $best[0]) {
-        $best = [$rank, $booking];
+      $rank = ($state === AdBooking::APPROVED ? 0 : 2) + ($booking->scope() !== '' ? 0 : 1);
+      $ranked[$rank][] = new Placement($booking, $creatives);
+    }
+    if ($ranked === []) {
+      return [];
+    }
+    ksort($ranked);
+    $placements = reset($ranked);
+    usort($placements, static fn (Placement $a, Placement $b): int => (int) $a->booking->id() <=> (int) $b->booking->id());
+    foreach ($placements as $placement) {
+      if ($placement->booking->isExclusive()) {
+        return [$placement];
       }
     }
-    return $best[1] ?? NULL;
+    return array_slice($placements, 0, self::ROSTER_MAX);
+  }
+
+  /**
+   * Whether a booking shows on a page: the pages it locked when approved.
+   *
+   * A booking with no stored coverage (a draft, or one approved before
+   * coverage existed) reaches its whole scope.
+   */
+  private function reaches(AdBooking $booking, AdScope $scope): bool {
+    $coverage = $booking->state() === AdBooking::APPROVED ? $this->coverage?->get($booking) : NULL;
+    return $coverage !== NULL ? $coverage->matches($scope) : $scope->matches($booking->scope());
   }
 
   /**

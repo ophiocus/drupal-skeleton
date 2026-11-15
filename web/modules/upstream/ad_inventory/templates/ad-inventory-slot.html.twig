@@ -20,10 +20,12 @@
  *   shows something.
  * - blocked_reason, blocked_link, consent_attribute: the notice and the link
  *   that reopens the site's cookie settings.
- * - candidates: what may fill the space, each {id, content, caption}: the
- *   creative's <picture> (or the provider's unit, id 0) and a line printed
- *   under it. With several (house banners), the browser shows one at
- *   random.
+ * - candidates: what may fill the space, each {id, booking, source, content,
+ *   caption}: the creative's <picture> (or the provider's unit, id 0), its
+ *   booking (0 for house banners and providers), its counting source and a
+ *   line printed under it. With several house banners the browser shows one
+ *   at random; with several placements or creatives of bookings it asks the
+ *   site which has the fewest views this week, and shows that one.
  */
 #}
 <aside class="ad-inventory ad-inventory--{{ devices }}{{ draft ? ' ad-inventory--draft' }}"
@@ -34,6 +36,6 @@
   <div class="ad-inventory__box"></div>
   <template class="ad-inventory__notice"><p class="ad-inventory__blocked"><span>{{ blocked_reason }}</span> <a href="#" {{ consent_attribute }}>{{ blocked_link }}</a></p></template>
   {% for candidate in candidates %}
-  <template class="ad-inventory__fill" data-ad-creative="{{ candidate.id }}">{{ candidate.content }}{% if candidate.caption %}<p class="ad-inventory__caption">{{ candidate.caption }}</p>{% endif %}</template>
+  <template class="ad-inventory__fill" data-ad-creative="{{ candidate.id }}" data-ad-booking="{{ candidate.booking }}" data-ad-source="{{ candidate.source }}">{{ candidate.content }}{% if candidate.caption %}<p class="ad-inventory__caption">{{ candidate.caption }}</p>{% endif %}</template>
   {% endfor %}
 </aside>

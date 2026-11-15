@@ -10,10 +10,14 @@
  * reopens the choice. Unanswered means no, and the space stays empty. Nothing
  * is fetched before a grant: no image, no provider script, no count.
  *
+ * A space sold to several clients carries every placement and creative; the
+ * browser asks the site once which goes next (the fewest views this week)
+ * and shows that one. House banners are picked at random.
+ *
  * After the swap a space counts as seen when at least half of it stays on
  * screen for one second. Every space seen is sent once, in one beacon, when
  * the page is left. The beacon carries the space, the creative and the
- * source; nothing about the reader.
+ * source (for a booking, "booking:<id>"); nothing about the reader.
  */
 ((Drupal, drupalSettings, once) => {
   const settings = drupalSettings.adInventory || {};
@@ -113,21 +117,53 @@
   }
 
   /**
-   * Swaps a space's creative in.
+   * The fill templates of a space.
    */
-  function fill(space) {
+  function templatesOf(space) {
+    return Array.from(space.querySelectorAll('template.ad-inventory__fill'));
+  }
+
+  /**
+   * Booking ids among a space's templates, once each.
+   */
+  function bookingsOf(space) {
+    const ids = templatesOf(space).map((t) => Number(t.dataset.adBooking || 0)).filter((id) => id > 0);
+    return Array.from(new Set(ids));
+  }
+
+  /**
+   * Whether the site must say which template goes next: several of bookings.
+   */
+  function needsPick(space) {
+    return templatesOf(space).filter((t) => Number(t.dataset.adBooking || 0) > 0).length > 1;
+  }
+
+  /**
+   * Swaps a space's creative in.
+   *
+   * With a pick from the site ([booking, creative]) that template shows;
+   * otherwise one at random (house banners, or the site did not answer).
+   */
+  function fill(space, pick) {
     if (space.dataset.adFilled) {
       return;
     }
-    // House banners come as several templates: show one at random, and
-    // count that one.
-    const templates = space.querySelectorAll('template.ad-inventory__fill');
-    const template = templates[Math.floor(Math.random() * templates.length)];
+    const templates = templatesOf(space);
+    let template = null;
+    if (Array.isArray(pick)) {
+      template = templates.find((t) => Number(t.dataset.adBooking || 0) === pick[0] && Number(t.dataset.adCreative || 0) === pick[1])
+        || templates.find((t) => Number(t.dataset.adBooking || 0) === pick[0])
+        || null;
+    }
+    template = template || templates[Math.floor(Math.random() * templates.length)];
     const box = space.querySelector('.ad-inventory__box');
     if (!template || !box) {
       return;
     }
     space.dataset.adCreative = template.dataset.adCreative || '0';
+    if (template.dataset.adSource) {
+      space.dataset.adSource = template.dataset.adSource;
+    }
     space.dataset.adFilled = '1';
     box.replaceChildren(template.content.cloneNode(true));
     activate(box);
@@ -159,11 +195,61 @@
   }
 
   /**
+   * Asks the site which placement and creative each space shows next.
+   *
+   * One small request for the whole page, only when some space has more than
+   * one to choose from: the answer is the one with the fewest views this
+   * week. It carries the space and booking ids printed on the page; nothing
+   * about the reader. Unanswered within two seconds, the browser picks.
+   */
+  function ask(spaces) {
+    const bySlot = new Map();
+    spaces.forEach((space) => {
+      bySlot.set(space.dataset.adSlot, Array.from(new Set([...(bySlot.get(space.dataset.adSlot) || []), ...bookingsOf(space)])));
+    });
+    if (!settings.pick || !window.fetch) {
+      return Promise.resolve({});
+    }
+    const controller = window.AbortController ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), 2000) : null;
+    return fetch(settings.pick, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p: Array.from(bySlot.entries()) }),
+      signal: controller ? controller.signal : undefined,
+    })
+      .then((response) => (response.ok ? response.json() : {}))
+      .catch(() => ({}))
+      .finally(() => timer && clearTimeout(timer));
+  }
+
+  /**
    * Fills every space on the page.
    */
   function fillAll() {
     loadScripts();
-    document.querySelectorAll('.ad-inventory[data-ad-slot]').forEach(fill);
+    const waiting = [];
+    document.querySelectorAll('.ad-inventory[data-ad-slot]').forEach((space) => {
+      if (space.dataset.adFilled || space.dataset.adAsking) {
+        return;
+      }
+      if (needsPick(space)) {
+        space.dataset.adAsking = '1';
+        waiting.push(space);
+      }
+      else {
+        fill(space);
+      }
+    });
+    if (waiting.length) {
+      ask(waiting).then((answer) => {
+        waiting.forEach((space) => {
+          delete space.dataset.adAsking;
+          fill(space, answer && answer[space.dataset.adSlot]);
+        });
+      });
+    }
   }
 
   /**

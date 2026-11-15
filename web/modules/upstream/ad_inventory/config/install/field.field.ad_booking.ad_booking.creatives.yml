@@ -1,0 +1,24 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.ad_booking.creatives
+  module:
+    - ad_inventory
+  enforced:
+    module:
+      - ad_inventory
+id: ad_booking.ad_booking.creatives
+field_name: creatives
+entity_type: ad_booking
+bundle: ad_booking
+label: Creatives
+description: 'The client''s creatives for this booking, in order. They take turns in the space: the one with the fewest views this week shows next.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:ad_creative'
+  handler_settings: {  }
+field_type: entity_reference

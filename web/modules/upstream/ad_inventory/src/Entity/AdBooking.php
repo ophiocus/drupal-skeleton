@@ -7,7 +7,9 @@ namespace Drupal\ad_inventory\Entity;
 use Drupal\Core\Entity\Attribute\ContentEntityType;
 use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EntityChangedTrait;
+use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Entity\Query\QueryInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
@@ -57,6 +59,11 @@ final class AdBooking extends ContentEntityBase {
   public const DRAFT = 'draft';
   public const APPROVED = 'approved';
   public const STOPPED = 'stopped';
+
+  /**
+   * The configurable field holding the booking's set of creatives.
+   */
+  public const CREATIVES = 'creatives';
 
   /**
    * {@inheritdoc}
@@ -113,11 +120,115 @@ final class AdBooking extends ContentEntityBase {
   }
 
   /**
-   * The booked creative.
+   * The booking's first creative (the first of its set).
    */
   public function creative(): ?AdCreative {
     $creative = $this->get('creative')->entity;
     return $creative instanceof AdCreative ? $creative : NULL;
+  }
+
+  /**
+   * The booking's creatives, in the client's order.
+   *
+   * They take turns inside the booking's placement (inner rotation). The set
+   * lives in the configurable field "creatives" (config, so a site gets it
+   * by importing config, with no schema step); a booking saved before the
+   * field existed, or a site without it, has its one creative.
+   *
+   * @return \Drupal\ad_inventory\Entity\AdCreative[]
+   *   Creatives, keyed by nothing, first is creative().
+   */
+  public function creatives(): array {
+    $set = [];
+    if ($this->hasField(self::CREATIVES)) {
+      foreach ($this->get(self::CREATIVES) as $item) {
+        $creative = $item->entity;
+        if ($creative instanceof AdCreative && !isset($set[(int) $creative->id()])) {
+          $set[(int) $creative->id()] = $creative;
+        }
+      }
+    }
+    if ($set === []) {
+      $first = $this->creative();
+      return $first !== NULL ? [$first] : [];
+    }
+    return array_values($set);
+  }
+
+  /**
+   * Creative ids of the set, in order.
+   *
+   * @return int[]
+   *   Ids.
+   */
+  public function creativeIds(): array {
+    return array_map(static fn (AdCreative $c): int => (int) $c->id(), $this->creatives());
+  }
+
+  /**
+   * Sets the creatives; the first also becomes creative().
+   *
+   * @param array<int, \Drupal\ad_inventory\Entity\AdCreative|int> $creatives
+   *   Creatives or ids, in order.
+   */
+  public function setCreatives(array $creatives): static {
+    $ids = [];
+    foreach ($creatives as $creative) {
+      $id = $creative instanceof AdCreative ? (int) $creative->id() : (int) $creative;
+      if ($id > 0 && !in_array($id, $ids, TRUE)) {
+        $ids[] = $id;
+      }
+    }
+    $this->set('creative', $ids[0] ?? NULL);
+    if ($this->hasField(self::CREATIVES)) {
+      $this->set(self::CREATIVES, array_map(static fn (int $id): array => ['target_id' => $id], $ids));
+    }
+    return $this;
+  }
+
+  /**
+   * Narrows a booking query to bookings that use a creative.
+   *
+   * Bookings saved before the creatives field existed hold it only in
+   * "creative", so both are asked.
+   */
+  public static function whereCreative(QueryInterface $query, int $creative): QueryInterface {
+    $fields = \Drupal::service('entity_field.manager')->getFieldStorageDefinitions('ad_booking');
+    if (!isset($fields[self::CREATIVES])) {
+      return $query->condition('creative', $creative);
+    }
+    $or = $query->orConditionGroup()
+      ->condition('creative', $creative)
+      ->condition(self::CREATIVES, $creative);
+    return $query->condition($or);
+  }
+
+  /**
+   * Whether the booking holds its space alone (a sponsorship).
+   *
+   * A booking that is not exclusive shares its space with the other
+   * non-exclusive bookings in force there (outer rotation).
+   */
+  public function isExclusive(): bool {
+    return (bool) $this->get('exclusive')->value;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function preSave(EntityStorageInterface $storage): void {
+    parent::preSave($storage);
+    // The set and its first item stay in step whichever was written.
+    if ($this->hasField(self::CREATIVES)) {
+      $set = array_values(array_filter(array_map(static fn ($item): int => (int) $item->target_id, iterator_to_array($this->get(self::CREATIVES)))));
+      $first = (int) $this->get('creative')->target_id;
+      if ($set === [] && $first > 0) {
+        $this->set(self::CREATIVES, [['target_id' => $first]]);
+      }
+      elseif ($set !== [] && $set[0] !== $first) {
+        $this->set('creative', $set[0]);
+      }
+    }
   }
 
   /**

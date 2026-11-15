@@ -96,9 +96,11 @@ trait AdFixturesTrait {
    *   The booking's state.
    * @param string $scope
    *   A scope key, or '' for every page.
+   * @param array<string, mixed> $values
+   *   Other field values (exclusive…).
    */
-  protected function createBooking(AdCreative $creative, array $slots, string $start, string $end, string $state = AdBooking::APPROVED, string $scope = ''): AdBooking {
-    $booking = AdBooking::create([
+  protected function createBooking(AdCreative $creative, array $slots, string $start, string $end, string $state = AdBooking::APPROVED, string $scope = '', array $values = []): AdBooking {
+    $booking = AdBooking::create($values + [
       'label' => 'Test booking',
       'creative' => $creative->id(),
       'slots' => ['ids' => $slots],

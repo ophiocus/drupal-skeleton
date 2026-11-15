@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - ad_inventory
+  enforced:
+    module:
+      - ad_inventory
+id: ad_booking.creatives
+field_name: creatives
+entity_type: ad_booking
+type: entity_reference
+settings:
+  target_type: ad_creative
+module: core
+locked: true
+cardinality: -1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

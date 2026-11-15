@@ -6,6 +6,7 @@ package: Advertising
 configure: ad_inventory.settings
 dependencies:
   - drupal:block
+  - drupal:field
   - drupal:file
   - drupal:image
   - drupal:media

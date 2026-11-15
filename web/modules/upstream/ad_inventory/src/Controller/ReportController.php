@@ -156,10 +156,16 @@ final class ReportController extends ControllerBase {
       if (!$booking instanceof AdBooking || $booking->creative() === NULL) {
         continue;
       }
-      $rows = array_filter(
-        $this->counter->rows((int) $booking->creative()->id(), $booking->slots(), $booking->startDay(), $booking->endDay()),
-        static fn ($r) => $r['source'] === 'booking' || $r['source'] === 'email',
-      );
+      // The booking's own rows, every creative of its set; plus the plain
+      // "booking" rows counted before per-booking sources, and mail clicks.
+      $own = AdCounter::bookingSource((int) $booking->id());
+      $rows = [];
+      foreach ($booking->creatives() as $creative) {
+        $rows = array_merge($rows, array_filter(
+          $this->counter->rows((int) $creative->id(), $booking->slots(), $booking->startDay(), $booking->endDay()),
+          static fn ($r) => $r['source'] === $own || $r['source'] === 'booking' || $r['source'] === 'email',
+        ));
+      }
       $lines[] = $this->line($booking->label(), (string) $booking->creative()->get('advertiser')->value, implode(', ', $booking->slots()), $booking->startDay() . ' → ' . $booking->endDay(), $rows);
     }
     $ids = $this->entityTypeManager()->getStorage('ad_creative')->getQuery()->accessCheck(FALSE)->condition('house', 1)->execute();

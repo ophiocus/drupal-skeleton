@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Drupal\ad_inventory\Hook;
 
 use Drupal\ad_inventory\Boundaries;
+use Drupal\ad_inventory\Coverage\CoverageStore;
+use Drupal\ad_inventory\Entity\AdBooking;
 use Drupal\ad_inventory\Entity\AdProvider;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -18,7 +20,18 @@ final class AdInventoryHooks {
   public function __construct(
     private readonly Boundaries $boundaries,
     private readonly EntityTypeManagerInterface $entityTypeManager,
+    private readonly CoverageStore $coverage,
   ) {}
+
+  /**
+   * Implements hook_ENTITY_TYPE_delete() for ad_booking.
+   *
+   * A deleted booking's pages are free again.
+   */
+  #[Hook('ad_booking_delete')]
+  public function bookingDelete(AdBooking $booking): void {
+    $this->coverage->delete((string) $booking->id());
+  }
 
   /**
    * Implements hook_theme().

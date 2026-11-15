@@ -23,17 +23,37 @@ services:
     class: Drupal\ad_inventory\OverrideStore
     arguments: ['@entity_type.manager']
 
+  # The pages each approved booking locked when it was bought, and the
+  # calculation of what a new booking would take (what is still free).
+  ad_inventory.coverage_store:
+    class: Drupal\ad_inventory\Coverage\CoverageStore
+    arguments: ['@keyvalue']
+
+  ad_inventory.coverage:
+    class: Drupal\ad_inventory\Coverage\CoverageCalculator
+    arguments: ['@entity_type.manager', '@ad_inventory.scopes', '@ad_inventory.coverage_store']
+    # Sites tag `ad_inventory.coverage_summary` to show pages, volume or
+    # price before staff confirm a booking.
+    tags:
+      - { name: service_collector, tag: ad_inventory.coverage_summary, call: addSummary }
+
   ad_inventory.resolver:
     class: Drupal\ad_inventory\AdResolver
-    arguments: ['@entity_type.manager', '@ad_inventory.site_day', '@ad_inventory.overrides']
+    arguments: ['@entity_type.manager', '@ad_inventory.site_day', '@ad_inventory.overrides', '@ad_inventory.coverage_store']
 
   ad_inventory.slot_builder:
     class: Drupal\ad_inventory\SlotBuilder
-    arguments: ['@ad_inventory.resolver', '@ad_inventory.scopes', '@current_user', '@entity_type.manager', '@file_url_generator', '@config.factory']
+    arguments: ['@ad_inventory.resolver', '@ad_inventory.scopes', '@current_user', '@entity_type.manager', '@file_url_generator', '@config.factory', '@current_route_match']
 
   ad_inventory.counter:
     class: Drupal\ad_inventory\AdCounter
     arguments: ['@database', '@ad_inventory.site_day']
+
+  # Which placement and creative a space shows next (fewest views this week),
+  # and which counts are real (pairs the page could have shown, no robots).
+  ad_inventory.rotation:
+    class: Drupal\ad_inventory\Rotation
+    arguments: ['@entity_type.manager', '@ad_inventory.site_day', '@ad_inventory.counter']
 
   ad_inventory.boundaries:
     class: Drupal\ad_inventory\Boundaries
@@ -43,8 +63,11 @@ services:
   # service ids; without these aliases they fail or vanish silently.
   Drupal\ad_inventory\Boundaries: '@ad_inventory.boundaries'
   Drupal\ad_inventory\AdCounter: '@ad_inventory.counter'
+  Drupal\ad_inventory\Rotation: '@ad_inventory.rotation'
   Drupal\ad_inventory\AdResolver: '@ad_inventory.resolver'
   Drupal\ad_inventory\SlotBuilder: '@ad_inventory.slot_builder'
   Drupal\ad_inventory\OverrideStore: '@ad_inventory.overrides'
   Drupal\ad_inventory\Scope\ScopeCollector: '@ad_inventory.scopes'
   Drupal\ad_inventory\SiteDay: '@ad_inventory.site_day'
+  Drupal\ad_inventory\Coverage\CoverageStore: '@ad_inventory.coverage_store'
+  Drupal\ad_inventory\Coverage\CoverageCalculator: '@ad_inventory.coverage'

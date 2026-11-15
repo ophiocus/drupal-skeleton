@@ -65,6 +65,11 @@ final class AdCreative extends ContentEntityBase {
   public const PLAIN = 'plain';
 
   /**
+   * Carried by pages that may show house banners; renewed by house saves.
+   */
+  public const HOUSE_TAG = 'ad_inventory_house';
+
+  /**
    * {@inheritdoc}
    */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type): array {
@@ -229,6 +234,36 @@ final class AdCreative extends ContentEntityBase {
    */
   public function target(): string {
     return (string) $this->get('target_url')->value;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Pages carry the tags of their spaces, not a tag every creative save
+   * empties: a house banner renews the pages that may show house banners
+   * (HOUSE_TAG), and a booked creative renews the spaces of the bookings
+   * that use it. A creative in no booking and never a house banner renews no
+   * page.
+   */
+  public function getCacheTagsToInvalidate(): array {
+    $tags = parent::getCacheTagsToInvalidate();
+    $original = $this->isNew() ? NULL : $this->getOriginal();
+    if ($this->isHouse() || ($original instanceof self && $original->isHouse())) {
+      $tags[] = self::HOUSE_TAG;
+    }
+    if (!$this->isNew()) {
+      $storage = $this->entityTypeManager()->getStorage('ad_booking');
+      $query = $storage->getQuery()->accessCheck(FALSE);
+      $ids = AdBooking::whereCreative($query, (int) $this->id())->execute();
+      foreach ($storage->loadMultiple($ids) as $booking) {
+        if ($booking instanceof AdBooking) {
+          foreach ($booking->slots() as $slot) {
+            $tags[] = AdSlot::tag($slot);
+          }
+        }
+      }
+    }
+    return array_values(array_unique($tags));
   }
 
 }
