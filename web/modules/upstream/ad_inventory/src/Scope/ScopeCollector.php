@@ -7,6 +7,7 @@ namespace Drupal\ad_inventory\Scope;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
  * Asks every tagged scope resolver what the current page is about.
@@ -64,6 +65,43 @@ final class ScopeCollector {
       $options += $resolver->options();
     }
     return $options;
+  }
+
+  /**
+   * How scope key $a relates to scope key $b ('' is every page).
+   *
+   * @return string
+   *   One of the ScopeRelationInterface constants.
+   */
+  public function relation(string $a, string $b): string {
+    if ($a === $b) {
+      return ScopeRelationInterface::SAME;
+    }
+    if ($a === '') {
+      return ScopeRelationInterface::CONTAINS;
+    }
+    if ($b === '') {
+      return ScopeRelationInterface::WITHIN;
+    }
+    foreach ($this->resolvers as $resolver) {
+      if ($resolver instanceof ScopeRelationInterface) {
+        $relation = $resolver->relation($a, $b);
+        if ($relation !== NULL) {
+          return $relation;
+        }
+      }
+    }
+    return ScopeRelationInterface::OVERLAPS;
+  }
+
+  /**
+   * A key's label, as the booking form lists it.
+   */
+  public function label(string $key): string {
+    if ($key === '') {
+      return (string) new TranslatableMarkup('Every page of these spaces');
+    }
+    return $this->options()[$key] ?? $key;
   }
 
   /**

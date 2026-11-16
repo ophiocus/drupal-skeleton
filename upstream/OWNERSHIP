@@ -23,6 +23,8 @@ recipes/google-business-shop/
 scripts/ci/
 scripts/upstream/
 .github/workflows/build-and-push.yml
+# Retired 2026-11-15 (its weekly run is security-scan.yml's). Still listed so
+# the sync removes it from every site; drop the line once no site has it.
 .github/workflows/composer-audit.yml
 .github/workflows/security-scan.yml
 .github/workflows/test-gate.yml

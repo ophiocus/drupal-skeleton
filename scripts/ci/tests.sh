@@ -16,7 +16,8 @@
 #   phpstan     static analysis over custom code (phpstan.neon); an upstream
 #               module whose dependencies this codebase lacks is left out of
 #               phpstan and PHPUnit (scripts/ci/unmet_upstream.php)
-#   unit        PHPUnit Unit suites of every custom module, submodule, theme
+#   unit        PHPUnit Unit suites of every custom module, submodule, theme,
+#               and of every upstream extension this site enables (below)
 #   kernel      PHPUnit Kernel suites (needs SIMPLETEST_DB)
 #   functional  PHPUnit Functional suites (needs SIMPLETEST_DB and a web
 #               server answering SIMPLETEST_BASE_URL)
@@ -60,6 +61,36 @@ unmet_path() {
   return 1
 }
 
+# Upstream extensions this site does not enable. Every site carries every
+# upstream module and the upstream's install profile, but a site's PHPUnit
+# suites test only the ones its config/sync/core.extension.yml enables: the
+# rest is code that never runs here, and its suites run where it is
+# maintained, in the upstream, which has no core.extension.yml and so tests
+# them all. An extension is named by its own *.info.yml; a submodule of a
+# disabled module goes with it. Static analysis and coding standards still
+# cover every upstream extension: they are cheap, and they say whether the
+# code still fits this site's dependencies before the day the site enables it.
+DISABLED=()
+if [ -f config/sync/core.extension.yml ]; then
+  for d in web/modules/upstream/*/ web/modules/upstream/*/modules/*/ web/profiles/upstream/*/; do
+    d="${d%/}"
+    for info in "$d"/*.info.yml; do
+      if ! grep -q -E "^  $(basename "$info" .info.yml):" config/sync/core.extension.yml; then
+        DISABLED+=("$d")
+      fi
+      break
+    done
+  done
+fi
+
+disabled_path() {
+  local u
+  for u in "${DISABLED[@]}"; do
+    case "$1" in "$u"/*) return 0 ;; esac
+  done
+  return 1
+}
+
 phpstan_gate() {
   local args=(analyse --no-progress --memory-limit=1G) conf u
   if [ ${#UNMET[@]} -gt 0 ]; then
@@ -89,10 +120,20 @@ phpunit_suite() {
     web/profiles/upstream/*/tests/src/"$type"
     web/themes/custom/*/tests/src/"$type"
   )
-  local dirs=()
+  local dirs=() skipped=()
   for d in "${found[@]}"; do
-    unmet_path "$d" || dirs+=("$d")
+    if unmet_path "$d"; then
+      continue
+    elif disabled_path "$d"; then
+      skipped+=("$d")
+    else
+      dirs+=("$d")
+    fi
   done
+  if [ ${#skipped[@]} -gt 0 ]; then
+    echo "not enabled on this site (config/sync/core.extension.yml), not run here:"
+    printf '  %s\n' "${skipped[@]}"
+  fi
   if [ ${#dirs[@]} -eq 0 ]; then
     echo "no $type tests in custom code"
     return 0

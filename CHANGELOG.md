@@ -5,6 +5,32 @@ loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Skeletons don't really do semantic versioning — date stamps tell
 you whether the foundation you cloned is recent enough.
 
+## 2026-11-15 — CI spends fewer Actions minutes; the deploy host's key is pinned
+
+- `composer-audit.yml` is retired; `upstream/OWNERSHIP` still lists it so the next sync deletes it
+  from every site. Its weekly run moves into `security-scan.yml`, which is now the one weekly
+  security run: the lock's audit and the ZAP baseline in one job. A lock change is audited once, by
+  the build before its image; an upstream sync still audits before proposing.
+- `build-and-push.yml`, `reuse`: a passing gate counts under both of its check names, `test` (run on
+  the PR) and `test / test` (called by another workflow). The lookup asked for `test` only, so every
+  upstream-sync merge ran the gate a second time.
+- `upstream-sync.yml`: the gate runs once per synced commit. With `UPSTREAM_SYNC_TOKEN` set the
+  PR's own check is the gate and the workflow skips its own run; without it, as before.
+- `test-gate.yml`: a newer push to a PR cancels its gate in progress; runs called by another
+  workflow are never cancelled. No paths filter: `test` is required on this repository's master,
+  and a filtered-out required check would leave docs-only PRs waiting.
+- `scripts/ci/tests.sh`: a site's PHPUnit suites skip the upstream extensions its
+  `config/sync/core.extension.yml` does not enable. The upstream has no such file and tests all of
+  them; phpcs and phpstan still cover every one.
+- `build-and-push.yml`, deploy: the host's SSH key is pinned (`StrictHostKeyChecking=yes`) from the
+  variable `DEPLOY_KNOWN_HOSTS` or the site's own `deploy/known_hosts`. Without either the deploy
+  still runs, trusting the first key, with a warning (docs/DEPLOY.md §2). The upstream ships no
+  key: the line names the host's address.
+- `.dockerignore`: also leaves out `web/private*` (a private path mistyped as `private:/`),
+  `deploy/known_hosts`, `scripts/harvest/*.json` and `scripts/import_events.php`.
+- `docs/DEPLOY.md`: all four workflows listed; the drainer named as the upstream's reference
+  script, which sites do not carry. `docs/UPSTREAM.md`: `security-scan.yml` in the ownership table.
+
 ## 2026-11-08 — ad_inventory: no text in the HTML before a reader's choice
 
 - A banner space printed its label and its "turned off" notice in every page's HTML, for readers

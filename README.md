@@ -19,8 +19,10 @@ the next project makes for itself.
 drupal-skeleton/
 ├── .ddev/config.yaml                 ← PHP 8.4, MariaDB 11.4, apache-fpm (= prod image), mutagen, Composer 2, Node 22
 ├── .github/workflows/
-│   ├── composer-audit.yml            ← inherited security gate: fails CI on a vulnerable composer.lock (push/PR + weekly)
-│   └── build-and-push.yml            ← the production pipeline: audit → image → GHCR → deploy → HTTP health gate
+│   ├── build-and-push.yml            ← the production pipeline: gate (or its reuse) → audit → image → GHCR → deploy → HTTP health gate
+│   ├── test-gate.yml                 ← scripts/ci/tests.sh on every PR, and the gate the other workflows call
+│   ├── upstream-sync.yml             ← weekly: proposes the upstream's latest to a site as a gated PR
+│   └── security-scan.yml             ← the one weekly security run: composer audit of the lock + passive ZAP baseline
 ├── Dockerfile / .dockerignore        ← multi-stage production image (drupal:11-php8.4-apache, composer --no-dev, drush on PATH)
 ├── deploy/
 │   ├── docker-compose.yaml           ← host-side stack (drupal + mariadb, Traefik labels), fully .env-interpolated
@@ -60,19 +62,21 @@ the Dockerfile is proven in CI from the first commit. The full contract is in
 
 ### Inherited security gate
 
-`.github/workflows/composer-audit.yml` ships with the skeleton so every property
-minted from it is covered **by construction**, not by remembering to bolt an audit
-step onto each property's build workflow later. It runs `composer audit --no-dev
---locked` and:
+Every property minted from the skeleton is audited **by construction**, not by
+remembering to bolt an audit step onto its workflows later. `composer audit
+--no-dev --locked` runs in two places:
 
-- **fails the build** on push / PR when `composer.lock` carries a known advisory in
-  a production dependency — a vulnerable lock cannot merge;
-- **runs weekly on a schedule**, so an advisory published *after* code merged is
-  surfaced (a failed scheduled run notifies the repo owner) without waiting for
-  someone to touch composer by chance.
+- **in `build-and-push.yml`, before every image**: a lock carrying a known
+  advisory in a production dependency is never built, so never deployed. It is
+  the only audit on a push; a lock change is audited once;
+- **weekly, in `security-scan.yml`**, so an advisory published *after* code
+  merged is surfaced (a failed scheduled run notifies the repo owner) without
+  waiting for someone to touch composer by chance. The same job runs the ZAP
+  baseline: one weekly security run, one runner.
 
-If a property also has a build-and-push workflow, keep an audit step there too as a
-hard pre-deploy gate — this standalone workflow is the floor, not the ceiling.
+An upstream sync also audits its re-resolved lock before it proposes it. Until
+2026-11-15 a separate `composer-audit.yml` audited every lock change on its PR
+and its push as well; it cost a runner per run and repeated the build's audit.
 
 ### Health baseline
 

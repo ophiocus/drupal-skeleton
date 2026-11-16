@@ -12,6 +12,7 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
@@ -39,6 +40,11 @@ final class SlotBuilder {
   public const DESKTOP = 'desktop';
   public const PHONE = 'phone';
 
+  /**
+   * Routes Drupal renders error pages with.
+   */
+  public const ERROR_ROUTES = ['system.401', 'system.403', 'system.404', 'system.4xx'];
+
   public function __construct(
     private readonly AdResolver $resolver,
     private readonly ScopeCollector $scopes,
@@ -46,6 +52,7 @@ final class SlotBuilder {
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly FileUrlGeneratorInterface $fileUrlGenerator,
     private readonly ConfigFactoryInterface $configFactory,
+    private readonly ?RouteMatchInterface $routeMatch = NULL,
   ) {}
 
   /**
@@ -57,6 +64,13 @@ final class SlotBuilder {
   public function build(string $slot_id, string $devices = self::BOTH): array {
     $cacheability = new CacheableMetadata();
     $build = [];
+    // Error pages (403, 404…) show no space: nothing is sold on them, and an
+    // unscoped booking or a provider's unit must not land there.
+    $cacheability->addCacheContexts(['route.name']);
+    if (in_array((string) $this->routeMatch?->getRouteName(), self::ERROR_ROUTES, TRUE)) {
+      $cacheability->applyTo($build);
+      return $build;
+    }
     $slot = $this->entityTypeManager->getStorage('ad_slot')->load($slot_id);
     if ($slot instanceof AdSlot && $slot->status() && $slot->channel() === AdSlot::WEB) {
       $fill = $this->resolver->resolve($slot, $this->scopes->current(), $this->account, $cacheability);
@@ -92,12 +106,35 @@ final class SlotBuilder {
 
     $candidates = [];
     $loaders = [];
-    if ($fill->creative !== NULL) {
+    if ($fill->placements !== []) {
+      // Every placement of the roster, each with its creatives: the browser
+      // asks which goes next when there is more than one to choose from.
+      foreach ($fill->placements as $placement) {
+        foreach ($placement->creatives as $creative) {
+          $picture = $this->picture($creative, $desktop, $phone, $breakpoint, (string) $slot->id(), $placement->source(), $cacheability);
+          if ($picture !== []) {
+            $candidates[] = [
+              'id' => (int) $creative->id(),
+              'booking' => (int) $placement->booking->id(),
+              'source' => $placement->source(),
+              'content' => $picture,
+              'caption' => (string) $creative->get('caption')->value,
+            ];
+          }
+        }
+      }
+      if ($candidates === []) {
+        return [];
+      }
+    }
+    elseif ($fill->creative !== NULL) {
       foreach ($fill->candidates ?: [$fill->creative] as $creative) {
         $picture = $this->picture($creative, $desktop, $phone, $breakpoint, (string) $slot->id(), $fill->countSource(), $cacheability);
         if ($picture !== []) {
           $candidates[] = [
             'id' => (int) $creative->id(),
+            'booking' => 0,
+            'source' => $fill->countSource(),
             'content' => $picture,
             'caption' => (string) $creative->get('caption')->value,
           ];
@@ -114,6 +151,8 @@ final class SlotBuilder {
       // inside the <template> until the browser fills the space.
       $candidates[] = [
         'id' => 0,
+        'booking' => 0,
+        'source' => $fill->countSource(),
         'content' => [
           '#type' => 'inline_template',
           '#template' => '{{ unit|raw }}',
@@ -148,6 +187,7 @@ final class SlotBuilder {
               'event' => (string) ($settings->get('consent.event') ?: 'ad:consent'),
             ],
             'beacon' => Url::fromRoute('ad_inventory.beacon')->toString(),
+            'pick' => Url::fromRoute('ad_inventory.pick')->toString(),
             'loaders' => array_values($loaders),
           ],
         ],

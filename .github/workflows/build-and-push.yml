@@ -19,6 +19,10 @@ name: Build and push image
 #                                     Required for any deploy.
 #   variable  DEPLOY_HOST             user@host — REQUIRED to enable deploys.
 #                                     Unset ⇒ audit + build + push only.
+#   variable  DEPLOY_KNOWN_HOSTS      the deploy host's known_hosts lines (its
+#                                     pinned key). Default: the site's own
+#                                     deploy/known_hosts. With neither, the
+#                                     deploy warns and trusts the first key.
 #   variable  PROD_URL                https://example.com — REQUIRED to enable
 #                                     the health gate. Unset ⇒ gate skipped.
 #   variable  DEPLOY_SITE             site slug passed to deploy-prod/deploy-dev
@@ -68,10 +72,15 @@ jobs:
   # A change normally reaches master as a PR, and test-gate.yml already ran
   # on the PR's head. When the pushed commit is that PR's merge and its tree
   # is byte-identical to the PR head the gate passed on, running the gate
-  # again tests the same files twice: 2-6 minutes of Actions per deploy for
+  # again tests the same files twice: 10-15 minutes of Actions per deploy for
   # nothing (docs/DEPLOY.md, "Actions minutes"). Anything else — a direct
   # push, a PR whose branch was behind master, a gate that did not pass, a
   # manual run — gets the full gate below.
+  #
+  # The gate's check run is named "test" when it ran on the PR itself, and
+  # "test / test" when another workflow called it: upstream-sync.yml gates its
+  # branch that way, and so does this workflow on a dev/** push (both names
+  # read off the checks API, 2026-11-15). Either is a pass of the same gate.
   reuse:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -100,8 +109,8 @@ jobs:
             if [ -n "$head" ]; then
               pushed=$(gh api "repos/$REPO/git/commits/$SHA" --jq .tree.sha || true)
               proposed=$(gh api "repos/$REPO/git/commits/$head" --jq .tree.sha || true)
-              passed=$(gh api "repos/$REPO/commits/$head/check-runs?check_name=test" \
-                --jq '[.check_runs[] | select(.conclusion == "success")] | length' || echo 0)
+              passed=$(gh api "repos/$REPO/commits/$head/check-runs?per_page=100" \
+                --jq '[.check_runs[] | select((.name == "test" or .name == "test / test") and .conclusion == "success")] | length' || echo 0)
               echo "PR head ${head:0:7}: tree $([ -n "$pushed" ] && [ "$pushed" = "$proposed" ] && echo identical || echo differs); passing test gate runs: ${passed:-0}"
               if [ -n "$pushed" ] && [ "$pushed" = "$proposed" ] && [ "${passed:-0}" -ge 1 ]; then
                 tested=true
@@ -147,6 +156,9 @@ jobs:
       # This gate is fleet-wide by construction: the day an advisory lands
       # against a shared runtime dep, EVERY property's next push stops here.
       # Bump the lock in each property (BATTLE_SCARS §20).
+      #
+      # It is the only audit on a push: a lock change is audited here, once.
+      # Advisories against an unchanged lock are security-scan.yml's, weekly.
       - name: Composer audit (production deps)
         run: composer audit --no-dev --abandoned=report --format=plain --locked
 
@@ -197,18 +209,51 @@ jobs:
       # Slug and branch travel as env vars rather than inline expressions: a
       # repo or branch name containing shell metacharacters would otherwise be
       # interpolated straight into the remote command string.
+      #
+      # The deploy host's key is pinned, never learned: a fresh runner has no
+      # known_hosts, and accept-new trusts whichever key answers first. The pin
+      # is the repository variable DEPLOY_KNOWN_HOSTS, else the site's own
+      # deploy/known_hosts (site-owned; `ssh-keyscan -t ed25519,rsa <host>`,
+      # checked against a known_hosts that already trusts the host). A host key
+      # is public, but its line names the host's address, which the CDN keeps
+      # out of sight, so it never goes in the upstream. With no pin the deploy
+      # still runs, trusting the first key, and says so: no site stops
+      # deploying on the sync that brings this (docs/DEPLOY.md §2).
+      - name: Deploy host key
+        id: ssh
+        if: vars.DEPLOY_HOST != '' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/dev/'))
+        env:
+          DEPLOY_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+            echo "deploy host key pinned by vars.DEPLOY_KNOWN_HOSTS"
+            checking=yes
+          elif [ -s deploy/known_hosts ]; then
+            cp deploy/known_hosts ~/.ssh/known_hosts
+            echo "deploy host key pinned by deploy/known_hosts"
+            checking=yes
+          else
+            echo "::warning title=Deploy host not pinned::Neither vars.DEPLOY_KNOWN_HOSTS nor deploy/known_hosts exists on ${{ github.repository }}: this deploy trusts whichever host key answers. Pin it (docs/DEPLOY.md §2)."
+            checking=accept-new
+          fi
+          echo "checking=$checking" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to dev env
         if: startsWith(github.ref, 'refs/heads/dev/') && vars.DEPLOY_HOST != ''
         env:
-          DEPLOY_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
           DEPLOY_SITE: ${{ vars.DEPLOY_SITE || github.event.repository.name }}
           DEV_BRANCH: ${{ github.ref_name }}
+          CHECKING: ${{ steps.ssh.outputs.checking }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+          ssh -i ~/.ssh/deploy_key -o "StrictHostKeyChecking=$CHECKING" \
+              -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
               "$DEPLOY_HOST" \
               "deploy-dev $DEPLOY_SITE $DEV_BRANCH"
 
@@ -228,14 +273,12 @@ jobs:
       - name: Deploy to production
         if: github.ref == 'refs/heads/master' && vars.DEPLOY_HOST != ''
         env:
-          DEPLOY_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
           DEPLOY_SITE: ${{ vars.DEPLOY_SITE || github.event.repository.name }}
+          CHECKING: ${{ steps.ssh.outputs.checking }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+          ssh -i ~/.ssh/deploy_key -o "StrictHostKeyChecking=$CHECKING" \
+              -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
               "$DEPLOY_HOST" \
               "deploy-prod $DEPLOY_SITE master"
 

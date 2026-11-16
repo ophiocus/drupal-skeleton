@@ -7,6 +7,7 @@ namespace Drupal\ad_inventory\Controller;
 use Drupal\ad_inventory\AdCounter;
 use Drupal\ad_inventory\AdResolver;
 use Drupal\ad_inventory\Entity\AdSlot;
+use Drupal\ad_inventory\Rotation;
 use Drupal\ad_inventory\Scope\AdScope;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\CacheableResponse;
@@ -14,6 +15,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\media\MediaInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -75,15 +77,21 @@ final class EmailSlotController extends ControllerBase {
 
   /**
    * Counts a click on /ad/e/{ad_slot}/go and follows the banner in force.
+   *
+   * Mail scanners that follow links before the reader does announce
+   * themselves as robots often enough to be left out; the rest still count,
+   * which is why mail clicks are reported as floors.
    */
-  public function go(AdSlot $ad_slot): Response {
+  public function go(AdSlot $ad_slot, Request $request): Response {
     $this->email($ad_slot);
     $fill = $this->resolver->resolve($ad_slot, $this->scope(), new AnonymousUserSession(), new CacheableMetadata());
     if ($fill?->creative === NULL) {
       $response = CountController::follow('/');
     }
     else {
-      $this->counter->click((string) $ad_slot->id(), (int) $fill->creative->id(), 'email');
+      if (!Rotation::isRobot((string) $request->headers->get('User-Agent', '')) && strtoupper($request->getMethod()) === 'GET') {
+        $this->counter->click((string) $ad_slot->id(), (int) $fill->creative->id(), 'email');
+      }
       $response = CountController::follow($fill->creative->target());
     }
     $response->headers->set('Cache-Control', 'no-store');

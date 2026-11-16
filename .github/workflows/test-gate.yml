@@ -11,6 +11,11 @@ name: Test gate
 # red gate here reproduces locally. Versions follow the image (PHP) and
 # .ddev/config.yaml (MariaDB, Node): change them together. Test locally on
 # MariaDB, as here: SQLite hides MySQL-only behaviour.
+#
+# No paths filter, on purpose: the upstream requires this check on master, and
+# a required check that a filter never starts leaves a docs-only pull request
+# waiting forever. A docs-only change still costs one gate, on its PR; the
+# merge then reuses it (build-and-push.yml, `reuse`).
 
 on:
   pull_request:
@@ -30,6 +35,13 @@ jobs:
   # system libraries under setup-php and the service containers. A gate
   # that changes under a push is not a gate. Bump deliberately.
   test:
+    # A newer push to a pull request supersedes the run in progress there. Only
+    # pull requests cancel: a run called by another workflow gets a group of
+    # its own (the caller's run id), so a gate before a deploy or a sync is
+    # never cancelled by this.
+    concurrency:
+      group: ${{ github.event_name == 'pull_request' && format('test-gate-{0}', github.ref) || format('test-gate-run-{0}-{1}', github.run_id, github.run_attempt) }}
+      cancel-in-progress: true
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     services:

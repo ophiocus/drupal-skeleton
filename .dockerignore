@@ -14,6 +14,9 @@ web/libraries/
 web/sites/*/files/
 web/sites/*/private/
 private/
+# A private path mistyped as a stream wrapper ("private:/…") makes a directory
+# named web/private: beside the docroot, full of private files.
+web/private*
 web/sites/*/settings.local.php
 web/sites/*/settings.ddev.php
 web/sites/*/services.local.yml
@@ -50,6 +53,14 @@ LICENSE*
 **/*.key
 # credential files read by path (production mounts its own ./secrets)
 secrets/
+# the deploy host's pinned SSH key: read by CI, never by the site
+deploy/known_hosts
+
+# --- Data that only workstation tools read ---
+# Harvest output and its retired importer: run from a checkout, never in the
+# container (a site's harvest now writes through its own writer).
+scripts/harvest/*.json
+scripts/import_events.php
 
 # --- OS / editor noise ---
 **/.DS_Store

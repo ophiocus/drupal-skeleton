@@ -9,7 +9,7 @@ use Drupal\ad_inventory\Entity\AdCreative;
 use Drupal\ad_inventory\Entity\AdProvider;
 
 /**
- * What fills a space on a page: a booking, a provider or a house banner.
+ * What fills a space on a page: bookings, a provider or a house banner.
  */
 final class Fill {
 
@@ -29,14 +29,18 @@ final class Fill {
    * @param bool $draft
    *   TRUE when only a draft fills it (seen by staff who preview drafts).
    * @param \Drupal\ad_inventory\Entity\AdCreative|null $creative
-   *   The creative, for bookings and house banners.
+   *   The first creative, for bookings and house banners.
    * @param \Drupal\ad_inventory\Entity\AdBooking|null $booking
-   *   The booking.
+   *   The first booking.
    * @param \Drupal\ad_inventory\Entity\AdProvider|null $provider
    *   The provider.
    * @param \Drupal\ad_inventory\Entity\AdCreative[] $candidates
    *   For a house fill: every house banner that may fill the space (the
    *   first is $creative). The browser picks one of them at random.
+   * @param \Drupal\ad_inventory\Placement[] $placements
+   *   For a booking fill: every placement the space shows this week (the
+   *   first holds $booking). One exclusive booking stands alone. With more
+   *   than one placement or creative the browser asks which goes next.
    */
   public function __construct(
     public readonly string $source,
@@ -47,15 +51,23 @@ final class Fill {
     public readonly ?AdBooking $booking = NULL,
     public readonly ?AdProvider $provider = NULL,
     public readonly array $candidates = [],
+    public readonly array $placements = [],
   ) {}
 
   /**
-   * The counting key of the source: 'booking', 'house' or 'provider:<id>'.
+   * The counting key of the source.
+   *
+   * Either 'booking:<id>' (the first placement's), 'house' or
+   * 'provider:<id>'.
    */
   public function countSource(): string {
-    return $this->source === self::PROVIDER && $this->provider !== NULL
-      ? 'provider:' . $this->provider->id()
-      : $this->source;
+    if ($this->source === self::PROVIDER && $this->provider !== NULL) {
+      return 'provider:' . $this->provider->id();
+    }
+    if ($this->source === self::BOOKING && $this->booking !== NULL) {
+      return AdCounter::bookingSource((int) $this->booking->id());
+    }
+    return $this->source;
   }
 
 }

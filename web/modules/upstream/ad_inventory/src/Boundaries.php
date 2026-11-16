@@ -25,7 +25,7 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  * fills a space depends on the day only through a booking's first and last
  * day. A tag shared by every space, invalidated every day, emptied the edge
  * cache of every page with a space each midnight, on a site with no bookings
- * at all (oidoenvivo, 2026-11-09: 114 of 147 sampled pages had no other reason
+ * at all (measured 2026-11-09: 114 of 147 sampled pages had no other reason
  * to go).
  */
 final class Boundaries {

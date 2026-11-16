@@ -41,6 +41,19 @@ ad_inventory.beacon:
   options:
     no_cache: TRUE
 
+# Public, uncached, sessionless: which placement and creative a space shows
+# next (fewest views this week). Asked only when a page has more than one.
+ad_inventory.pick:
+  path: '/ad/pick'
+  methods: [POST]
+  defaults:
+    _controller: '\Drupal\ad_inventory\Controller\CountController::pick'
+  requirements:
+    # Every reader's browser asks; ids are checked, nothing personal is kept.
+    _access: 'TRUE'
+  options:
+    no_cache: TRUE
+
 # Public, uncached: a counted click, then a 302 to the creative's link.
 ad_inventory.click:
   path: '/ad/c/{ad_creative}'
