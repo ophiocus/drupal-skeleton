@@ -144,7 +144,7 @@ final class AdCreativeForm extends EntityForm {
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     parent::validateForm($form, $form_state);
     $target = trim((string) $form_state->getValue('target_url'));
-    if (!str_starts_with($target, '/') && parse_url($target, PHP_URL_SCHEME) !== 'https' && parse_url($target, PHP_URL_SCHEME) !== 'http') {
+    if (!str_starts_with($target, '/') && parse_url($target, PHP_URL_SCHEME) !== 'https') {
       $form_state->setErrorByName('target_url', $this->t('Use an https:// address or a path starting with /.'));
     }
     $files = $this->entityTypeManager->getStorage('file');

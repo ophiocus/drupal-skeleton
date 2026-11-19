@@ -207,7 +207,7 @@ final class AdBookingForm extends EntityForm {
           $form_state->setErrorByName('slots', $this->t('%slot needs the creative %creative in @formats.', [
             '%slot' => $slot->label(),
             '%creative' => $creative->label(),
-            '@formats' => implode(', ', $missing),
+            '@formats' => implode(', ', $this->formatLabels($missing)),
           ]));
         }
         if (!$slot->allowsKind($creative->kind())) {
@@ -356,6 +356,20 @@ final class AdBookingForm extends EntityForm {
     $this->messenger()->addStatus($this->t('Saved the booking %label.', ['%label' => $this->entity->label()]));
     $form_state->setRedirectUrl($this->entity->toUrl('collection'));
     return $result;
+  }
+
+  /**
+   * The labels of these format ids, in order; an unknown id as itself.
+   *
+   * @param string[] $ids
+   *   Format ids.
+   *
+   * @return string[]
+   *   Their labels.
+   */
+  private function formatLabels(array $ids): array {
+    $formats = $this->entityTypeManager->getStorage('ad_format')->loadMultiple($ids);
+    return array_map(static fn (string $id): string => isset($formats[$id]) ? (string) $formats[$id]->label() : $id, $ids);
   }
 
 }
