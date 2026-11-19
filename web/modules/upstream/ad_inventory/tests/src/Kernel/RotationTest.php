@@ -235,6 +235,11 @@ final class RotationTest extends KernelTestBase {
 
     $this->assertTrue(Rotation::isRobot('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'));
     $this->assertTrue(Rotation::isRobot(''));
+    $this->assertTrue(Rotation::isRobot('Mozilla/5.0 (compatible; GoogleOther)'));
+    $this->assertTrue(Rotation::isRobot('Mozilla/5.0 (compatible; Google-InspectionTool/1.0;)'));
+    $this->assertTrue(Rotation::isRobot('APIs-Google (+https://developers.google.com/webmasters/APIs-Google.html)'));
+    $this->assertTrue(Rotation::isRobot('FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)'));
+    $this->assertTrue(Rotation::isRobot('Mediapartners-Google'));
     $this->assertFalse(Rotation::isRobot('Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36'));
   }
 
