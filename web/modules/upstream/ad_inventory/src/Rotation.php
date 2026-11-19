@@ -34,7 +34,7 @@ final class Rotation {
   /**
    * User agents that never count (crawlers, link previews, scanners).
    */
-  private const ROBOTS = '/bot|crawl|spider|slurp|preview|scan|monitor|lighthouse|headless|phantom|facebookexternalhit|embedly|whatsapp|telegram|curl|wget|python|java\/|go-http|okhttp|axios|node-fetch|libwww|httpclient/i';
+  private const ROBOTS = '/bot|crawl|spider|slurp|preview|scan|monitor|lighthouse|headless|phantom|facebookexternalhit|embedly|whatsapp|telegram|curl|wget|python|java\/|go-http|okhttp|axios|node-fetch|libwww|httpclient|googleother|inspectiontool|apis-google|feedfetcher|mediapartners/i';
 
   public function __construct(
     private readonly EntityTypeManagerInterface $entityTypeManager,
