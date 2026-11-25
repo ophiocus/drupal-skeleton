@@ -10,9 +10,9 @@
         "drupal/adsense": "^1.5",
         "drupal/adstxt": "^1.5",
         "drupal/captcha": "^2.0.11",
-        "drupal/core-composer-scaffold": "~11.4.13",
-        "drupal/core-project-message": "~11.4.13",
-        "drupal/core-recommended": "~11.4.13",
+        "drupal/core-composer-scaffold": "~11.4.14",
+        "drupal/core-project-message": "~11.4.14",
+        "drupal/core-recommended": "~11.4.14",
         "drupal/encrypt": "^3.2",
         "drupal/google_tag": "^2.0",
         "drupal/key": "^1.22",
@@ -32,7 +32,7 @@
         "drupal/commerce": "<3.3.13",
         "drupal/commerce_shipping": "<3.0.6",
         "drupal/cookies": "<1.2.17",
-        "drupal/core": "<11.4.13",
+        "drupal/core": "<11.4.14",
         "symfony/filesystem": "<7.4.23",
         "symfony/http-foundation": "<7.4.23",
         "symfony/http-kernel": "<7.4.23",
@@ -40,6 +40,7 @@
         "symfony/routing": "<7.4.23",
         "symfony/serializer": "<7.4.23",
         "symfony/validator": "<7.4.23",
-        "symfony/yaml": "<7.4.23"
+        "symfony/yaml": "<7.4.23",
+        "twig/twig": "<3.31.1"
     }
 }
