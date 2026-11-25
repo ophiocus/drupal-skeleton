@@ -158,6 +158,39 @@ Roll back by re-tagging: `docker compose pull` of a previous `sha-…` tag (set
 `IMAGE=` in `.env` temporarily) or push a revert commit. Volumes are never
 touched by the pipeline, so rollback is image-only.
 
+## 4a. Two performers, one contract
+
+A release can be performed by **GitHub Actions** or by the **VPS release runner** (`tec-run`, the
+platform's script on the deploy host). Which one is a per-site switch, `RELEASE_PERFORMER`: `github`
+(the default) or `vps`. It is held in two places that must agree: the repository's Actions variable,
+which the workflows read, and the host's copy for the site, which the runner reads. The platform's
+`performer` command sets both and checks them; never set one by hand.
+
+The contract is the list of steps and who owns each one. Every step that decides whether a release is
+good is a file that both performers run, from the commit being released or from the host:
+
+| Step | The contract (one copy) | GitHub performs it by | The VPS performs it by |
+|---|---|---|---|
+| gate | `scripts/ci/tests.sh` | `test-gate.yml` on the PR, reused at merge | the platform's diff-sized gate on the workstation, before the release |
+| audit | `scripts/ci/release-audit.sh` | `build-and-push.yml` | `tec-run`, in a `composer:2` container |
+| image | `Dockerfile` (+ build args) | buildx on the runner, pushed to GHCR | buildx on the host, tagged locally, then pushed to GHCR |
+| deploy | `deploy-prod <site> <sha>` on the host | over SSH (`VPS_DEPLOY_KEY`) | directly, without the GHCR pull |
+| health | `scripts/ci/release-health.sh <url>` | `build-and-push.yml` | `tec-run`, read from the released commit |
+| weekly audit | `scripts/ci/release-audit.sh` | `security-scan.yml` | `tec-run audit` |
+| upstream sync | `scripts/upstream/sync.sh` | `upstream-sync.yml`, as a PR | the platform, on the workstation, released through the runner |
+
+`deploy-prod` owns everything that touches the host: the pre-release database dump, the maintenance
+state (restored, never lifted), drush deploy, seeding, the sitemap and the edge, and, given the commit,
+the check that the container really runs it. So a step changes in one place and both performers follow.
+
+The build arguments (`APACHE_PREFORK`) and the health settings are repository variables. The runner
+keeps a copy on the host, and `performer` refreshes it from GitHub every time it switches.
+
+With `RELEASE_PERFORMER=vps` every workflow in this repository skips its jobs, so pushes and PRs spend
+no minutes. A push to master then deploys nothing by itself: the runner releases the commit, and the
+platform fast-forwards master to it afterwards. Switching back to `github` restores today's behaviour
+at once; nothing else changes.
+
 ### Actions minutes
 
 A private repository on GitHub Free gets 2,000 Actions minutes a month for

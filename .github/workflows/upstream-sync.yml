@@ -39,6 +39,9 @@ env:
 
 jobs:
   sync:
+    # The VPS runner performs this site: the platform runs scripts/upstream/sync.sh
+    # on the workstation and releases the result through it (docs/DEPLOY.md §4a).
+    if: vars.RELEASE_PERFORMER != 'vps'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     outputs:

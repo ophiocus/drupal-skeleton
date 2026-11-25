@@ -35,6 +35,9 @@ jobs:
   # system libraries under setup-php and the service containers. A gate
   # that changes under a push is not a gate. Bump deliberately.
   test:
+    # The VPS runner performs this site's releases: its gate runs on the
+    # workstation before the release (docs/DEPLOY.md §4a), so none runs here.
+    if: vars.RELEASE_PERFORMER != 'vps'
     # A newer push to a pull request supersedes the run in progress there. Only
     # pull requests cancel: a run called by another workflow gets a group of
     # its own (the caller's run id), so a gate before a deploy or a sync is
