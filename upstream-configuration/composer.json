@@ -33,6 +33,7 @@
         "drupal/commerce_shipping": "<3.0.6",
         "drupal/cookies": "<1.2.17",
         "drupal/core": "<11.4.14",
+        "league/csv": "<9.28.1 || >=9.29.0 <9.29.1",
         "symfony/filesystem": "<7.4.23",
         "symfony/http-foundation": "<7.4.23",
         "symfony/http-kernel": "<7.4.23",
@@ -41,6 +42,7 @@
         "symfony/serializer": "<7.4.23",
         "symfony/validator": "<7.4.23",
         "symfony/yaml": "<7.4.23",
+        "twig/html-extra": "<3.31.1",
         "twig/twig": "<3.31.1"
     }
 }
