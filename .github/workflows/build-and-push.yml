@@ -36,6 +36,18 @@ name: Build and push image
 #                                     if the front page is genuinely lean.
 #   variable  HEALTH_ATTEMPTS         health retries. Default 10.
 #   variable  HEALTH_SLEEP_SECONDS    delay between retries. Default 15.
+#   variable  RELEASE_PERFORMER       github (default) or vps. With vps, the
+#                                     VPS release runner (tec-run) performs
+#                                     this pipeline and every job here is
+#                                     skipped, spending no minutes. Switched
+#                                     together with the host's copy, never by
+#                                     hand (docs/DEPLOY.md §4a).
+#
+# The steps both performers share are files, not inline code: the audit
+# (scripts/ci/release-audit.sh), the image (Dockerfile), the deploy
+# (deploy-prod on the host, given the commit) and the health gate
+# (scripts/ci/release-health.sh). Change a step there and both performers
+# change with it.
 #
 # NOT parametric, deliberately: the production branch. GitHub does not allow
 # expressions in `on.push.branches`, so a PROD_BRANCH variable would arm the
@@ -82,6 +94,9 @@ jobs:
   # branch that way, and so does this workflow on a dev/** push (both names
   # read off the checks API, 2026-11-15). Either is a pass of the same gate.
   reuse:
+    # The VPS runner performs this site's releases: nothing runs here, and the
+    # jobs below are skipped with it (a skipped job bills no minutes).
+    if: vars.RELEASE_PERFORMER != 'vps'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -160,7 +175,7 @@ jobs:
       # It is the only audit on a push: a lock change is audited here, once.
       # Advisories against an unchanged lock are security-scan.yml's, weekly.
       - name: Composer audit (production deps)
-        run: composer audit --no-dev --abandoned=report --format=plain --locked
+        run: bash scripts/ci/release-audit.sh
 
       - uses: docker/setup-buildx-action@v4
 
@@ -280,7 +295,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o "StrictHostKeyChecking=$CHECKING" \
               -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
               "$DEPLOY_HOST" \
-              "deploy-prod $DEPLOY_SITE master"
+              "deploy-prod $DEPLOY_SITE $GITHUB_SHA"
 
       # ─── Post-deploy health gate ──────────────────────────────────────
       # A green image build proves `composer install` succeeded. It does NOT
@@ -298,44 +313,8 @@ jobs:
         if: github.ref == 'refs/heads/master' && vars.DEPLOY_HOST != '' && vars.PROD_URL != ''
         env:
           HEALTH_URL: ${{ vars.PROD_URL }}
-          MIN_BYTES: ${{ vars.HEALTH_MIN_BYTES || '5000' }}
-          ATTEMPTS: ${{ vars.HEALTH_ATTEMPTS || '10' }}
-          SLEEP_SECONDS: ${{ vars.HEALTH_SLEEP_SECONDS || '15' }}
-        run: |
-          set -u
-          fail_body=""
-          for i in $(seq 1 "$ATTEMPTS"); do
-            code=$(curl -sL -o /tmp/health.html -w '%{http_code}' --max-time 25 "$HEALTH_URL" || echo 000)
-            bytes=$(wc -c < /tmp/health.html | tr -d ' ')
-            fatal=$(grep -ciE 'Fatal error|Uncaught (Error|Exception)|The website encountered an unexpected error' /tmp/health.html || true)
-
-            echo "attempt $i/$ATTEMPTS: http=$code bytes=$bytes fatal_markers=$fatal"
-
-            if [ "$code" = "200" ] && [ "$bytes" -ge "$MIN_BYTES" ] && [ "$fatal" = "0" ]; then
-              echo "::notice::Health check passed — $HEALTH_URL is serving ($bytes bytes)."
-              exit 0
-            fi
-
-            # A site the operator put in maintenance answers Drupal's maintenance
-            # page with 503. deploy-prod restores that state on purpose and never
-            # lifts it (lifting is the operator's keystroke), so that page is the
-            # expected answer, not a fault. Any other 503, or a PHP fatal, still fails.
-            if [ "$code" = "503" ] && grep -q 'class="maintenance-page' /tmp/health.html && [ "$fatal" = "0" ]; then
-              echo "::notice::$HEALTH_URL answers its maintenance page, as the operator left it. The deploy is verified; lifting maintenance stays the operator's call."
-              exit 0
-            fi
-
-            fail_body=$(head -c 800 /tmp/health.html)
-            # The container needs a moment after `docker compose up -d`.
-            sleep "$SLEEP_SECONDS"
-          done
-
-          echo "::error::Health check FAILED for $HEALTH_URL after $ATTEMPTS attempts."
-          echo "Last response: http=$code bytes=$bytes fatal_markers=$fatal"
-          echo "--- first 800 bytes of the response ---"
-          echo "$fail_body"
-          echo "---------------------------------------"
-          echo "The image built and deployed, but the site is not serving a"
-          echo "healthy page. Check the container log on the host:"
-          echo "  docker logs --tail 50 <compose-project>-drupal-1"
-          exit 1
+          HEALTH_MIN_BYTES: ${{ vars.HEALTH_MIN_BYTES || '5000' }}
+          HEALTH_ATTEMPTS: ${{ vars.HEALTH_ATTEMPTS || '10' }}
+          HEALTH_SLEEP_SECONDS: ${{ vars.HEALTH_SLEEP_SECONDS || '15' }}
+        # The gate itself is the contract's file, shared with the VPS runner.
+        run: bash scripts/ci/release-health.sh "$HEALTH_URL"
