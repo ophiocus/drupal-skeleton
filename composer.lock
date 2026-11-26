@@ -4750,7 +4750,7 @@
             "dist": {
                 "type": "path",
                 "url": "upstream-configuration",
-                "reference": "d704cf70eb4ac4a3ee026bb1b42a59de939ccc08"
+                "reference": "2ec6892bd1ea024cdb8facc32695df3bc6c8ae19"
             },
             "require": {
                 "composer/installers": "^2.0",
@@ -4784,10 +4784,11 @@
                 "league/csv": "<9.28.1 || >=9.29.0 <9.29.1",
                 "symfony/filesystem": "<7.4.23",
                 "symfony/http-foundation": "<7.4.23",
-                "symfony/http-kernel": "<7.4.23",
+                "symfony/http-kernel": "<7.4.24",
+                "symfony/mailer": "<7.4.24",
                 "symfony/mime": "<7.4.22",
-                "symfony/routing": "<7.4.23",
-                "symfony/serializer": "<7.4.23",
+                "symfony/routing": "<7.4.24",
+                "symfony/serializer": "<7.4.24",
                 "symfony/validator": "<7.4.23",
                 "symfony/yaml": "<7.4.23",
                 "twig/html-extra": "<3.31.1",
